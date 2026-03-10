@@ -30,11 +30,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
-.env
-.env.local
-.env.*.local
-# allow .env.example so new contributors know what vars are needed
+# env files — block all, but allow the example file for onboarding
+.env*
 !.env.example
 
 # vercel

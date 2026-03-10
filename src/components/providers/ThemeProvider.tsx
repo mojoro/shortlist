@@ -1,12 +1,13 @@
 "use client";
 
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { env } from "@/env";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme={process.env.NEXT_PUBLIC_DEFAULT_THEME ?? "system"}
+      defaultTheme={env.NEXT_PUBLIC_DEFAULT_THEME}
       enableSystem
       disableTransitionOnChange
     >

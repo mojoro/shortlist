@@ -1,5 +1,5 @@
 // ============================================================
-// JOBFLOW — Prisma Schema
+// Shortlist — Prisma Schema
 // Database: PostgreSQL (Neon)
 // Auth: Clerk (users are created/managed by Clerk; we store
 //        only the Clerk user ID as our foreign key anchor)

@@ -14,6 +14,7 @@ export const env = createEnv({
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),
     NEXT_PUBLIC_APP_URL:               z.string().url(),
+    NEXT_PUBLIC_DEFAULT_THEME:         z.enum(["light", "dark", "system"]).default("system"),
   },
   runtimeEnv: {
     DATABASE_URL:                      process.env.DATABASE_URL,
@@ -25,5 +26,6 @@ export const env = createEnv({
     CRON_SECRET:                       process.env.CRON_SECRET,
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
     NEXT_PUBLIC_APP_URL:               process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_DEFAULT_THEME:         process.env.NEXT_PUBLIC_DEFAULT_THEME,
   },
 });
