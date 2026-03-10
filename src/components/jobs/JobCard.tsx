@@ -1,32 +1,36 @@
+"use client";
+
+import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { useState, useTransition } from "react";
 import { ScoreBadge } from "@/components/jobs/ScoreBadge";
+import { toggleSaveJob } from "@/app/(dashboard)/dashboard/actions";
 import type { JobWithApplication } from "@/types";
 
-// ─── Avatar palette ───────────────────────────────────────────────────────────
+// ─── Source tag styles ────────────────────────────────────────────────────────
 
-const AVATAR_PALETTE = [
-  { bg: "#e0e7ff", text: "#4338ca" }, // indigo
-  { bg: "#fce7f3", text: "#be185d" }, // pink
-  { bg: "#d1fae5", text: "#065f46" }, // emerald
-  { bg: "#fef3c7", text: "#92400e" }, // amber
-  { bg: "#ede9fe", text: "#5b21b6" }, // violet
-  { bg: "#fee2e2", text: "#991b1b" }, // red
-  { bg: "#cffafe", text: "#0e7490" }, // cyan
-  { bg: "#f0fdf4", text: "#15803d" }, // green
-];
+const SOURCE_TAG_STYLES: Record<string, { bg: string; color: string }> = {
+  GREENHOUSE:          { bg: "#1a2744", color: "#93c5fd" },
+  LEVER:               { bg: "#1a2744", color: "#93c5fd" },
+  ASHBY:               { bg: "#1a2744", color: "#93c5fd" },
+  LINKEDIN:            { bg: "#172236", color: "#60a5fa" },
+  BERLIN_STARTUP_JOBS: { bg: "#1e1a2e", color: "#c4b5fd" },
+  HONEYPOT:            { bg: "#2a1a2e", color: "#e879f9" },
+  YC_JOBS:             { bg: "#2a1a0e", color: "#fb923c" },
+  NO_FLUFF_JOBS:       { bg: "#1a2e1a", color: "#86efac" },
+};
 
-function getAvatarColors(company: string) {
-  return AVATAR_PALETTE[company.charCodeAt(0) % AVATAR_PALETTE.length];
-}
-
-// ─── Display label maps ───────────────────────────────────────────────────────
-
-const JOB_TYPE_LABELS: Record<string, string> = {
-  FULL_TIME: "Full-time",
-  PART_TIME: "Part-time",
-  CONTRACT: "Contract",
-  FREELANCE: "Freelance",
-  INTERNSHIP: "Internship",
+const SOURCE_LABELS: Record<string, string> = {
+  LINKEDIN:            "LinkedIn",
+  GREENHOUSE:          "Greenhouse",
+  LEVER:               "Lever",
+  ASHBY:               "Ashby",
+  INDEED:              "Indeed",
+  BERLIN_STARTUP_JOBS: "Berlin Startup Jobs",
+  HONEYPOT:            "Honeypot",
+  YC_JOBS:             "Y Combinator",
+  NO_FLUFF_JOBS:       "No Fluff Jobs",
+  CUSTOM:              "Custom",
 };
 
 const LOCATION_TYPE_LABELS: Record<string, string> = {
@@ -35,120 +39,153 @@ const LOCATION_TYPE_LABELS: Record<string, string> = {
   ONSITE: "On-site",
 };
 
-const SOURCE_LABELS: Record<string, string> = {
-  LINKEDIN: "LinkedIn",
-  GREENHOUSE: "Greenhouse",
-  LEVER: "Lever",
-  ASHBY: "Ashby",
-  INDEED: "Indeed",
-  BERLIN_STARTUP_JOBS: "Berlin Startup Jobs",
-  HONEYPOT: "Honeypot",
-  YC_JOBS: "Y Combinator",
-  NO_FLUFF_JOBS: "No Fluff Jobs",
-  CUSTOM: "Custom",
-};
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
-// ─── Component ────────────────────────────────────────────────────────────────
+function SourceTag({ source }: { source: string }) {
+  const style = SOURCE_TAG_STYLES[source];
+  const label = SOURCE_LABELS[source] ?? source;
+  if (style) {
+    return (
+      <span
+        className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium"
+        style={{ backgroundColor: style.bg, color: style.color }}
+      >
+        {label}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center rounded bg-[--bg-subtle] px-1.5 py-0.5 text-xs font-medium text-[--text-muted]">
+      {label}
+    </span>
+  );
+}
+
+function SkillChip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center rounded px-2 py-0.5 text-xs text-[--text-muted] ring-1 ring-inset ring-[--border]">
+      {children}
+    </span>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 interface JobCardProps {
   job: JobWithApplication;
 }
 
 export function JobCard({ job }: JobCardProps) {
-  const avatarColors = getAvatarColors(job.company);
-  const avatarLetter = job.company[0]?.toUpperCase() ?? "?";
+  const [isPending, startTransition] = useTransition();
+  const [isSaved, setIsSaved] = useState(job.feedStatus === "SAVED");
+
+  function handleSave() {
+    const next = !isSaved;
+    setIsSaved(next);
+    startTransition(async () => {
+      try {
+        await toggleSaveJob(job.id, job.profileId, next);
+      } catch {
+        setIsSaved(!next); // revert on error
+      }
+    });
+  }
 
   const postedDate = job.postedAt
     ? formatDistanceToNow(new Date(job.postedAt), { addSuffix: true })
     : null;
 
+  const subtitleParts = [
+    job.location,
+    job.locationType ? (LOCATION_TYPE_LABELS[job.locationType] ?? null) : null,
+    job.salary,
+    postedDate,
+  ].filter(Boolean);
+
   const displaySkills = job.skills.slice(0, 4);
   const remainingCount = job.skills.length - displaySkills.length;
 
-  const locationLabel = job.locationType
-    ? (LOCATION_TYPE_LABELS[job.locationType] ?? null)
-    : null;
-  const locationDisplay = [job.location, locationLabel]
-    .filter(Boolean)
-    .join(" · ");
-
   return (
-    <article className="rounded-xl border border-[--border] bg-[--bg] p-4 transition-shadow hover:shadow-md sm:p-5">
-      {/* Top row */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-            style={{ backgroundColor: avatarColors.bg, color: avatarColors.text }}
-            aria-hidden="true"
-          >
-            {avatarLetter}
-          </div>
-          <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-[--text] sm:text-base">
-              {job.title}
-            </h2>
-            <p className="truncate text-xs text-[--text-muted] sm:text-sm">
-              {job.company}
-              {locationDisplay ? ` · ${locationDisplay}` : ""}
-            </p>
+    <article className="rounded-xl border border-[--border] bg-[--bg-card] p-5 transition-shadow hover:shadow-sm">
+      {/* Top row: title + score badge */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className="text-base font-bold text-[--text]">
+            {job.title}{" "}
+            <span className="font-normal text-[--text-muted]">@ {job.company}</span>
+          </h2>
+
+          {/* Subtitle + source tag */}
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+            {subtitleParts.length > 0 && (
+              <span className="text-xs text-[--text-muted]">
+                {subtitleParts.join(" · ")}
+              </span>
+            )}
+            <SourceTag source={job.source} />
           </div>
         </div>
-        <div className="shrink-0">
-          <ScoreBadge score={job.aiScore} />
-        </div>
+        <ScoreBadge score={job.aiScore} />
       </div>
 
-      {/* Middle — AI summary */}
-      <div className="mt-3">
-        {job.aiSummary ? (
-          <p className="line-clamp-2 text-sm leading-relaxed text-[--text-muted]">
-            {job.aiSummary}
-          </p>
-        ) : (
-          <p className="text-sm italic text-[--text-muted]">Analysis pending</p>
-        )}
-      </div>
+      {/* AI summary */}
+      {job.aiSummary && (
+        <p className="mt-3 line-clamp-1 text-sm text-[--text-muted]">
+          {job.aiSummary}
+        </p>
+      )}
 
-      {/* Bottom row — chips + source/date */}
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-1.5">
-          {job.salary && <Chip>{job.salary}</Chip>}
-          {job.jobType && (
-            <Chip>{JOB_TYPE_LABELS[job.jobType] ?? job.jobType}</Chip>
-          )}
+      {/* Skills */}
+      {displaySkills.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {displaySkills.map((skill) => (
-            <Chip key={skill}>{skill}</Chip>
+            <SkillChip key={skill}>{skill}</SkillChip>
           ))}
           {remainingCount > 0 && (
+            <span className="text-xs text-[--text-muted]">+{remainingCount} more</span>
+          )}
+        </div>
+      )}
+
+      {/* Bottom row: saved indicator + action buttons */}
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <div>
+          {isSaved && (
             <span className="text-xs text-[--text-muted]">
-              +{remainingCount} more
+              <span className="mr-1 text-[--accent]">•</span>saved
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 text-xs text-[--text-muted]">
-          <span>{SOURCE_LABELS[job.source] ?? job.source}</span>
-          {postedDate && (
-            <>
-              <span aria-hidden="true">·</span>
-              <time dateTime={job.postedAt?.toISOString()}>
-                {postedDate}
-              </time>
-            </>
-          )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSave}
+            disabled={isPending}
+            className={[
+              "inline-flex min-h-[32px] items-center rounded px-3 py-1 text-xs font-medium transition-colors",
+              "ring-1 ring-inset ring-[--border] text-[--text-muted] hover:text-[--text]",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--accent]",
+              isPending ? "opacity-50 cursor-wait" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {isSaved ? "unsave" : "save"}
+          </button>
+          <Link
+            href={`/jobs/${job.id}`}
+            className="inline-flex min-h-[32px] items-center rounded px-3 py-1 text-xs font-medium text-[--text-muted] ring-1 ring-inset ring-[--border] transition-colors hover:text-[--text] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--accent]"
+          >
+            view
+          </Link>
+          <Link
+            href={`/tailor/${job.id}`}
+            className="inline-flex min-h-[32px] items-center rounded bg-[--accent] px-3 py-1 text-xs font-medium text-[--accent-fg] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--accent]"
+          >
+            tailor →
+          </Link>
         </div>
       </div>
     </article>
-  );
-}
-
-// ─── Chip primitive ───────────────────────────────────────────────────────────
-
-function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-md bg-[--bg-subtle] px-2 py-0.5 text-xs text-[--text-muted] ring-1 ring-inset ring-[--border]">
-      {children}
-    </span>
   );
 }

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { buildWhereClause } from "@/lib/jobs";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { JobFeed } from "@/components/jobs/JobFeed";
+import { StatsRow } from "@/components/dashboard/StatsRow";
 import { APP_CONFIG } from "@/config/app";
 import type { JobWithApplication } from "@/types";
 
@@ -43,7 +44,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     );
   }
 
-  const [allCount, newCount, savedCount, appliedCount, jobs] =
+  const [allCount, newCount, savedCount, appliedCount, avgScoreResult, jobs] =
     await Promise.all([
       prisma.job.count({
         where: { profileId: profile.id, feedStatus: { not: "HIDDEN" } },
@@ -60,6 +61,14 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           application: { status: { not: "INTERESTED" } },
         },
       }),
+      prisma.job.aggregate({
+        where: {
+          profileId: profile.id,
+          aiScore: { not: null },
+          feedStatus: { not: "HIDDEN" },
+        },
+        _avg: { aiScore: true },
+      }),
       prisma.job.findMany({
         where: buildWhereClause(profile.id, safeFilter),
         include: { application: { select: { status: true } } },
@@ -70,14 +79,22 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   const nextCursor = jobs.length === 25 ? jobs[jobs.length - 1].id : null;
 
+  const avgScore = avgScoreResult._avg.aiScore;
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-[--text]">Your matches</h1>
-        <p className="mt-1 text-sm text-[--text-muted]">
-          Sorted by match score · {profile.name}
-        </p>
+        <h1 className="text-lg font-semibold uppercase tracking-wide text-[--text-muted]">
+          Job Feed
+        </h1>
       </div>
+
+      <StatsRow
+        newCount={newCount}
+        savedCount={savedCount}
+        appliedCount={appliedCount}
+        avgScore={avgScore}
+      />
 
       <FilterChips
         allCount={allCount}

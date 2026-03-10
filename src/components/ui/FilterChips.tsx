@@ -11,10 +11,10 @@ interface FilterChipsProps {
 }
 
 const CHIPS = [
-  { key: "all", label: "All" },
-  { key: "new", label: "New" },
-  { key: "saved", label: "Saved" },
-  { key: "applied", label: "Applied" },
+  { key: "all", label: "all" },
+  { key: "new", label: "new" },
+  { key: "saved", label: "saved" },
+  { key: "applied", label: "applied" },
 ] as const;
 
 type FilterKey = (typeof CHIPS)[number]["key"];
@@ -51,40 +51,46 @@ export function FilterChips({
   }
 
   return (
-    <div className="flex flex-wrap gap-2" role="group" aria-label="Filter jobs">
-      {CHIPS.map(({ key, label }) => {
-        const isActive = currentFilter === key;
-        return (
-          <button
-            key={key}
-            onClick={() => handleFilterChange(key)}
-            disabled={isPending}
-            aria-pressed={isActive}
-            className={[
-              "inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--accent] focus-visible:ring-offset-2",
-              isActive
-                ? "bg-[--accent] text-[--accent-fg]"
-                : "bg-[--bg] text-[--text] ring-1 ring-inset ring-[--border] hover:bg-[--bg-subtle]",
-              isPending ? "opacity-60 cursor-wait" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            {label}
-            <span
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter jobs">
+        {CHIPS.map(({ key, label }) => {
+          const isActive = currentFilter === key;
+          return (
+            <button
+              key={key}
+              onClick={() => handleFilterChange(key)}
+              disabled={isPending}
+              aria-pressed={isActive}
               className={[
-                "inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-xs tabular-nums",
+                "inline-flex min-h-[36px] items-center rounded-full px-3 py-1 text-sm font-medium transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--accent] focus-visible:ring-offset-2",
                 isActive
-                  ? "bg-white/20 text-white"
-                  : "bg-[--bg-subtle] text-[--text-muted]",
-              ].join(" ")}
+                  ? "bg-[--accent] text-[--accent-fg]"
+                  : "text-[--text-muted] ring-1 ring-inset ring-[--border] hover:text-[--text]",
+                isPending ? "opacity-60 cursor-wait" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
             >
-              {counts[key]}
-            </span>
-          </button>
-        );
-      })}
+              {label}
+              {key !== "all" && (
+                <span
+                  className={[
+                    "ml-1.5 text-xs tabular-nums",
+                    isActive ? "opacity-75" : "opacity-60",
+                  ].join(" ")}
+                >
+                  {counts[key]}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <span className="shrink-0 text-xs text-[--text-muted]">
+        Sort: Match ↓
+      </span>
     </div>
   );
 }

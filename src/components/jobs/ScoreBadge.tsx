@@ -2,51 +2,32 @@ interface ScoreBadgeProps {
   score: number | null;
 }
 
-interface BadgeConfig {
-  bg: string;
-  text: string;
-  label: string;
-}
-
-function getBadgeConfig(score: number | null): BadgeConfig {
+function getBadgeStyle(score: number | null): { className: string; label: string } {
   if (score === null) {
-    return {
-      bg: "bg-[#f4f4f5] dark:bg-[#27272a]",
-      text: "text-[#71717a] dark:text-[#a1a1aa]",
-      label: "Not yet scored",
-    };
+    return { className: "bg-[--border] text-[--text-muted]", label: "—" };
   }
-  if (score >= 90) {
-    return {
-      bg: "bg-[#dcfce7] dark:bg-[#14532d]",
-      text: "text-[#16a34a] dark:text-[#4ade80]",
-      label: "Strong match",
-    };
-  }
-  if (score >= 75) {
-    return {
-      bg: "bg-[#fef9c3] dark:bg-[#713f12]",
-      text: "text-[#a16207] dark:text-[#fbbf24]",
-      label: "Good match",
-    };
-  }
-  return {
-    bg: "bg-[#f4f4f5] dark:bg-[#27272a]",
-    text: "text-[#71717a] dark:text-[#a1a1aa]",
-    label: "Weak match",
-  };
+  if (score >= 90) return { className: "bg-[#16a34a] text-white", label: String(score) };
+  if (score >= 75) return { className: "bg-[#d97706] text-white", label: String(score) };
+  return { className: "bg-[#dc2626] text-white", label: String(score) };
 }
 
 export function ScoreBadge({ score }: ScoreBadgeProps) {
-  const { bg, text, label } = getBadgeConfig(score);
+  const { className, label } = getBadgeStyle(score);
+  const ariaLabel =
+    score === null
+      ? "Not yet scored"
+      : score >= 90
+        ? `${score} — Strong match`
+        : score >= 75
+          ? `${score} — Good match`
+          : `${score} — Weak match`;
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${bg} ${text}`}
-      aria-label={score !== null ? `${score} — ${label}` : label}
+      className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-bold ${className}`}
+      aria-label={ariaLabel}
     >
-      {score !== null && <span className="font-semibold">{score}</span>}
-      <span>{label}</span>
+      {label}
     </span>
   );
 }
