@@ -1,0 +1,360 @@
+// ============================================================
+// JOBFLOW — Prisma Schema
+// Database: PostgreSQL (Neon)
+// Auth: Clerk (users are created/managed by Clerk; we store
+//        only the Clerk user ID as our foreign key anchor)
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // Required for Neon + Prisma migrations
+}
+
+// ============================================================
+// USER
+// Minimal record — Clerk owns name, email, avatar.
+// We store only what Clerk doesn't manage.
+// ============================================================
+
+model User {
+  id        String   @id // Clerk user ID (e.g. "user_2abc...")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profiles Profile[]
+  usage    Usage?
+
+  @@map("users")
+}
+
+// ============================================================
+// PROFILE
+// A user can have multiple job search profiles.
+// Each profile is a fully independent search context:
+// different criteria, different resume, different feed.
+//
+// Examples: "Frontend Berlin", "Automation Engineer Remote"
+// ============================================================
+
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Identity
+  name      String   // e.g. "Frontend Berlin"
+  isActive  Boolean  @default(false) // which profile is currently selected
+
+  // Job search criteria (used for AI scoring)
+  targetRoles      String[]  // ["Frontend Engineer", "Fullstack Engineer"]
+  targetLocations  String[]  // ["Berlin", "Remote"]
+  currency         String
+  targetSalaryMin  Int?      // in $currency/year
+  targetSalaryMax  Int?
+  requiredSkills   String[]  // ["TypeScript", "Next.js", "React"]
+  niceToHaveSkills String[]
+  excludedKeywords String[]  // ["Senior", "Lead", "10+ years"] — auto-reject triggers
+  companySize      CompanySize[]
+  remotePreference RemotePreference @default(ANY)
+
+  // Resume
+  masterResume     String?   // Markdown — the base resume for this profile
+  resumeLastEdited DateTime?
+
+  // Scraping config
+  scraperEnabled   Boolean   @default(true)
+  scraperSources   ScraperSource[]
+  scraperFrequency ScraperFrequency @default(DAILY)
+  lastScrapedAt    DateTime?
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs         Job[]
+  applications Application[]
+
+  @@map("profiles")
+}
+
+// ============================================================
+// JOB
+// A scraped listing, scoped to a profile (because the same
+// job may score differently against different profiles, and
+// each profile has its own feed/filters).
+//
+// Raw scraper output is preserved in rawData so we never
+// lose information and can re-process without re-scraping.
+// ============================================================
+
+model Job {
+  id        String   @id @default(cuid())
+  profileId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Identity / dedup
+  externalId  String    // ID from the scraper (apify item ID or constructed hash)
+  source      ScraperSource
+  url         String
+
+  // Core fields (normalized)
+  title       String
+  company     String
+  location    String?
+  locationType LocationType? // REMOTE, HYBRID, ONSITE
+  salary      String?       // raw string e.g. "€55,000–70,000"
+  salaryMin   Int?          // parsed, EUR/year
+  salaryMax   Int?
+  currency    String?
+  jobType     JobType?      // FULL_TIME, CONTRACT, etc.
+  postedAt    DateTime?
+  description String        // full JD, plain text (HTML stripped)
+  skills      String[]      // extracted tags
+  companySize String?
+  industry    String?
+
+  // AI analysis
+  aiScore        Int?          // 0–100
+  aiStatus       AiStatus?     // GO, NO_GO, EXAMINE
+  aiSummary      String?       // 1–2 sentence overview
+  aiMatchPoints  String[]      // what aligns
+  aiGapPoints    String[]      // what doesn't
+  aiAnalyzedAt   DateTime?
+  aiModel        String?       // which model was used
+
+  // Feed state
+  feedStatus  FeedStatus  @default(NEW)   // NEW, SAVED, ARCHIVED, HIDDEN
+  viewedAt    DateTime?
+  userNotes   String?
+
+  // Raw scraper output — never discard
+  rawData     Json?
+
+  // Relations
+  profile     Profile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  application Application?
+
+  // A job is unique per profile (same listing won't appear twice in same feed)
+  @@unique([profileId, externalId])
+  @@index([profileId, feedStatus])
+  @@index([profileId, aiScore(sort: Desc)])
+  @@index([profileId, postedAt(sort: Desc)])
+  @@map("jobs")
+}
+
+// ============================================================
+// APPLICATION
+// Created when the user moves a job into their pipeline.
+// Tracks the full lifecycle from "interested" to "offer/rejected".
+// ============================================================
+
+model Application {
+  id        String   @id @default(cuid())
+  profileId String
+  jobId     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Kanban / pipeline state
+  status    ApplicationStatus @default(INTERESTED)
+  statusUpdatedAt DateTime?
+
+  // Key dates
+  appliedAt      DateTime?
+  interviewDates DateTime[]
+  offerReceivedAt DateTime?
+  decisionAt      DateTime?
+
+  // Notes and tracking
+  notes          String?
+  salaryOffered  Int?     // if offer received
+  recruiterName  String?
+  recruiterEmail String?
+
+  // The resume that was actually sent (if tailored + exported)
+  exportedResumeMarkdown String?
+  exportedAt             DateTime?
+
+  // Relations
+  profile        Profile          @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  job            Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  tailoredResumes TailoredResume[]
+
+  @@index([profileId, status])
+  @@map("applications")
+}
+
+// ============================================================
+// TAILORED RESUME
+// Each time the user generates + edits + exports a resume
+// for a specific application, we store that version.
+// Multiple versions per application are allowed (user may
+// regenerate after editing the JD notes or tweaking criteria).
+// ============================================================
+
+model TailoredResume {
+  id            String   @id @default(cuid())
+  applicationId String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Content
+  markdown      String   // the resume content (AI-generated + user-edited)
+  generatedBy   String?  // AI model used e.g. "claude-sonnet-4-20250514"
+  wasExported   Boolean  @default(false)
+  exportedAt    DateTime?
+
+  // Prompt context snapshot (so you can see what was sent to the AI)
+  promptSnapshot String?
+
+  // Relations
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@map("tailored_resumes")
+}
+
+// ============================================================
+// USAGE
+// Tracks AI API calls per user for cost monitoring.
+// One record per user, incremented on each AI call.
+// Extend this into a credits system when you add billing.
+// ============================================================
+
+model Usage {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  // Cumulative token counts
+  totalInputTokens  Int @default(0)
+  totalOutputTokens Int @default(0)
+
+  // Call counts by type
+  analysisCallCount Int @default(0)
+  tailorCallCount   Int @default(0)
+
+  // Soft limit — pause AI features if exceeded
+  monthlyLimitInputTokens Int @default(500000)
+
+  // Rolling window — reset monthly via cron
+  currentMonthInputTokens  Int @default(0)
+  currentMonthOutputTokens Int @default(0)
+  currentMonthResetsAt     DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("usage")
+}
+
+// ============================================================
+// SCRAPE RUN
+// Log of each scraping execution — useful for debugging,
+// monitoring pipeline health, and surfacing in a "last 
+// scraped X minutes ago" UI indicator.
+// ============================================================
+
+model ScrapeRun {
+  id        String   @id @default(cuid())
+  profileId String
+  createdAt DateTime @default(now())
+
+  source       ScraperSource
+  status       ScrapeStatus
+  jobsFound    Int  @default(0)
+  jobsNew      Int  @default(0)  // net new after dedup
+  jobsAnalyzed Int  @default(0)
+  errorMessage String?
+  durationMs   Int?
+
+  @@index([profileId, createdAt(sort: Desc)])
+  @@map("scrape_runs")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum CompanySize {
+  STARTUP      // 1–20
+  SMALL        // 20–100
+  MEDIUM       // 100–500
+  LARGE        // 500–2000
+  ENTERPRISE   // 2000+
+}
+
+enum RemotePreference {
+  REMOTE_ONLY
+  HYBRID_OK
+  ANY
+  ONSITE_ONLY
+}
+
+enum ScraperSource {
+  LINKEDIN
+  GREENHOUSE
+  LEVER
+  ASHBY
+  INDEED
+  BERLIN_STARTUP_JOBS
+  HONEYPOT
+  YC_JOBS
+  NO_FLUFF_JOBS
+  CUSTOM
+}
+
+enum ScraperFrequency {
+  HOURLY
+  EVERY_6H
+  DAILY
+  MANUAL
+}
+
+enum LocationType {
+  REMOTE
+  HYBRID
+  ONSITE
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  FREELANCE
+  INTERNSHIP
+}
+
+enum AiStatus {
+  GO
+  NO_GO
+  EXAMINE    // PRÜFEN equivalent
+}
+
+enum FeedStatus {
+  NEW
+  SAVED
+  ARCHIVED   // dismissed / not interested
+  HIDDEN     // filtered out by criteria, kept in DB
+}
+
+enum ApplicationStatus {
+  INTERESTED       // saved to pipeline, not yet applied
+  APPLIED          // application submitted
+  SCREENING        // initial call / recruiter screen
+  INTERVIEWING     // active interview process
+  OFFER            // offer received
+  ACCEPTED         // offer accepted
+  REJECTED         // rejected at any stage
+  WITHDRAWN        // withdrew application
+  GHOSTED          // no response after reasonable time
+}
+
+enum ScrapeStatus {
+  SUCCESS
+  PARTIAL    // completed but with some errors
+  FAILED
+}
