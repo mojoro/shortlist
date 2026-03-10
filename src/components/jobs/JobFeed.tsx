@@ -40,7 +40,7 @@ export function JobFeed({
   if (jobs.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-base text-[--text-muted]">
+        <p className="text-base text-[var(--text-muted)]">
           {filter === "new" && "No new jobs right now."}
           {filter === "saved" && "You haven't saved any jobs yet."}
           {filter === "applied" && "No applications yet."}
@@ -64,7 +64,7 @@ export function JobFeed({
           <button
             onClick={handleLoadMore}
             disabled={isPending}
-            className="inline-flex min-h-[44px] items-center rounded-full bg-[--bg] px-6 py-2 text-sm font-medium text-[--text] ring-1 ring-inset ring-[--border] transition-colors hover:bg-[--bg-subtle] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--accent] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
+            className="inline-flex min-h-[44px] items-center rounded-full bg-[var(--bg)] px-6 py-2 text-sm font-medium text-[var(--text)] ring-1 ring-inset ring-[var(--border)] transition-colors hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
           >
             {isPending ? "Loading…" : "Load more"}
           </button>

@@ -12,11 +12,14 @@ interface StatCardProps {
 
 function StatCard({ label, value }: StatCardProps) {
   return (
-    <div className="rounded-xl border border-[--border] bg-[--bg-card] p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-[--text-muted]">
+    <div
+      className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4"
+      style={{ boxShadow: "var(--shadow-card)" }}
+    >
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
         {label}
       </p>
-      <p className="mt-1 text-3xl font-bold text-[--text] tabular-nums">
+      <p className="mt-2 text-3xl font-bold text-[var(--text)] tabular-nums">
         {value}
       </p>
     </div>

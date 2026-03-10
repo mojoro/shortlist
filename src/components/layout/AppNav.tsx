@@ -18,31 +18,39 @@ export function AppNav() {
   const { resolvedTheme, setTheme } = useTheme();
 
   return (
-    <header className="border-b border-[--border] bg-[--bg-card]">
+    <header
+      className="border-b border-[var(--border)] bg-[var(--bg-card)]"
+      style={{ boxShadow: "0 1px 0 var(--border), 0 2px 8px rgba(0,0,0,0.06)" }}
+    >
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
         {/* Logo */}
         <Link
           href="/dashboard"
-          className="flex items-center gap-2 text-sm font-semibold text-[--text] hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
         >
           <span
-            className="flex h-6 w-6 items-center justify-center rounded-full bg-[--accent] text-[--accent-fg] text-xs font-bold"
+            className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--accent)] text-[var(--accent-fg)] text-xs font-bold shadow-sm"
             aria-hidden="true"
           >
             S
           </span>
-          {APP_CONFIG.name}
+          <span className="text-sm font-semibold tracking-tight text-[var(--text)]">
+            {APP_CONFIG.name}
+          </span>
         </Link>
 
         {/* Center tabs */}
-        <nav className="flex items-center gap-1" aria-label="Main navigation">
+        <nav
+          className="flex items-center gap-0.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-0.5"
+          aria-label="Main navigation"
+        >
           {NAV_TABS.map(({ label, href, active }) => {
             const isCurrent = active && pathname.startsWith(href);
             if (!active) {
               return (
                 <span
                   key={label}
-                  className="cursor-not-allowed select-none rounded-md px-3 py-1.5 text-xs font-medium uppercase tracking-wide text-[--text-muted] opacity-40"
+                  className="cursor-not-allowed select-none rounded-md px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] opacity-35"
                   aria-disabled="true"
                   title="Coming soon"
                 >
@@ -55,10 +63,10 @@ export function AppNav() {
                 key={label}
                 href={href}
                 className={[
-                  "rounded-md px-3 py-1.5 text-xs font-medium uppercase tracking-wide transition-colors",
+                  "rounded-md px-3 py-1.5 text-xs font-medium transition-all",
                   isCurrent
-                    ? "bg-[--accent] text-[--accent-fg]"
-                    : "text-[--text-muted] hover:text-[--text]",
+                    ? "bg-[var(--bg-card)] text-[var(--text)] shadow-sm ring-1 ring-inset ring-[var(--border)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text)]",
                 ].join(" ")}
                 aria-current={isCurrent ? "page" : undefined}
               >
@@ -71,26 +79,22 @@ export function AppNav() {
         {/* Right side: email + theme toggle */}
         <div className="flex items-center gap-3">
           {user?.primaryEmailAddress && (
-            <span className="hidden text-xs text-[--text-muted] sm:block">
+            <span className="hidden text-xs text-[var(--text-muted)] sm:block">
               {user.primaryEmailAddress.emailAddress}
             </span>
           )}
           <button
-            onClick={() =>
-              setTheme(resolvedTheme === "dark" ? "light" : "dark")
-            }
-            className="flex h-8 w-8 items-center justify-center rounded-md text-[--text-muted] transition-colors hover:bg-[--bg-subtle] hover:text-[--text] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--accent]"
+            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            className="cursor-pointer flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg)] text-[var(--text-muted)] transition-all hover:border-[var(--border-strong)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
             aria-label={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode`}
           >
             {resolvedTheme === "dark" ? (
-              // Sun icon
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="12" cy="12" r="4" />
                 <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
               </svg>
             ) : (
-              // Moon icon
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
               </svg>
             )}

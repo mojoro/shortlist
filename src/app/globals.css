@@ -3,36 +3,49 @@
 /* Configure Tailwind's dark: variant to use the .dark class set by next-themes */
 @variant dark (&:is(.dark *));
 
+/* ── Light mode ──────────────────────────────────────────────────────────────
+   Page bg is a cool blue-grey so white cards stand out clearly.
+   ─────────────────────────────────────────────────────────────────────────── */
 :root {
-  --bg:       #ffffff;
-  --bg-subtle: #f5f5f7;
-  --bg-card:  #ffffff;
-  --border:   #e4e4e7;
-  --text:     #0f172a;
-  --text-muted: #64748b;
-  --accent:   #7c3aed;
-  --accent-fg: #ffffff;
+  --bg:           #eef0f6;   /* cool grey page — makes white cards pop */
+  --bg-card:      #ffffff;   /* card / nav surfaces */
+  --bg-subtle:    #f4f5fb;   /* hover states, inner backgrounds */
+  --border:       #d8dae8;   /* default border */
+  --border-strong: #b0b3cc;  /* hover / focused border */
+  --text:         #0f1221;
+  --text-muted:   #5c6080;
+  --accent:       #7c3aed;
+  --accent-fg:    #ffffff;
+  --accent-muted: #ede9fe;   /* tinted bg for accent highlights */
+  --shadow-card:  0 1px 3px rgba(15,18,40,0.08), 0 1px 2px rgba(15,18,40,0.06);
+  --shadow-card-hover: 0 6px 20px rgba(15,18,40,0.12), 0 2px 6px rgba(15,18,40,0.08);
 }
 
-@theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-/* Dark mode via .dark class (toggled by next-themes) */
+/* ── Dark mode ───────────────────────────────────────────────────────────────
+   Layered navy surfaces — clear visual hierarchy between page / card / hover.
+   ─────────────────────────────────────────────────────────────────────────── */
 .dark {
-  --bg:       #0d0d14;
-  --bg-subtle: #161622;
-  --bg-card:  #161622;
-  --border:   #1e1e2e;
-  --text:     #e2e8f0;
-  --text-muted: #8892a4;
-  --accent:   #7c3aed;
-  --accent-fg: #ffffff;
+  --bg:           #06060e;   /* page background — deepest layer */
+  --bg-card:      #10101f;   /* cards — clearly lighter */
+  --bg-subtle:    #1a1a30;   /* hover states, inner panels */
+  --border:       #252540;   /* default border — more visible */
+  --border-strong: #3a3a60;  /* hover / focused border */
+  --text:         #e4e7f0;
+  --text-muted:   #7880a0;
+  --accent:       #a78bfa;   /* lighter purple — actually visible on dark bg */
+  --accent-fg:    #ffffff;
+  --accent-muted: #2d1f5e;
+  --shadow-card:  0 1px 4px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,0.5);
+  --shadow-card-hover: 0 8px 28px rgba(0,0,0,0.7), 0 2px 10px rgba(0,0,0,0.6);
 }
 
 body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }

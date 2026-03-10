@@ -4,7 +4,7 @@ interface ScoreBadgeProps {
 
 function getBadgeStyle(score: number | null): { className: string; label: string } {
   if (score === null) {
-    return { className: "bg-[--border] text-[--text-muted]", label: "—" };
+    return { className: "bg-[var(--border)] text-[var(--text-muted)]", label: "—" };
   }
   if (score >= 90) return { className: "bg-[#16a34a] text-white", label: String(score) };
   if (score >= 75) return { className: "bg-[#d97706] text-white", label: String(score) };

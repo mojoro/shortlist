@@ -62,12 +62,12 @@ export function FilterChips({
               disabled={isPending}
               aria-pressed={isActive}
               className={[
-                "inline-flex min-h-[36px] items-center rounded-full px-3 py-1 text-sm font-medium transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--accent] focus-visible:ring-offset-2",
+                "cursor-pointer inline-flex min-h-[36px] items-center rounded-full px-3 py-1 text-sm font-medium transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2",
                 isActive
-                  ? "bg-[--accent] text-[--accent-fg]"
-                  : "text-[--text-muted] ring-1 ring-inset ring-[--border] hover:text-[--text]",
-                isPending ? "opacity-60 cursor-wait" : "",
+                  ? "bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm"
+                  : "bg-[var(--bg-card)] text-[var(--text-muted)] ring-1 ring-inset ring-[var(--border)] hover:text-[var(--text)] hover:ring-[var(--border-strong)]",
+                isPending ? "opacity-60 !cursor-wait" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
@@ -88,7 +88,7 @@ export function FilterChips({
         })}
       </div>
 
-      <span className="shrink-0 text-xs text-[--text-muted]">
+      <span className="shrink-0 text-xs text-[var(--text-muted)]">
         Sort: Match ↓
       </span>
     </div>

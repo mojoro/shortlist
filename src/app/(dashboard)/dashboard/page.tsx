@@ -34,10 +34,10 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   if (!profile) {
     return (
       <div className="py-16 text-center">
-        <h1 className="text-xl font-semibold text-[--text]">
+        <h1 className="text-xl font-semibold text-[var(--text)]">
           Welcome to {APP_CONFIG.name}
         </h1>
-        <p className="mt-2 text-base text-[--text-muted]">
+        <p className="mt-2 text-base text-[var(--text-muted)]">
           You haven&apos;t set up a profile yet. Head to Settings to get started.
         </p>
       </div>
@@ -84,7 +84,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-semibold uppercase tracking-wide text-[--text-muted]">
+        <h1 className="text-lg font-semibold uppercase tracking-wide text-[var(--text-muted)]">
           Job Feed
         </h1>
       </div>
