@@ -48,13 +48,14 @@ model Profile {
   updatedAt DateTime @updatedAt
 
   // Identity
-  name      String   // e.g. "Frontend Berlin"
-  isActive  Boolean  @default(false) // which profile is currently selected
+  name                 String   // e.g. "Frontend Berlin"
+  isActive             Boolean  @default(false) // which profile is currently selected
+  onboardingCompletedAt DateTime? // null = wizard not finished; used by middleware
 
   // Job search criteria (used for AI scoring)
   targetRoles      String[]  // ["Frontend Engineer", "Fullstack Engineer"]
   targetLocations  String[]  // ["Berlin", "Remote"]
-  currency         String
+  currency         String    @default("EUR")
   targetSalaryMin  Int?      // in $currency/year
   targetSalaryMax  Int?
   requiredSkills   String[]  // ["TypeScript", "Next.js", "React"]
@@ -77,6 +78,7 @@ model Profile {
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   jobs         Job[]
   applications Application[]
+  scrapeRuns   ScrapeRun[]
 
   @@map("profiles")
 }
@@ -254,7 +256,7 @@ model Usage {
 // ============================================================
 // SCRAPE RUN
 // Log of each scraping execution — useful for debugging,
-// monitoring pipeline health, and surfacing in a "last 
+// monitoring pipeline health, and surfacing in a "last
 // scraped X minutes ago" UI indicator.
 // ============================================================
 
@@ -270,6 +272,8 @@ model ScrapeRun {
   jobsAnalyzed Int  @default(0)
   errorMessage String?
   durationMs   Int?
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@index([profileId, createdAt(sort: Desc)])
   @@map("scrape_runs")
