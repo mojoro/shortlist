@@ -6,6 +6,15 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Design tokens */
+  --bg: #ffffff;
+  --bg-subtle: #f5f5f7;
+  --border: #e4e4e7;
+  --text: #18181b;
+  --text-muted: #71717a;
+  --accent: #6366f1;
+  --accent-fg: #ffffff;
 }
 
 @theme inline {
@@ -15,10 +24,16 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* Dark mode via .dark class (toggled by next-themes) — not media query */
+/* Dark mode via .dark class (toggled by next-themes) */
 .dark {
   --background: #0a0a0a;
   --foreground: #ededed;
+
+  --bg: #0f0f12;
+  --bg-subtle: #18181b;
+  --border: #27272a;
+  --text: #fafafa;
+  --text-muted: #a1a1aa;
 }
 
 body {
