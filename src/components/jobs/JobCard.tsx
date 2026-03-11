@@ -256,7 +256,7 @@ export function JobCard({
       {/* Skills + tailor on the same row */}
       <div className="mt-4 flex items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5">
-          {displaySkills.map((skill) => (
+          {displaySkills.map((skill: string) => (
             <SkillChip key={skill}>{skill}</SkillChip>
           ))}
           {remainingCount > 0 && (

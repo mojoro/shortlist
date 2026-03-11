@@ -117,7 +117,7 @@ export default async function JobDetailPage({ params }: PageProps) {
         )}
         {job.skills.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {job.skills.map((skill) => (
+            {job.skills.map((skill: string) => (
               <span
                 key={skill}
                 className="inline-flex items-center rounded px-2 py-0.5 text-xs text-[var(--text-muted)] ring-1 ring-inset ring-[var(--border)]"
@@ -184,7 +184,7 @@ export default async function JobDetailPage({ params }: PageProps) {
                       Why it fits
                     </p>
                     <ul className="space-y-1.5">
-                      {job.aiMatchPoints.map((point, i) => (
+                      {job.aiMatchPoints.map((point: string, i: number) => (
                         <li key={i} className="flex items-start gap-2 text-sm text-[var(--text)]">
                           <span
                             className="mt-0.5 shrink-0 font-bold text-green-600 dark:text-green-400"
@@ -206,7 +206,7 @@ export default async function JobDetailPage({ params }: PageProps) {
                       Gaps to address
                     </p>
                     <ul className="space-y-1.5">
-                      {job.aiGapPoints.map((point, i) => (
+                      {job.aiGapPoints.map((point: string, i: number) => (
                         <li key={i} className="flex items-start gap-2 text-sm text-[var(--text)]">
                           <span
                             className="mt-0.5 shrink-0 font-bold text-red-500 dark:text-red-400"
