@@ -77,7 +77,7 @@ export function TailorPanel({
   return (
     <>
       {/* ── Desktop (md+) ───────────────────────────────────────────────── */}
-      <div className="hidden h-[calc(100vh-4rem)] md:flex overflow-hidden">
+      <div className="fixed inset-x-0 bottom-0 top-16 z-10 hidden bg-[var(--bg)] md:flex overflow-hidden">
         <JobDescriptionPane
           jobId={jobId}
           title={jobTitle}
@@ -118,7 +118,7 @@ export function TailorPanel({
       </div>
 
       {/* ── Mobile (<md) ────────────────────────────────────────────────── */}
-      <div className="flex h-[calc(100vh-4rem)] flex-col overflow-hidden md:hidden">
+      <div className="fixed inset-x-0 bottom-0 top-16 z-10 flex flex-col overflow-hidden bg-[var(--bg)] md:hidden">
         <MobileTabBar
           activeTab={mobileTab}
           hasResume={!!markdown}
