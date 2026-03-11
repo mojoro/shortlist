@@ -11,7 +11,7 @@ const styles = StyleSheet.create({
     color: "#111",
     lineHeight: 1.5,
   },
-  name: { fontSize: 20, fontFamily: "Helvetica-Bold", marginBottom: 4 },
+  name: { fontSize: 20, fontFamily: "Helvetica-Bold", marginBottom: 10 },
   contactLine: { fontSize: 9, color: "#555", marginBottom: 16 },
   sectionHeader: {
     fontSize: 11,
