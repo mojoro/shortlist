@@ -12,9 +12,15 @@ export function buildWhereClause(
   profileId: string,
   filter: string
 ): Prisma.JobWhereInput {
+  // "ignored" view shows only archived jobs — handle before base clause
+  if (filter === "ignored") {
+    return { profileId, feedStatus: "ARCHIVED" as FeedStatus };
+  }
+
+  // Default feed excludes both HIDDEN (auto-filtered) and ARCHIVED (user-dismissed)
   const base: Prisma.JobWhereInput = {
     profileId,
-    feedStatus: { not: "HIDDEN" as FeedStatus },
+    feedStatus: { notIn: ["HIDDEN", "ARCHIVED"] as FeedStatus[] },
   };
 
   switch (filter) {

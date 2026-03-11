@@ -11,7 +11,7 @@ import type { JobWithApplication } from "@/types";
 
 export const metadata: Metadata = { title: "Your matches" };
 
-const VALID_FILTERS = ["all", "new", "saved", "applied"] as const;
+const VALID_FILTERS = ["all", "new", "saved", "applied", "ignored"] as const;
 
 interface PageProps {
   searchParams: Promise<{ filter?: string }>;
@@ -44,10 +44,10 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     );
   }
 
-  const [allCount, newCount, savedCount, appliedCount, avgScoreResult, jobs] =
+  const [allCount, newCount, savedCount, appliedCount, ignoredCount, avgScoreResult, jobs] =
     await Promise.all([
       prisma.job.count({
-        where: { profileId: profile.id, feedStatus: { not: "HIDDEN" } },
+        where: { profileId: profile.id, feedStatus: { notIn: ["HIDDEN", "ARCHIVED"] } },
       }),
       prisma.job.count({
         where: { profileId: profile.id, feedStatus: "NEW" },
@@ -61,11 +61,14 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           application: { status: { not: "INTERESTED" } },
         },
       }),
+      prisma.job.count({
+        where: { profileId: profile.id, feedStatus: "ARCHIVED" },
+      }),
       prisma.job.aggregate({
         where: {
           profileId: profile.id,
           aiScore: { not: null },
-          feedStatus: { not: "HIDDEN" },
+          feedStatus: { notIn: ["HIDDEN", "ARCHIVED"] },
         },
         _avg: { aiScore: true },
       }),
@@ -101,6 +104,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         newCount={newCount}
         savedCount={savedCount}
         appliedCount={appliedCount}
+        ignoredCount={ignoredCount}
       />
 
       <JobFeed

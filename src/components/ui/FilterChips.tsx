@@ -8,13 +8,15 @@ interface FilterChipsProps {
   newCount: number;
   savedCount: number;
   appliedCount: number;
+  ignoredCount: number;
 }
 
 const CHIPS = [
-  { key: "all", label: "all" },
-  { key: "new", label: "new" },
-  { key: "saved", label: "saved" },
+  { key: "all",     label: "all" },
+  { key: "new",     label: "new" },
+  { key: "saved",   label: "saved" },
   { key: "applied", label: "applied" },
+  { key: "ignored", label: "ignored" },
 ] as const;
 
 type FilterKey = (typeof CHIPS)[number]["key"];
@@ -24,6 +26,7 @@ export function FilterChips({
   newCount,
   savedCount,
   appliedCount,
+  ignoredCount,
 }: FilterChipsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -32,10 +35,11 @@ export function FilterChips({
   const currentFilter = (searchParams.get("filter") ?? "all") as FilterKey;
 
   const counts: Record<FilterKey, number> = {
-    all: allCount,
-    new: newCount,
-    saved: savedCount,
+    all:     allCount,
+    new:     newCount,
+    saved:   savedCount,
     applied: appliedCount,
+    ignored: ignoredCount,
   };
 
   function handleFilterChange(filter: FilterKey) {
@@ -55,6 +59,7 @@ export function FilterChips({
       <div className="flex flex-wrap gap-2" role="group" aria-label="Filter jobs">
         {CHIPS.map(({ key, label }) => {
           const isActive = currentFilter === key;
+          const isIgnored = key === "ignored";
           return (
             <button
               key={key}
@@ -65,7 +70,9 @@ export function FilterChips({
                 "cursor-pointer inline-flex min-h-[36px] items-center rounded-full px-3 py-1 text-sm font-medium transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2",
                 isActive
-                  ? "bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm"
+                  ? isIgnored
+                    ? "bg-[var(--text-muted)] text-[var(--bg-card)] shadow-sm"
+                    : "bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm"
                   : "bg-[var(--bg-card)] text-[var(--text-muted)] ring-1 ring-inset ring-[var(--border)] hover:text-[var(--text)] hover:ring-[var(--border-strong)]",
                 isPending ? "opacity-60 !cursor-wait" : "",
               ]
