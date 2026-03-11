@@ -79,6 +79,26 @@ function SkillChip({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
+function BookmarkIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 interface JobCardProps {
@@ -118,7 +138,6 @@ export function JobCard({
   }
 
   function handleCardClick(e: React.MouseEvent) {
-    // Modifier keys → selection mode, no navigation
     if (e.ctrlKey || e.metaKey || e.shiftKey) {
       e.preventDefault();
       onSelect?.(job.id, e, index);
@@ -160,15 +179,17 @@ export function JobCard({
         (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-card)";
       }}
     >
-      {/* Top row: title + action button (X or ✓) */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
+      {/* Top row: score · title/subtitle/source · bookmark · ×/✓ */}
+      <div className="flex items-start gap-3">
+        {/* Score badge — top left */}
+        <ScoreBadge score={job.aiScore} />
+
+        {/* Title + subtitle + source */}
+        <div className="min-w-0 flex-1">
           <h2 className="text-base font-bold text-[var(--text)]">
             {job.title}{" "}
             <span className="font-normal text-[var(--text-muted)]">@ {job.company}</span>
           </h2>
-
-          {/* Subtitle + source tag */}
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
             {subtitleParts.length > 0 && (
               <span className="text-xs text-[var(--text-muted)]">
@@ -179,47 +200,50 @@ export function JobCard({
           </div>
         </div>
 
-        {/* Ignore (×) or Unignore (✓) button — top right */}
-        {isIgnoredView ? (
-          <button
-            onClick={(e) => { e.stopPropagation(); onUnignore?.(job.id); }}
-            className="cursor-pointer shrink-0 flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-950/50 dark:hover:text-green-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
-            aria-label="Restore this job"
-          >
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 13 13"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+        {/* Action buttons */}
+        <div className="flex shrink-0 items-center gap-0.5">
+          {/* Bookmark — feed view only */}
+          {!isIgnoredView && (
+            <button
+              onClick={handleSave}
+              disabled={savePending}
+              className={[
+                "cursor-pointer flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
+                isSaved
+                  ? "text-[var(--accent)] hover:opacity-70"
+                  : "text-[var(--text-muted)] hover:text-[var(--text)]",
+                savePending ? "opacity-50 !cursor-wait" : "",
+              ].filter(Boolean).join(" ")}
+              aria-label={isSaved ? "Unsave job" : "Save job"}
             >
-              <path d="M1.5 7L5 10.5L11.5 2.5" />
-            </svg>
-          </button>
-        ) : (
-          <button
-            onClick={(e) => { e.stopPropagation(); onIgnore?.(job.id); }}
-            className="cursor-pointer shrink-0 flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/60 dark:hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-            aria-label="Ignore this job"
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              aria-hidden="true"
+              <BookmarkIcon filled={isSaved} />
+            </button>
+          )}
+
+          {/* Ignore (×) or Unignore (✓) */}
+          {isIgnoredView ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); onUnignore?.(job.id); }}
+              className="cursor-pointer flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-950/50 dark:hover:text-green-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+              aria-label="Restore this job"
             >
-              <path d="M1 1l10 10M11 1L1 11" />
-            </svg>
-          </button>
-        )}
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M1.5 7L5 10.5L11.5 2.5" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); onIgnore?.(job.id); }}
+              className="cursor-pointer flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/60 dark:hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+              aria-label="Ignore this job"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <path d="M1 1l10 10M11 1L1 11" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* AI summary */}
@@ -229,9 +253,9 @@ export function JobCard({
         </p>
       )}
 
-      {/* Skills */}
-      {displaySkills.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+      {/* Skills + tailor on the same row */}
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-1.5">
           {displaySkills.map((skill) => (
             <SkillChip key={skill}>{skill}</SkillChip>
           ))}
@@ -239,46 +263,15 @@ export function JobCard({
             <span className="text-xs text-[var(--text-muted)]">+{remainingCount} more</span>
           )}
         </div>
-      )}
-
-      {/* Bottom row: score badge + saved indicator on left, actions on right */}
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <ScoreBadge score={job.aiScore} />
-          {isSaved && !isIgnoredView && (
-            <span className="text-xs text-[var(--text-muted)]">
-              <span className="mr-1 text-[var(--accent)]">•</span>saved
-            </span>
-          )}
-          {isIgnoredView && (
-            <span className="text-xs text-[var(--text-muted)]">hidden</span>
-          )}
-        </div>
 
         {!isIgnoredView && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleSave}
-              disabled={savePending}
-              className={[
-                "cursor-pointer inline-flex min-h-[32px] items-center rounded px-3 py-1 text-xs font-medium transition-colors",
-                "ring-1 ring-inset ring-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--bg-card)] hover:text-[var(--text)] hover:ring-[var(--border-strong)]",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
-                savePending ? "opacity-50 !cursor-wait" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              {isSaved ? "unsave" : "save"}
-            </button>
-            <Link
-              href={`/tailor/${job.id}`}
-              onClick={(e) => e.stopPropagation()}
-              className="cursor-pointer inline-flex min-h-[32px] items-center rounded bg-[var(--accent)] px-3 py-1 text-xs font-medium text-[var(--accent-fg)] transition-all hover:opacity-90 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-            >
-              tailor →
-            </Link>
-          </div>
+          <Link
+            href={`/tailor/${job.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="cursor-pointer shrink-0 inline-flex min-h-[32px] items-center rounded bg-[var(--accent)] px-3 py-1 text-xs font-medium text-[var(--accent-fg)] transition-all hover:opacity-90 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+          >
+            tailor →
+          </Link>
         )}
       </div>
     </article>
