@@ -47,6 +47,7 @@ export function TailorPanel({
   initialTailoredResumeId,
 }: TailorPanelProps) {
   const [markdown, setMarkdown] = useState(initialMarkdown);
+  const [pdfMarkdown, setPdfMarkdown] = useState(initialMarkdown);
   const [tailoredResumeId, setTailoredResumeId] = useState<string | null>(
     initialTailoredResumeId
   );
@@ -55,9 +56,15 @@ export function TailorPanel({
   const [showPreview, setShowPreview] = useState(false);
   const [mobileTab, setMobileTab] = useState<MobileTab>("editor");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pdfTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function handleMarkdownChange(value: string) {
     setMarkdown(value);
+
+    // Debounce PDF re-render to avoid constant flickering while typing
+    if (pdfTimerRef.current) clearTimeout(pdfTimerRef.current);
+    pdfTimerRef.current = setTimeout(() => setPdfMarkdown(value), 1500);
+
     if (!tailoredResumeId) return; // no ID yet — save happens after stream ends
 
     setSaveStatus("saving");
@@ -77,6 +84,7 @@ export function TailorPanel({
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (pdfTimerRef.current) clearTimeout(pdfTimerRef.current);
     };
   }, []);
 
@@ -141,7 +149,7 @@ export function TailorPanel({
         {showPreview && (
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden border-l border-[var(--border)]">
             <PDFPreview
-              markdown={markdown}
+              markdown={pdfMarkdown}
               filename={filename}
               onBack={() => setShowPreview(false)}
               onDownload={handleExportTriggered}
@@ -186,7 +194,7 @@ export function TailorPanel({
           )}
           {mobileTab === "preview" && (
             <PDFPreview
-              markdown={markdown}
+              markdown={pdfMarkdown}
               filename={filename}
               onBack={() => setMobileTab("editor")}
               onDownload={handleExportTriggered}

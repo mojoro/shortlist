@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { AutoSaveIndicator, type SaveStatus } from "@/components/tailor/AutoSaveIndicator";
+import type { ICommand } from "@uiw/react-md-editor";
 
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), {
   ssr: false,
@@ -39,7 +40,31 @@ export function GeneratePane({
   const [streamingText, setStreamingText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [confirmRegenerate, setConfirmRegenerate] = useState(false);
+  const [editorCommands, setEditorCommands] = useState<ICommand[]>([]);
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    import("@uiw/react-md-editor").then((mod) => {
+      const smartLink: ICommand = {
+        ...mod.commands.link,
+        execute(state, api) {
+          const sel = state.selectedText.trim();
+          if (/^https?:\/\//i.test(sel)) {
+            api.replaceSelection(`[${sel}](${sel})`);
+          } else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sel)) {
+            api.replaceSelection(`[${sel}](mailto:${sel})`);
+          } else if (sel) {
+            api.replaceSelection(`[${sel}]()`);
+          } else {
+            api.replaceSelection(`[](url)`);
+          }
+        },
+      };
+      setEditorCommands(
+        mod.commands.getCommands().map((cmd) => (cmd.name === "link" ? smartLink : cmd))
+      );
+    });
+  }, []);
 
   async function handleGenerate() {
     setError(null);
@@ -237,6 +262,7 @@ export function GeneratePane({
           onChange={(v) => onMarkdownChange(v ?? "")}
           height="100%"
           preview="edit"
+          commands={editorCommands.length ? editorCommands : undefined}
         />
       </div>
     </div>
