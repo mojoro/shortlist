@@ -1,24 +1,8 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { ResumePDFDocument } from "@/components/tailor/ResumePDFDocument";
+import { PDFDownloadLink, PDFViewer } from "@react-pdf/renderer";
 
-const PDFViewer = dynamic(
-  () => import("@react-pdf/renderer").then((m) => m.PDFViewer),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
-        Loading preview…
-      </div>
-    ),
-  }
-);
-
-const PDFDownloadLink = dynamic(
-  () => import("@react-pdf/renderer").then((m) => m.PDFDownloadLink),
-  { ssr: false }
-);
 
 interface PDFPreviewProps {
   markdown: string;
