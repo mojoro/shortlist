@@ -73,3 +73,67 @@ export async function ignoreJob(
   });
   revalidatePath("/dashboard");
 }
+
+export async function unignoreJob(
+  jobId: string,
+  profileId: string,
+  restoreStatus: string
+): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const profile = await prisma.profile.findFirst({
+    where: { id: profileId, userId },
+  });
+  if (!profile) throw new Error("Profile not found");
+
+  const validStatuses = ["NEW", "SAVED"] as const;
+  const feedStatus = (validStatuses as readonly string[]).includes(restoreStatus)
+    ? (restoreStatus as "NEW" | "SAVED")
+    : "NEW";
+
+  await prisma.job.update({
+    where: { id: jobId },
+    data: { feedStatus },
+  });
+  revalidatePath("/dashboard");
+}
+
+export async function batchIgnoreJobs(
+  jobIds: string[],
+  profileId: string
+): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const profile = await prisma.profile.findFirst({
+    where: { id: profileId, userId },
+  });
+  if (!profile) throw new Error("Profile not found");
+
+  await prisma.job.updateMany({
+    where: { id: { in: jobIds }, profileId },
+    data: { feedStatus: "ARCHIVED" },
+  });
+  revalidatePath("/dashboard");
+}
+
+export async function batchSaveJobs(
+  jobIds: string[],
+  profileId: string,
+  save: boolean
+): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const profile = await prisma.profile.findFirst({
+    where: { id: profileId, userId },
+  });
+  if (!profile) throw new Error("Profile not found");
+
+  await prisma.job.updateMany({
+    where: { id: { in: jobIds }, profileId },
+    data: { feedStatus: save ? "SAVED" : "NEW" },
+  });
+  revalidatePath("/dashboard");
+}
