@@ -84,9 +84,9 @@ function SkillChip({ children }: { children: React.ReactNode }) {
 function BookmarkIcon({ filled }: { filled: boolean }) {
   return (
     <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
+      width="12"
+      height="17"
+      viewBox="4 2 16 21"
       fill={filled ? "currentColor" : "none"}
       stroke="currentColor"
       strokeWidth="2"
@@ -163,7 +163,7 @@ export function JobCard({
   return (
     <article
       className={[
-        "group rounded-xl border p-5 transition-all duration-200",
+        "group rounded-xl border p-6 transition-all duration-200",
         isSelected
           ? "cursor-default border-[var(--accent)] bg-[var(--accent-muted)]"
           : isIgnoredView
@@ -180,7 +180,7 @@ export function JobCard({
       }}
     >
       {/* Top row: score · title/subtitle/source · bookmark · ×/✓ */}
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-4">
         {/* Score badge — top left */}
         <ScoreBadge score={job.aiScore} />
 
@@ -248,13 +248,13 @@ export function JobCard({
 
       {/* AI summary */}
       {job.aiSummary && (
-        <p className="mt-3 line-clamp-1 text-sm text-[var(--text-muted)]">
+        <p className="mt-4 line-clamp-1 text-sm text-[var(--text-muted)]">
           {job.aiSummary}
         </p>
       )}
 
       {/* Skills + tailor on the same row */}
-      <div className="mt-3 flex items-center justify-between gap-3">
+      <div className="mt-4 flex items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5">
           {displaySkills.map((skill) => (
             <SkillChip key={skill}>{skill}</SkillChip>

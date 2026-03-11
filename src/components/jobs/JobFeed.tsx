@@ -331,7 +331,7 @@ export function JobFeed({
       )}
 
       {/* Job list */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-[18px]">
         {jobs.map((job, index) => (
           <JobCard
             key={job.id}
