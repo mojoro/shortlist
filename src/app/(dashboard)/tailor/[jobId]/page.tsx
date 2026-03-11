@@ -54,6 +54,17 @@ export default async function TailorPage({ params }: Props) {
       jobTitle={job.title}
       jobCompany={job.company}
       jobDescription={job.description}
+      jobUrl={job.url}
+      jobLocation={job.location ?? null}
+      jobLocationType={job.locationType ?? null}
+      jobType={job.jobType ?? null}
+      jobSalary={job.salary ?? null}
+      jobPostedAt={job.postedAt?.toISOString() ?? null}
+      jobSkills={job.skills}
+      aiScore={job.aiScore ?? null}
+      aiSummary={job.aiSummary ?? null}
+      aiMatchPoints={job.aiMatchPoints}
+      aiGapPoints={job.aiGapPoints}
       initialMarkdown={latest?.markdown ?? ""}
       initialTailoredResumeId={latest?.id ?? null}
     />

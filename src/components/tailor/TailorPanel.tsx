@@ -12,6 +12,17 @@ interface TailorPanelProps {
   jobTitle: string;
   jobCompany: string;
   jobDescription: string;
+  jobUrl: string;
+  jobLocation: string | null;
+  jobLocationType: string | null;
+  jobType: string | null;
+  jobSalary: string | null;
+  jobPostedAt: string | null;
+  jobSkills: string[];
+  aiScore: number | null;
+  aiSummary: string | null;
+  aiMatchPoints: string[];
+  aiGapPoints: string[];
   initialMarkdown: string;
   initialTailoredResumeId: string | null;
 }
@@ -21,6 +32,17 @@ export function TailorPanel({
   jobTitle,
   jobCompany,
   jobDescription,
+  jobUrl,
+  jobLocation,
+  jobLocationType,
+  jobType,
+  jobSalary,
+  jobPostedAt,
+  jobSkills,
+  aiScore,
+  aiSummary,
+  aiMatchPoints,
+  aiGapPoints,
   initialMarkdown,
   initialTailoredResumeId,
 }: TailorPanelProps) {
@@ -83,6 +105,17 @@ export function TailorPanel({
           title={jobTitle}
           company={jobCompany}
           description={jobDescription}
+          jobUrl={jobUrl}
+          location={jobLocation}
+          locationType={jobLocationType}
+          jobType={jobType}
+          salary={jobSalary}
+          postedAt={jobPostedAt}
+          skills={jobSkills}
+          aiScore={aiScore}
+          aiSummary={aiSummary}
+          aiMatchPoints={aiMatchPoints}
+          aiGapPoints={aiGapPoints}
           isCollapsed={jdCollapsed}
           onToggleCollapse={() => setJdCollapsed((c) => !c)}
         />
