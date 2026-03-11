@@ -54,3 +54,22 @@ export async function toggleSaveJob(
   });
   revalidatePath("/dashboard");
 }
+
+export async function ignoreJob(
+  jobId: string,
+  profileId: string
+): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const profile = await prisma.profile.findFirst({
+    where: { id: profileId, userId },
+  });
+  if (!profile) throw new Error("Profile not found");
+
+  await prisma.job.update({
+    where: { id: jobId },
+    data: { feedStatus: "ARCHIVED" },
+  });
+  revalidatePath("/dashboard");
+}

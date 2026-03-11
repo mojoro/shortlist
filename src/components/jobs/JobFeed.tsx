@@ -23,6 +23,10 @@ export function JobFeed({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  function handleIgnore(jobId: string) {
+    setJobs((prev) => prev.filter((j) => j.id !== jobId));
+  }
+
   function handleLoadMore() {
     if (!nextCursor) return;
     setError(null);
@@ -55,7 +59,7 @@ export function JobFeed({
     <div>
       <div className="flex flex-col gap-3">
         {jobs.map((job) => (
-          <JobCard key={job.id} job={job} />
+          <JobCard key={job.id} job={job} onIgnore={handleIgnore} />
         ))}
       </div>
 
