@@ -26,24 +26,85 @@ export async function GET() {
     await prisma.profile.deleteMany({ where: { userId } });
   }
 
+  const masterResume = `# John Moorman
+Software Engineer | Next.js & TypeScript Specialist
+Berlin, Germany | +49 176 303 21460 | john@johnmoorman.com
+johnmoorman.com | github.com/mojoro | linkedin.com/in/johnmoorman
+
+## Professional Summary
+
+Software Engineer and former Operatic Performer with a unique blend of disciplined performance and technical expertise. Specialize in creating scalable Next.js and TypeScript applications with a focus on process automation and AI-powered workflow automation. Expert in bridging complex UI requirements with robust DevOps infrastructure.
+
+## Technical Skills
+
+- **Languages:** TypeScript, JavaScript (ES6+), Python, PHP, Bash, HTML5, CSS3/SASS
+- **Frameworks & Libraries:** React 19, Next.js 15, Vue.js, Nuxt, Tailwind CSS, Puppeteer
+- **Backend & Database:** Node.js, REST APIs, Firebase, MongoDB, PostgreSQL
+- **DevOps & Tools:** CI/CD (GitHub Actions), Docker, Linux/UNIX Shell, Vercel/Edge Deployment
+- **Automation:** n8n, Apify, Google Apps Script, Agentic Workflows, Jest
+
+## Professional Experience
+
+### Freelance Software Engineer | Remote / Berlin
+**Serenity Retreat & Various Clients** | 2025 – Present
+
+- Delivered full-stack development and infrastructure support for a wellness retreat: built new pages, redesigned frontend, developed a custom PHP plugin to sync calendar systems, implemented analytics, and set up automated mail merges.
+- Architected and deployed full-stack Next.js and Vue.js applications for multiple clients, supporting 1k+ monthly users.
+- Built an AI-powered real estate data pipeline using n8n and Apify, scraping and structuring property listings for automated analysis.
+- Implemented CI/CD pipelines using GitHub Actions and Docker, reducing deployment times by 30%.
+
+### Software Engineer | Berlin, Germany
+**Berlin Opera Academy** | 2023 – 2025
+
+- Taught myself Google Apps Script from scratch to automate BOA's entire casting and student communication workflow — reducing the administrative team from 4 staff to 2 part-time, cutting an estimated €74,000/year in overhead.
+- Automated student offer letters, payment tracking, and confirmation/reminder/cancellation emails via Apps Script and Google Sheets, replacing manual copy-paste processes across the full student lifecycle.
+- Configured PayPal integration and built a payment reconciliation system tracking incoming payments and triggering automated follow-up emails, contributing to an 18% increase in payment collection.
+- Developed a high-performance responsive website (95/100 Lighthouse score), optimised for Top-3 search rankings on key terms, raising organic traffic by 8%.
+
+## Education
+
+**Bachelor of Music, Vocal Performance** | Boston Conservatory at Berklee | 2017 – 2022
+3.84 GPA. Studied music, languages, and anatomy; performed leading operatic roles.
+
+## Languages
+
+English (C2), German (B2)`;
+
   // Create profile
   const profile = await prisma.profile.create({
     data: {
       userId,
-      name: "Frontend Engineer — Berlin",
+      name: "Software Engineer — Berlin",
       isActive: true,
       onboardingCompletedAt: new Date(),
-      targetRoles: ["Frontend Engineer", "Fullstack Engineer", "React Developer"],
+      // Candidate identity
+      displayName: "John Moorman",
+      email: "john@johnmoorman.com",
+      location: "Berlin, Germany",
+      portfolioUrl: "https://johnmoorman.com",
+      githubUrl: "https://github.com/mojoro",
+      linkedinUrl: "https://linkedin.com/in/johnmoorman",
+      skills: [
+        "TypeScript", "JavaScript", "Python", "PHP", "Bash",
+        "React", "Next.js", "Vue.js", "Nuxt", "Tailwind CSS", "Puppeteer",
+        "Node.js", "REST APIs", "Firebase", "MongoDB", "PostgreSQL",
+        "GitHub Actions", "Docker", "Vercel", "CI/CD",
+        "n8n", "Apify", "Google Apps Script", "Jest",
+        "HTML5", "CSS3",
+      ],
+      masterResume,
+      curriculumVitae: masterResume,
+      // Job search criteria
+      targetRoles: ["Software Engineer", "Frontend Engineer", "Fullstack Engineer"],
       targetLocations: ["Berlin", "Remote"],
       currency: "EUR",
       targetSalaryMin: 70000,
       targetSalaryMax: 110000,
       requiredSkills: ["TypeScript", "React", "Next.js"],
-      niceToHaveSkills: ["GraphQL", "PostgreSQL", "AWS"],
-      excludedKeywords: ["10+ years", "C++", "COBOL"],
+      niceToHaveSkills: ["PostgreSQL", "Python", "AI/ML tooling"],
+      excludedKeywords: ["10+ years", "C++", "COBOL", "Java"],
       remotePreference: "HYBRID_OK",
       scraperSources: ["GREENHOUSE", "LEVER", "ASHBY"],
-      masterResume: `# Jane Doe\njane@example.com · Berlin, Germany · github.com/janedoe\n\n## Summary\nFrontend engineer with 5 years building React applications at scale. Strong TypeScript and Next.js background. Passionate about developer experience and accessible interfaces.\n\n## Experience\n\n### Senior Frontend Engineer — Acme Corp (2022–present)\n- Led migration from CRA to Next.js 14, cutting build times by 60%\n- Built design system used across 4 product teams\n- Mentored 3 junior engineers\n\n### Frontend Engineer — Beta Co (2019–2022)\n- Owned the customer-facing dashboard (React, Redux, REST)\n- Reduced bundle size by 40% through code splitting\n\n## Skills\nTypeScript, React, Next.js, Node.js, PostgreSQL, GraphQL, Tailwind CSS, Figma\n\n## Education\nB.Sc. Computer Science — TU Berlin, 2019`,
     },
   });
 
