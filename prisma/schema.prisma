@@ -69,6 +69,17 @@ model Profile {
   masterResume     String?   // Markdown — the base resume for this profile
   resumeLastEdited DateTime?
 
+  // Comprehensive candidate profile (used by tailor feature)
+  curriculumVitae  String?   // Full CV — all experience, all skills, everything (markdown)
+  displayName      String?   // Full name as it should appear on resume/applications
+  email            String?   // Contact email for applications (may differ from Clerk login email)
+  phone            String?   // Contact phone number
+  location         String?   // Current location e.g. "Berlin, Germany"
+  linkedinUrl      String?   // LinkedIn profile URL
+  portfolioUrl     String?   // Portfolio / personal site URL
+  githubUrl        String?   // GitHub profile URL
+  skills           String[]  // All skills the candidate has (not search criteria — the full list)
+
   // Scraping config
   scraperEnabled   Boolean   @default(true)
   scraperSources   ScraperSource[]
