@@ -7,9 +7,9 @@ import { useTheme } from "next-themes";
 import { APP_CONFIG } from "@/config/app";
 
 const NAV_TABS = [
-  { label: "Feed", href: "/dashboard", active: true },
-  { label: "Detail", href: "/jobs", active: false },
-  { label: "Tailor", href: "/tailor", active: false },
+  { label: "Feed",   href: "/dashboard", matchPath: "/dashboard", active: true },
+  { label: "Detail", href: "/dashboard", matchPath: "/jobs",      active: true },
+  { label: "Tailor", href: "/tailor",    matchPath: "/tailor",    active: false },
 ] as const;
 
 export function AppNav() {
@@ -44,8 +44,8 @@ export function AppNav() {
           className="flex items-center gap-0.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-0.5"
           aria-label="Main navigation"
         >
-          {NAV_TABS.map(({ label, href, active }) => {
-            const isCurrent = active && pathname.startsWith(href);
+          {NAV_TABS.map(({ label, href, matchPath, active }) => {
+            const isCurrent = active && pathname.startsWith(matchPath);
             if (!active) {
               return (
                 <span
