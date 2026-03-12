@@ -4,25 +4,21 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useTransition } from "react";
-import { useTheme } from "next-themes";
 import { ScoreBadge } from "@/components/jobs/ScoreBadge";
 import { toggleSaveJob } from "@/app/(dashboard)/dashboard/actions";
 import type { JobWithApplication } from "@/types";
 
 // ─── Source tag styles (light + dark variants) ───────────────────────────────
 
-const SOURCE_TAG_STYLES: Record<
-  string,
-  { lightBg: string; lightColor: string; darkBg: string; darkColor: string }
-> = {
-  GREENHOUSE:          { lightBg: "#dbeafe", lightColor: "#1d4ed8", darkBg: "#1a2744", darkColor: "#93c5fd" },
-  LEVER:               { lightBg: "#dbeafe", lightColor: "#1d4ed8", darkBg: "#1a2744", darkColor: "#93c5fd" },
-  ASHBY:               { lightBg: "#dbeafe", lightColor: "#1d4ed8", darkBg: "#1a2744", darkColor: "#93c5fd" },
-  LINKEDIN:            { lightBg: "#eff6ff", lightColor: "#1e40af", darkBg: "#172236", darkColor: "#60a5fa" },
-  BERLIN_STARTUP_JOBS: { lightBg: "#f3e8ff", lightColor: "#6d28d9", darkBg: "#1e1a2e", darkColor: "#c4b5fd" },
-  HONEYPOT:            { lightBg: "#fdf4ff", lightColor: "#a21caf", darkBg: "#2a1a2e", darkColor: "#e879f9" },
-  YC_JOBS:             { lightBg: "#fff7ed", lightColor: "#c2410c", darkBg: "#2a1a0e", darkColor: "#fb923c" },
-  NO_FLUFF_JOBS:       { lightBg: "#f0fdf4", lightColor: "#15803d", darkBg: "#1a2e1a", darkColor: "#86efac" },
+const SOURCE_TAG_CLASSES: Record<string, string> = {
+  GREENHOUSE:          "bg-[#dbeafe] text-[#1d4ed8] dark:bg-[#1a2744] dark:text-[#93c5fd]",
+  LEVER:               "bg-[#dbeafe] text-[#1d4ed8] dark:bg-[#1a2744] dark:text-[#93c5fd]",
+  ASHBY:               "bg-[#dbeafe] text-[#1d4ed8] dark:bg-[#1a2744] dark:text-[#93c5fd]",
+  LINKEDIN:            "bg-[#eff6ff] text-[#1e40af] dark:bg-[#172236] dark:text-[#60a5fa]",
+  BERLIN_STARTUP_JOBS: "bg-[#f3e8ff] text-[#6d28d9] dark:bg-[#1e1a2e] dark:text-[#c4b5fd]",
+  HONEYPOT:            "bg-[#fdf4ff] text-[#a21caf] dark:bg-[#2a1a2e] dark:text-[#e879f9]",
+  YC_JOBS:             "bg-[#fff7ed] text-[#c2410c] dark:bg-[#2a1a0e] dark:text-[#fb923c]",
+  NO_FLUFF_JOBS:       "bg-[#f0fdf4] text-[#15803d] dark:bg-[#1a2e1a] dark:text-[#86efac]",
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -47,25 +43,13 @@ const LOCATION_TYPE_LABELS: Record<string, string> = {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SourceTag({ source }: { source: string }) {
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
-  const style = SOURCE_TAG_STYLES[source];
+  const classes = SOURCE_TAG_CLASSES[source];
   const label = SOURCE_LABELS[source] ?? source;
 
-  if (style) {
-    const bg = isDark ? style.darkBg : style.lightBg;
-    const color = isDark ? style.darkColor : style.lightColor;
-    return (
-      <span
-        className="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium"
-        style={{ backgroundColor: bg, color }}
-      >
-        {label}
-      </span>
-    );
-  }
   return (
-    <span className="inline-flex items-center rounded bg-[var(--bg-subtle)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-muted)]">
+    <span
+      className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ${classes ?? "bg-[var(--bg-subtle)] text-[var(--text-muted)]"}`}
+    >
       {label}
     </span>
   );
