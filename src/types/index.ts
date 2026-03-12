@@ -10,6 +10,16 @@ export type JobWithApplication = Job & {
 };
 
 /**
+ * Editable fields managed by PipelineTable and passed down to ApplicationDrawer.
+ */
+export type FieldOverrides = {
+  notes:          string;
+  followUpAt:     string; // "yyyy-MM-dd" or ""
+  recruiterName:  string;
+  recruiterEmail: string;
+};
+
+/**
  * A full application with its job fields — used by the pipeline table and drawer.
  */
 export type ApplicationWithJob = Prisma.ApplicationGetPayload<{

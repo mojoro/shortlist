@@ -4,74 +4,44 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import type { ApplicationStatus } from "@prisma/client";
-import type { ApplicationWithJob } from "@/types";
+import type { ApplicationWithJob, FieldOverrides } from "@/types";
 import { StatusSelect } from "@/components/pipeline/StatusSelect";
-import { updateApplicationDetail } from "@/app/(dashboard)/pipeline/actions";
 
 interface ApplicationDrawerProps {
   application: ApplicationWithJob;
+  fields: FieldOverrides;
+  onFieldChange: (field: keyof FieldOverrides, value: string) => void;
   onClose: () => void;
   onStatusChange: (applicationId: string, status: ApplicationStatus) => void;
 }
 
-type SaveStatus = "saving" | "saved" | "error";
-
 export function ApplicationDrawer({
   application,
+  fields,
+  onFieldChange,
   onClose,
   onStatusChange,
 }: ApplicationDrawerProps) {
-  const [notes, setNotes] = useState(application.notes ?? "");
-  const [followUpAt, setFollowUpAt] = useState(
-    application.followUpAt
-      ? format(new Date(application.followUpAt), "yyyy-MM-dd")
-      : ""
-  );
-  const [recruiterName, setRecruiterName] = useState(
-    application.recruiterName ?? ""
-  );
-  const [recruiterEmail, setRecruiterEmail] = useState(
-    application.recruiterEmail ?? ""
-  );
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+  // Visual save feedback — shows "Saving…" briefly after any field edit
+  const [showSaving, setShowSaving] = useState(false);
+  const savingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Re-initialize when a different application is opened
+  // Reset saving indicator when a different application is opened
   useEffect(() => {
-    setNotes(application.notes ?? "");
-    setFollowUpAt(
-      application.followUpAt
-        ? format(new Date(application.followUpAt), "yyyy-MM-dd")
-        : ""
-    );
-    setRecruiterName(application.recruiterName ?? "");
-    setRecruiterEmail(application.recruiterEmail ?? "");
-    setSaveStatus("saved");
-  }, [application.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    setShowSaving(false);
+  }, [application.id]);
 
   useEffect(() => {
     return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (savingTimerRef.current) clearTimeout(savingTimerRef.current);
     };
   }, []);
 
-  function scheduleAutoSave(patch: {
-    notes?: string;
-    followUpAt?: string | null;
-    recruiterName?: string | null;
-    recruiterEmail?: string | null;
-  }) {
-    setSaveStatus("saving");
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(async () => {
-      try {
-        await updateApplicationDetail(application.id, patch);
-        setSaveStatus("saved");
-      } catch {
-        setSaveStatus("error");
-      }
-    }, 1500);
+  function handleChange(field: keyof FieldOverrides, value: string) {
+    onFieldChange(field, value);
+    setShowSaving(true);
+    if (savingTimerRef.current) clearTimeout(savingTimerRef.current);
+    savingTimerRef.current = setTimeout(() => setShowSaving(false), 2000);
   }
 
   const keyDates: { label: string; value: Date | null }[] = [
@@ -108,7 +78,7 @@ export function ApplicationDrawer({
           </div>
           <button
             onClick={onClose}
-            className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+            className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]]"
             aria-label="Close panel"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -140,11 +110,8 @@ export function ApplicationDrawer({
             </label>
             <textarea
               id="app-notes"
-              value={notes}
-              onChange={(e) => {
-                setNotes(e.target.value);
-                scheduleAutoSave({ notes: e.target.value });
-              }}
+              value={fields.notes}
+              onChange={(e) => handleChange("notes", e.target.value)}
               rows={5}
               placeholder="Add notes about this application…"
               className="w-full resize-y rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
@@ -159,19 +126,13 @@ export function ApplicationDrawer({
             <div className="flex items-center gap-2">
               <input
                 type="date"
-                value={followUpAt}
-                onChange={(e) => {
-                  setFollowUpAt(e.target.value);
-                  scheduleAutoSave({ followUpAt: e.target.value || null });
-                }}
+                value={fields.followUpAt}
+                onChange={(e) => handleChange("followUpAt", e.target.value)}
                 className="min-h-[36px] rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
               />
-              {followUpAt && (
+              {fields.followUpAt && (
                 <button
-                  onClick={() => {
-                    setFollowUpAt("");
-                    scheduleAutoSave({ followUpAt: null });
-                  }}
+                  onClick={() => handleChange("followUpAt", "")}
                   className="text-xs text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded"
                 >
                   Clear
@@ -195,11 +156,8 @@ export function ApplicationDrawer({
               <input
                 id="recruiter-name"
                 type="text"
-                value={recruiterName}
-                onChange={(e) => {
-                  setRecruiterName(e.target.value);
-                  scheduleAutoSave({ recruiterName: e.target.value || null });
-                }}
+                value={fields.recruiterName}
+                onChange={(e) => handleChange("recruiterName", e.target.value)}
                 placeholder="e.g. Jane Smith"
                 className="w-full min-h-[36px] rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
               />
@@ -214,11 +172,8 @@ export function ApplicationDrawer({
               <input
                 id="recruiter-email"
                 type="email"
-                value={recruiterEmail}
-                onChange={(e) => {
-                  setRecruiterEmail(e.target.value);
-                  scheduleAutoSave({ recruiterEmail: e.target.value || null });
-                }}
+                value={fields.recruiterEmail}
+                onChange={(e) => handleChange("recruiterEmail", e.target.value)}
                 placeholder="e.g. jane@company.com"
                 className="w-full min-h-[36px] rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
               />
@@ -274,13 +229,7 @@ export function ApplicationDrawer({
         {/* Save indicator */}
         <div className="shrink-0 border-t border-[var(--border)] px-5 py-3">
           <p className="text-xs text-[var(--text-muted)]">
-            {saveStatus === "saving" && "Saving…"}
-            {saveStatus === "saved" && "All changes saved"}
-            {saveStatus === "error" && (
-              <span className="text-red-500 dark:text-red-400">
-                Couldn&apos;t save — check your connection
-              </span>
-            )}
+            {showSaving ? "Saving…" : "All changes saved"}
           </p>
         </div>
       </aside>

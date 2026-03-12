@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, useOptimistic, useTransition } from "react";
-import Link from "next/link";
+import { useState, useOptimistic, useTransition, useRef } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import type { ApplicationStatus } from "@prisma/client";
-import type { ApplicationWithJob } from "@/types";
+import type { ApplicationWithJob, FieldOverrides } from "@/types";
 import { StatusSelect } from "@/components/pipeline/StatusSelect";
 import { ApplicationDrawer } from "@/components/pipeline/ApplicationDrawer";
-import { updateApplicationStatus } from "@/app/(dashboard)/pipeline/actions";
+import { ResumePDFModal } from "@/components/pipeline/ResumePDFModal";
+import {
+  updateApplicationStatus,
+  updateApplicationDetail,
+} from "@/app/(dashboard)/pipeline/actions";
 
 interface PipelineTableProps {
   activeApplications: ApplicationWithJob[];
@@ -30,14 +33,22 @@ const STATUS_LABELS: Record<ApplicationStatus, string> = {
   GHOSTED:      "Ghosted",
 };
 
-function getFollowUpClass(followUpAt: Date | null, status: ApplicationStatus): string {
-  if (!followUpAt || TERMINAL_STATUSES.has(status)) return "text-[var(--text-muted)]";
+function getDefaultFields(app: ApplicationWithJob): FieldOverrides {
+  return {
+    notes:          app.notes ?? "",
+    followUpAt:     app.followUpAt
+      ? format(new Date(app.followUpAt), "yyyy-MM-dd")
+      : "",
+    recruiterName:  app.recruiterName ?? "",
+    recruiterEmail: app.recruiterEmail ?? "",
+  };
+}
 
+function getFollowUpClass(followUpStr: string, status: ApplicationStatus): string {
+  if (!followUpStr || TERMINAL_STATUSES.has(status)) return "text-[var(--text-muted)]";
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const due = new Date(followUpAt);
-  due.setHours(0, 0, 0, 0);
-
+  const due = new Date(followUpStr + "T00:00:00");
   if (due < today) return "text-red-600 font-medium dark:text-red-400";
   if (due.getTime() === today.getTime()) return "text-amber-600 font-medium dark:text-amber-400";
   return "text-[var(--text)]";
@@ -62,8 +73,28 @@ export function PipelineTable({
 }: PipelineTableProps) {
   const [activeTab, setActiveTab] = useState<"active" | "closed">("active");
   const [openDrawerAppId, setOpenDrawerAppId] = useState<string | null>(null);
+  const [pdfPreviewFor, setPdfPreviewFor] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [editingNotesFor, setEditingNotesFor] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // Field overrides: display state for editable fields, keyed by appId
+  const [fieldOverrides, setFieldOverrides] = useState<Map<string, FieldOverrides>>(new Map());
+  // Pending saves: latest values for debounce callback (avoids stale closure)
+  const pendingSaves = useRef<Map<string, FieldOverrides>>(new Map());
+  const saveTimers   = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  // Terminal overrides: shown in UI while undo toast is active
+  const [terminalOverrides, setTerminalOverrides] = useState<Map<string, ApplicationStatus>>(new Map());
+
+  // Undo toast state
+  const [undoState, setUndoState] = useState<{
+    applicationId:  string;
+    previousStatus: ApplicationStatus;
+    newStatus:      ApplicationStatus;
+    label:          string;
+    timeoutId:      ReturnType<typeof setTimeout>;
+  } | null>(null);
 
   const [optimisticApps, applyOptimisticUpdate] = useOptimistic(
     [...activeApplications, ...closedApplications],
@@ -73,31 +104,144 @@ export function PipelineTable({
     ) => state.map((a) => (a.id === update.id ? { ...a, status: update.status } : a))
   );
 
-  const displayedActive = optimisticApps.filter(
-    (a) => !TERMINAL_STATUSES.has(a.status)
+  // Apply terminal overrides on top of optimistic apps
+  const displayApps = optimisticApps.map((a) =>
+    terminalOverrides.has(a.id) ? { ...a, status: terminalOverrides.get(a.id)! } : a
   );
-  const displayedClosed = optimisticApps.filter((a) =>
-    TERMINAL_STATUSES.has(a.status)
-  );
+
+  const displayedActive = displayApps.filter((a) => !TERMINAL_STATUSES.has(a.status));
+  const displayedClosed = displayApps.filter((a) => TERMINAL_STATUSES.has(a.status));
 
   const openDrawerApp =
     openDrawerAppId != null
-      ? optimisticApps.find((a) => a.id === openDrawerAppId) ?? null
+      ? displayApps.find((a) => a.id === openDrawerAppId) ?? null
       : null;
 
-  function handleStatusChange(applicationId: string, newStatus: ApplicationStatus) {
-    if (TERMINAL_STATUSES.has(newStatus)) {
-      const confirmed = window.confirm(
-        `Move this application to "${STATUS_LABELS[newStatus]}"? This will close it.`
-      );
-      if (!confirmed) return;
-    }
+  const pdfPreviewApp =
+    pdfPreviewFor != null
+      ? displayApps.find((a) => a.id === pdfPreviewFor) ?? null
+      : null;
 
+  function getFields(app: ApplicationWithJob): FieldOverrides {
+    return fieldOverrides.get(app.id) ?? getDefaultFields(app);
+  }
+
+  function handleFieldChange(appId: string, field: keyof FieldOverrides, value: string) {
+    const app = optimisticApps.find((a) => a.id === appId);
+    const defaults = app ? getDefaultFields(app) : { notes: "", followUpAt: "", recruiterName: "", recruiterEmail: "" };
+
+    setFieldOverrides((prev) => {
+      const next = new Map(prev);
+      const current = prev.get(appId) ?? defaults;
+      next.set(appId, { ...current, [field]: value });
+      return next;
+    });
+
+    const currentPending = pendingSaves.current.get(appId) ?? defaults;
+    pendingSaves.current.set(appId, { ...currentPending, [field]: value });
+
+    const existing = saveTimers.current.get(appId);
+    if (existing) clearTimeout(existing);
+
+    const timer = setTimeout(async () => {
+      saveTimers.current.delete(appId);
+      const fields = pendingSaves.current.get(appId);
+      if (!fields) return;
+      await updateApplicationDetail(appId, {
+        notes:          fields.notes || undefined,
+        followUpAt:     fields.followUpAt || null,
+        recruiterName:  fields.recruiterName || null,
+        recruiterEmail: fields.recruiterEmail || null,
+      });
+    }, 1500);
+
+    saveTimers.current.set(appId, timer);
+  }
+
+  function handleStatusChange(applicationId: string, newStatus: ApplicationStatus) {
+    const app = displayApps.find((a) => a.id === applicationId);
+    if (!app) return;
+    const previousStatus = app.status;
+
+    if (TERMINAL_STATUSES.has(newStatus)) {
+      // Dismiss any existing undo toast — fire its server action immediately
+      if (undoState) {
+        clearTimeout(undoState.timeoutId);
+        const { applicationId: prevId, newStatus: prevNew } = undoState;
+        setTerminalOverrides((prev) => {
+          const next = new Map(prev);
+          next.delete(prevId);
+          return next;
+        });
+        setUndoState(null);
+        startTransition(async () => {
+          await updateApplicationStatus(prevId, prevNew).catch(() => {});
+        });
+      }
+
+      // Apply terminal override for immediate UI update
+      setTerminalOverrides((prev) => new Map(prev).set(applicationId, newStatus));
+
+      const timeoutId = setTimeout(async () => {
+        setUndoState(null);
+        setTerminalOverrides((prev) => {
+          const next = new Map(prev);
+          next.delete(applicationId);
+          return next;
+        });
+        try {
+          await updateApplicationStatus(applicationId, newStatus);
+        } catch {
+          setErrorMessage("Couldn't update status. Please try again.");
+          setTimeout(() => setErrorMessage(null), 4000);
+        }
+      }, 5000);
+
+      setUndoState({
+        applicationId,
+        previousStatus,
+        newStatus,
+        label: STATUS_LABELS[newStatus],
+        timeoutId,
+      });
+    } else {
+      startTransition(async () => {
+        applyOptimisticUpdate({ id: applicationId, status: newStatus });
+        try {
+          await updateApplicationStatus(applicationId, newStatus);
+          setErrorMessage(null);
+        } catch {
+          setErrorMessage("Couldn't update status. Please try again.");
+          setTimeout(() => setErrorMessage(null), 4000);
+        }
+      });
+    }
+  }
+
+  function handleUndo() {
+    if (!undoState) return;
+    clearTimeout(undoState.timeoutId);
+    setTerminalOverrides((prev) => {
+      const next = new Map(prev);
+      next.delete(undoState.applicationId);
+      return next;
+    });
+    setUndoState(null);
+  }
+
+  function handleUndoDismiss() {
+    if (!undoState) return;
+    clearTimeout(undoState.timeoutId);
+    const { applicationId, newStatus } = undoState;
+    setTerminalOverrides((prev) => {
+      const next = new Map(prev);
+      next.delete(applicationId);
+      return next;
+    });
+    setUndoState(null);
     startTransition(async () => {
-      applyOptimisticUpdate({ id: applicationId, status: newStatus });
       try {
         await updateApplicationStatus(applicationId, newStatus);
-        setErrorMessage(null);
       } catch {
         setErrorMessage("Couldn't update status. Please try again.");
         setTimeout(() => setErrorMessage(null), 4000);
@@ -108,8 +252,8 @@ export function PipelineTable({
   const rows = activeTab === "active" ? displayedActive : displayedClosed;
 
   const TAB_STYLES = {
-    active: "rounded-md px-3 py-1.5 text-xs font-medium transition-all",
-    selected: "bg-[var(--bg-card)] text-[var(--text)] shadow-sm ring-1 ring-inset ring-[var(--border)]",
+    active:     "rounded-md px-3 py-1.5 text-xs font-medium transition-all",
+    selected:   "bg-[var(--bg-card)] text-[var(--text)] shadow-sm ring-1 ring-inset ring-[var(--border)]",
     unselected: "text-[var(--text-muted)] hover:text-[var(--text)]",
   };
 
@@ -162,7 +306,7 @@ export function PipelineTable({
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)]">
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                  <th className="sticky left-0 z-10 bg-[var(--bg-card)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] w-[140px] max-w-[140px]">
                     Job
                   </th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
@@ -186,90 +330,170 @@ export function PipelineTable({
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                     Score
                   </th>
+                  <th className="sm:hidden w-6" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
-                {rows.map((app) => (
-                  <tr
-                    key={app.id}
-                    onClick={() => setOpenDrawerAppId(app.id)}
-                    className={[
-                      "cursor-pointer transition-colors hover:bg-[var(--bg)]",
-                      openDrawerAppId === app.id ? "bg-[var(--bg)]" : "",
-                      isPending ? "opacity-70" : "",
-                    ].join(" ")}
-                  >
-                    {/* Job */}
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/jobs/${app.job.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="font-medium text-[var(--text)] hover:text-[var(--accent)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded"
-                      >
-                        {app.job.title}
-                      </Link>
-                      <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                        {app.job.company}
-                      </p>
-                    </td>
+                {rows.map((app) => {
+                  const fields = getFields(app);
+                  return (
+                    <tr
+                      key={app.id}
+                      onClick={() => setOpenDrawerAppId(app.id)}
+                      className={[
+                        "cursor-pointer transition-colors hover:bg-[var(--bg)] active:bg-[var(--bg)]",
+                        openDrawerAppId === app.id ? "bg-[var(--bg)]" : "",
+                        isPending ? "opacity-70" : "",
+                      ].join(" ")}
+                    >
+                      {/* Job — sticky left column */}
+                      <td className="sticky left-0 z-10 bg-[var(--bg-card)] px-4 py-3 w-[140px] max-w-[140px]">
+                        <div className="truncate font-medium text-[var(--text)]">
+                          {app.job.title}
+                        </div>
+                        <div className="mt-0.5 truncate text-xs text-[var(--text-muted)]">
+                          {app.job.company}
+                        </div>
+                      </td>
 
-                    {/* Status */}
-                    <td className="px-4 py-3">
-                      <StatusSelect
-                        value={app.status}
-                        onChange={(s) => handleStatusChange(app.id, s)}
-                        disabled={isPending}
-                      />
-                    </td>
+                      {/* Status */}
+                      <td className="px-4 py-3">
+                        <StatusSelect
+                          value={app.status}
+                          onChange={(s) => handleStatusChange(app.id, s)}
+                          disabled={isPending}
+                        />
+                      </td>
 
-                    {/* Applied date */}
-                    <td className="px-4 py-3 text-xs text-[var(--text-muted)] hidden sm:table-cell">
-                      {app.appliedAt ? (
-                        <span title={format(new Date(app.appliedAt), "MMM d, yyyy")}>
-                          {formatDistanceToNow(new Date(app.appliedAt), { addSuffix: true })}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-
-                    {/* Follow-up or Closed date */}
-                    {activeTab === "active" ? (
-                      <td className="px-4 py-3 text-xs hidden md:table-cell">
-                        {app.followUpAt ? (
-                          <span
-                            className={getFollowUpClass(app.followUpAt, app.status)}
-                            title={format(new Date(app.followUpAt), "MMM d, yyyy")}
-                          >
-                            {format(new Date(app.followUpAt), "MMM d")}
+                      {/* Applied date */}
+                      <td className="px-4 py-3 text-xs text-[var(--text-muted)] hidden sm:table-cell">
+                        {app.appliedAt ? (
+                          <span title={format(new Date(app.appliedAt), "MMM d, yyyy")}>
+                            {formatDistanceToNow(new Date(app.appliedAt), { addSuffix: true })}
                           </span>
                         ) : (
-                          <span className="text-[var(--text-muted)]">—</span>
+                          "—"
                         )}
                       </td>
-                    ) : (
-                      <td className="px-4 py-3 text-xs text-[var(--text-muted)] hidden sm:table-cell">
-                        {app.decisionAt
-                          ? format(new Date(app.decisionAt), "MMM d, yyyy")
-                          : app.statusUpdatedAt
-                          ? format(new Date(app.statusUpdatedAt), "MMM d, yyyy")
-                          : "—"}
+
+                      {/* Follow-up (inline date input) or Closed date */}
+                      {activeTab === "active" ? (
+                        <td
+                          className="px-4 py-3 text-xs hidden md:table-cell"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="date"
+                            value={fields.followUpAt}
+                            onChange={(e) =>
+                              handleFieldChange(app.id, "followUpAt", e.target.value)
+                            }
+                            className={[
+                              "rounded border border-transparent bg-transparent px-1 py-0.5 text-xs",
+                              "focus:border-[var(--border)] focus:bg-[var(--bg)]",
+                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
+                              getFollowUpClass(fields.followUpAt, app.status),
+                            ].join(" ")}
+                          />
+                        </td>
+                      ) : (
+                        <td className="px-4 py-3 text-xs text-[var(--text-muted)] hidden sm:table-cell">
+                          {app.decisionAt
+                            ? format(new Date(app.decisionAt), "MMM d, yyyy")
+                            : app.statusUpdatedAt
+                            ? format(new Date(app.statusUpdatedAt), "MMM d, yyyy")
+                            : "—"}
+                        </td>
+                      )}
+
+                      {/* Notes — click-to-edit */}
+                      <td
+                        className="px-4 py-3 text-xs hidden lg:table-cell max-w-[180px]"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {editingNotesFor === app.id ? (
+                          <textarea
+                            autoFocus
+                            value={fields.notes}
+                            onChange={(e) =>
+                              handleFieldChange(app.id, "notes", e.target.value)
+                            }
+                            onBlur={() => setEditingNotesFor(null)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Escape") setEditingNotesFor(null);
+                            }}
+                            rows={3}
+                            className="w-full resize-none rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-xs text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                          />
+                        ) : (
+                          <button
+                            onClick={() => setEditingNotesFor(app.id)}
+                            className="group flex w-full items-center gap-1 text-left text-[var(--text-muted)] hover:text-[var(--text)]"
+                          >
+                            <span className="block flex-1 truncate">
+                              {fields.notes ? fields.notes.slice(0, 60) : "—"}
+                            </span>
+                            <svg
+                              width="11"
+                              height="11"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                              aria-hidden="true"
+                            >
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                          </button>
+                        )}
                       </td>
-                    )}
 
-                    {/* Notes preview */}
-                    <td className="px-4 py-3 text-xs text-[var(--text-muted)] hidden lg:table-cell max-w-[180px]">
-                      <span className="block truncate">
-                        {app.notes ? app.notes.slice(0, 60) : "—"}
-                      </span>
-                    </td>
+                      {/* Score + PDF icon */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <ScorePill score={app.job.aiScore} />
+                          {app.exportedResumeMarkdown && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPdfPreviewFor(app.id);
+                              }}
+                              title="View exported resume"
+                              className="text-[var(--text-muted)] hover:text-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded"
+                            >
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden="true"
+                              >
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                                <line x1="16" y1="13" x2="8" y2="13" />
+                                <line x1="16" y1="17" x2="8" y2="17" />
+                                <polyline points="10 9 9 9 8 9" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </td>
 
-                    {/* Score */}
-                    <td className="px-4 py-3">
-                      <ScorePill score={app.job.aiScore} />
-                    </td>
-                  </tr>
-                ))}
+                      {/* Mobile tap indicator */}
+                      <td className="pr-3 text-base text-[var(--text-muted)] sm:hidden">
+                        ›
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -283,12 +507,48 @@ export function PipelineTable({
         </div>
       )}
 
+      {/* Undo toast */}
+      {undoState && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-2.5 text-sm shadow-lg">
+          <span className="text-[var(--text)]">
+            Moved to <strong>{undoState.label}</strong>
+          </span>
+          <button
+            onClick={handleUndo}
+            className="font-semibold text-[var(--accent)] hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded"
+          >
+            Undo
+          </button>
+          <button
+            onClick={handleUndoDismiss}
+            className="text-[var(--text-muted)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded"
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Drawer */}
       {openDrawerApp && (
         <ApplicationDrawer
           application={openDrawerApp}
+          fields={getFields(openDrawerApp)}
+          onFieldChange={(field, value) =>
+            handleFieldChange(openDrawerApp.id, field, value)
+          }
           onClose={() => setOpenDrawerAppId(null)}
           onStatusChange={handleStatusChange}
+        />
+      )}
+
+      {/* PDF Preview Modal */}
+      {pdfPreviewApp?.exportedResumeMarkdown && (
+        <ResumePDFModal
+          markdown={pdfPreviewApp.exportedResumeMarkdown}
+          jobTitle={pdfPreviewApp.job.title}
+          company={pdfPreviewApp.job.company}
+          onClose={() => setPdfPreviewFor(null)}
         />
       )}
     </>
