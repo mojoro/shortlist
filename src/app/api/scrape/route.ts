@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { env } from "@/env";
 import { scrapeGreenhouse } from "@/lib/scrapers/greenhouse";
-import { normalizeGreenhouse } from "@/lib/normalize";
+import { normalizeGreenhouseForPool } from "@/lib/normalize";
+import { jobMatchesProfile, MAX_CANDIDATES_PER_RUN } from "@/lib/match";
 
 export const maxDuration = 60;
 
@@ -11,75 +12,140 @@ export async function POST(req: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  const startMs = Date.now();
+
+  // ── POOL LAYER ────────────────────────────────────────────────────────────
+  // Scrape all sources once into the global JobPool. No profile association.
+
+  let poolNew = 0;
+  let rawCount = 0;
+  let poolScrapeStatus: "SUCCESS" | "PARTIAL" | "FAILED" = "SUCCESS";
+  let poolErrorMessage: string | undefined;
+
+  try {
+    const rawJobs = await scrapeGreenhouse("_global");
+    rawCount = rawJobs.length;
+
+    const poolData = rawJobs.map((r) =>
+      normalizeGreenhouseForPool(r.raw, r.slug, r.companyName),
+    );
+
+    const { count } = await prisma.jobPool.createMany({
+      data:           poolData,
+      skipDuplicates: true,
+    });
+    poolNew = count;
+  } catch (err) {
+    console.error("[/api/scrape] Pool scrape failed:", err);
+    poolScrapeStatus = "FAILED";
+    poolErrorMessage = err instanceof Error ? err.message : String(err);
+  }
+
+  // Log the pool-level run (profileId: null)
+  await prisma.scrapeRun.create({
+    data: {
+      profileId:    null,
+      source:       "GREENHOUSE",
+      status:       poolScrapeStatus,
+      jobsFound:    rawCount,
+      jobsInPool:   poolNew,
+      errorMessage: poolErrorMessage,
+      durationMs:   Date.now() - startMs,
+    },
+  });
+
+  if (poolScrapeStatus === "FAILED") {
+    return Response.json({ error: "Pool scrape failed", poolNew: 0, results: [] }, { status: 500 });
+  }
+
+  // ── MATCH LAYER ───────────────────────────────────────────────────────────
+  // For each enabled profile, filter the pool by profile criteria and
+  // surface only the most relevant candidates into their Job feed.
+
   const profiles = await prisma.profile.findMany({
     where: { scraperEnabled: true },
   });
 
-  const results: {
-    profileId: string;
-    jobsFound: number;
-    jobsNew: number;
-    status: string;
-  }[] = [];
+  // Load the full pool once and reuse for all profiles.
+  // take: 2000 covers all realistic pool sizes; order newest-first so the
+  // per-profile cap naturally picks the most recent matching jobs.
+  const pool = await prisma.jobPool.findMany({
+    orderBy: { postedAt: "desc" },
+    take:    2000,
+  });
+
+  const results: { profileId: string; jobsNew: number; status: string }[] = [];
 
   for (const profile of profiles) {
-    const startMs = Date.now();
-    let jobsFound = 0;
+    const profileStart = Date.now();
     let jobsNew = 0;
-    let scrapeStatus: "SUCCESS" | "PARTIAL" | "FAILED" = "SUCCESS";
-    let errorMessage: string | undefined;
+    let profileStatus: "SUCCESS" | "FAILED" = "SUCCESS";
+    let profileError: string | undefined;
 
     try {
-      const rawJobs = profile.scraperSources.includes("GREENHOUSE")
-        ? await scrapeGreenhouse(profile.id)
-        : [];
+      // IDs of pool jobs already in this profile's feed
+      const existing = await prisma.job.findMany({
+        where:  { profileId: profile.id, jobPoolId: { not: null } },
+        select: { jobPoolId: true },
+      });
+      const existingIds = new Set(existing.map((j) => j.jobPoolId));
 
-      jobsFound = rawJobs.length;
+      // Filter pool against profile criteria, skip already-seen, cap at limit
+      const candidates = pool
+        .filter((p) => !existingIds.has(p.id) && jobMatchesProfile(p, profile))
+        .slice(0, MAX_CANDIDATES_PER_RUN);
 
-      if (rawJobs.length > 0) {
-        const normalized = rawJobs.map((r) =>
-          normalizeGreenhouse(r.raw, r.slug, r.companyName, profile.id),
-        );
-
+      if (candidates.length > 0) {
         const { count } = await prisma.job.createMany({
-          data: normalized,
+          data: candidates.map((c) => ({
+            profileId:   profile.id,
+            jobPoolId:   c.id,
+            externalId:  c.externalId,
+            source:      c.source,
+            url:         c.url,
+            title:       c.title,
+            company:     c.company,
+            location:    c.location,
+            description: c.description,
+            postedAt:    c.postedAt,
+            rawData:     c.rawData ?? undefined,
+            feedStatus:  "NEW" as const,
+          })),
           skipDuplicates: true,
         });
-
         jobsNew = count;
       }
 
       await prisma.profile.update({
         where: { id: profile.id },
-        data: { lastScrapedAt: new Date() },
+        data:  { lastScrapedAt: new Date() },
       });
     } catch (err) {
-      console.error(`[/api/scrape] Profile ${profile.id} failed:`, err);
-      scrapeStatus = "FAILED";
-      errorMessage = err instanceof Error ? err.message : String(err);
+      console.error(`[/api/scrape] Match failed for profile ${profile.id}:`, err);
+      profileStatus = "FAILED";
+      profileError  = err instanceof Error ? err.message : String(err);
     }
 
-    const durationMs = Date.now() - startMs;
-
+    // Log per-profile run
     await prisma.scrapeRun.create({
       data: {
         profileId:    profile.id,
         source:       "GREENHOUSE",
-        status:       scrapeStatus,
-        jobsFound,
+        status:       profileStatus,
+        jobsFound:    rawCount,
         jobsNew,
-        errorMessage,
-        durationMs,
+        errorMessage: profileError,
+        durationMs:   Date.now() - profileStart,
       },
     });
 
+    // Fire-and-forget analyze for new jobs
     if (jobsNew > 0) {
-      // Fire-and-forget: don't await so scrape route returns quickly
       fetch(`${env.NEXT_PUBLIC_APP_URL}/api/analyze`, {
         method:  "POST",
         headers: {
-          "Content-Type":  "application/json",
-          Authorization:   `Bearer ${env.CRON_SECRET}`,
+          "Content-Type": "application/json",
+          Authorization:  `Bearer ${env.CRON_SECRET}`,
         },
         body: JSON.stringify({ profileId: profile.id }),
       }).catch((err) =>
@@ -87,8 +153,8 @@ export async function POST(req: Request) {
       );
     }
 
-    results.push({ profileId: profile.id, jobsFound, jobsNew, status: scrapeStatus });
+    results.push({ profileId: profile.id, jobsNew, status: profileStatus });
   }
 
-  return Response.json({ results });
+  return Response.json({ poolNew, results });
 }
