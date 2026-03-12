@@ -14,6 +14,7 @@ export type JobWithApplication = Job & {
  */
 export type FieldOverrides = {
   notes:          string;
+  appliedAt:      string; // "yyyy-MM-dd" or ""
   followUpAt:     string; // "yyyy-MM-dd" or ""
   recruiterName:  string;
   recruiterEmail: string;

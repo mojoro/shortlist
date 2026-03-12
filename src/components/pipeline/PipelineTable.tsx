@@ -44,6 +44,9 @@ const STATUS_LABELS: Record<ApplicationStatus, string> = {
 function getDefaultFields(app: ApplicationWithJob): FieldOverrides {
   return {
     notes:          app.notes ?? "",
+    appliedAt:      app.appliedAt
+      ? format(new Date(app.appliedAt), "yyyy-MM-dd")
+      : "",
     followUpAt:     app.followUpAt
       ? format(new Date(app.followUpAt), "yyyy-MM-dd")
       : "",
@@ -136,7 +139,7 @@ export function PipelineTable({
 
   function handleFieldChange(appId: string, field: keyof FieldOverrides, value: string) {
     const app = optimisticApps.find((a) => a.id === appId);
-    const defaults = app ? getDefaultFields(app) : { notes: "", followUpAt: "", recruiterName: "", recruiterEmail: "" };
+    const defaults = app ? getDefaultFields(app) : { notes: "", appliedAt: "", followUpAt: "", recruiterName: "", recruiterEmail: "" };
 
     setFieldOverrides((prev) => {
       const next = new Map(prev);
@@ -157,6 +160,7 @@ export function PipelineTable({
       if (!fields) return;
       await updateApplicationDetail(appId, {
         notes:          fields.notes || undefined,
+        appliedAt:      fields.appliedAt || null,
         followUpAt:     fields.followUpAt || null,
         recruiterName:  fields.recruiterName || null,
         recruiterEmail: fields.recruiterEmail || null,
@@ -373,15 +377,19 @@ export function PipelineTable({
                         />
                       </td>
 
-                      {/* Applied date */}
-                      <td className="px-4 py-3 text-xs text-[var(--text-muted)] hidden sm:table-cell">
-                        {app.appliedAt ? (
-                          <span title={format(new Date(app.appliedAt), "MMM d, yyyy")}>
-                            {formatDistanceToNow(new Date(app.appliedAt), { addSuffix: true })}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
+                      {/* Applied date — inline editable */}
+                      <td
+                        className="px-4 py-3 text-xs hidden sm:table-cell"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="date"
+                          value={fields.appliedAt}
+                          onChange={(e) =>
+                            handleFieldChange(app.id, "appliedAt", e.target.value)
+                          }
+                          className="rounded border border-transparent bg-transparent px-1 py-0.5 text-xs text-[var(--text-muted)] focus:border-[var(--border)] focus:bg-[var(--bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                        />
                       </td>
 
                       {/* Follow-up (inline date input) or Closed date */}

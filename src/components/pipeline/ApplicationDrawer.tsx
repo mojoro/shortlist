@@ -46,7 +46,6 @@ export function ApplicationDrawer({
 
   const keyDates: { label: string; value: Date | null }[] = [
     { label: "Added to pipeline", value: application.createdAt },
-    { label: "Applied",           value: application.appliedAt },
     { label: "Offer received",    value: application.offerReceivedAt },
     { label: "Decision",          value: application.decisionAt },
   ];
@@ -116,6 +115,29 @@ export function ApplicationDrawer({
               placeholder="Add notes about this application…"
               className="w-full resize-y rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
             />
+          </div>
+
+          {/* Applied date */}
+          <div>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              Applied date
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={fields.appliedAt}
+                onChange={(e) => handleChange("appliedAt", e.target.value)}
+                className="min-h-[36px] rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+              />
+              {fields.appliedAt && (
+                <button
+                  onClick={() => handleChange("appliedAt", "")}
+                  className="text-xs text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Follow-up date */}

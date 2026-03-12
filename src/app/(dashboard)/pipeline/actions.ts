@@ -29,16 +29,12 @@ export async function updateApplicationStatus(
     data: {
       status: parsed.data.status,
       statusUpdatedAt: new Date(),
+      // Auto-set appliedAt when first transitioning to APPLIED
+      ...(parsed.data.status === "APPLIED" && !application.appliedAt
+        ? { appliedAt: new Date() }
+        : {}),
     },
   });
-
-  // Auto-set appliedAt when first transitioning to APPLIED
-  if (parsed.data.status === "APPLIED" && !application.appliedAt) {
-    await prisma.application.update({
-      where: { id: applicationId },
-      data: { appliedAt: new Date() },
-    });
-  }
 
   // Archive the job from the feed when moving to APPLIED
   if (parsed.data.status === "APPLIED") {
@@ -58,6 +54,7 @@ export async function updateApplicationDetail(
   applicationId: string,
   fields: {
     notes?: string;
+    appliedAt?: string | null;
     followUpAt?: string | null;
     recruiterName?: string | null;
     recruiterEmail?: string | null;
@@ -80,6 +77,11 @@ export async function updateApplicationDetail(
 
   const data: Record<string, unknown> = {};
   if (parsed.data.notes !== undefined) data.notes = parsed.data.notes || null;
+  if (parsed.data.appliedAt !== undefined) {
+    data.appliedAt = parsed.data.appliedAt
+      ? new Date(parsed.data.appliedAt + "T00:00:00.000Z")
+      : null;
+  }
   if (parsed.data.followUpAt !== undefined) {
     data.followUpAt = parsed.data.followUpAt
       ? new Date(parsed.data.followUpAt + "T00:00:00.000Z")

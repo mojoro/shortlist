@@ -24,10 +24,11 @@ export const updateApplicationStatusSchema = z.object({
   ]),
 });
 
-// ── Application detail update (notes, follow-up, recruiter) ───────────────
+// ── Application detail update (notes, dates, recruiter) ───────────────────
 export const updateApplicationDetailSchema = z.object({
   applicationId:  z.string().cuid(),
   notes:          z.string().max(5000).optional(),
+  appliedAt:      z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   followUpAt:     z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   recruiterName:  z.string().max(200).nullable().optional(),
   recruiterEmail: z.string().email().max(200).nullable().optional(),
