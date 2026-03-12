@@ -188,6 +188,7 @@ model Application {
   salaryOffered  Int?     // if offer received
   recruiterName  String?
   recruiterEmail String?
+  followUpAt     DateTime?  // when user wants a reminder to follow up
 
   // The resume that was actually sent (if tailored + exported)
   exportedResumeMarkdown String?
@@ -199,6 +200,7 @@ model Application {
   tailoredResumes TailoredResume[]
 
   @@index([profileId, status])
+  @@index([profileId, followUpAt])
   @@map("applications")
 }
 

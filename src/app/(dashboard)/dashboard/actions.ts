@@ -52,6 +52,17 @@ export async function toggleSaveJob(
     where: { id: jobId },
     data: { feedStatus: save ? "SAVED" : "NEW" },
   });
+
+  // When saving a job, ensure it appears in the pipeline at INTERESTED
+  if (save) {
+    await prisma.application.upsert({
+      where:  { jobId },
+      create: { jobId, profileId, status: "INTERESTED", statusUpdatedAt: new Date() },
+      update: {}, // never downgrade an existing application
+    });
+    revalidatePath("/pipeline");
+  }
+
   revalidatePath("/dashboard");
 }
 
@@ -136,4 +147,23 @@ export async function batchSaveJobs(
     data: { feedStatus: save ? "SAVED" : "NEW" },
   });
   revalidatePath("/dashboard");
+}
+
+export async function updateJobNotes(
+  jobId: string,
+  profileId: string,
+  notes: string
+): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const profile = await prisma.profile.findFirst({
+    where: { id: profileId, userId },
+  });
+  if (!profile) throw new Error("Profile not found");
+
+  await prisma.job.update({
+    where: { id: jobId },
+    data: { userNotes: notes.trim() || null },
+  });
 }

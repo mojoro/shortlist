@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { auth } from "@clerk/nextjs/server";
 import { APP_CONFIG } from "@/config/app";
 import { AppNav } from "@/components/layout/AppNav";
+import { getFollowUpCount } from "@/app/(dashboard)/pipeline/actions";
 
 export const metadata: Metadata = {
   title: {
@@ -9,14 +11,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { userId } = await auth();
+  const followUpCount = userId
+    ? await getFollowUpCount(userId).catch(() => 0)
+    : 0;
+
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      <AppNav />
+      <AppNav followUpCount={followUpCount} />
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         {children}
       </main>

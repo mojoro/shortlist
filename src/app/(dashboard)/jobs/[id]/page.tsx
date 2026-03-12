@@ -5,6 +5,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { JobDetailActions } from "@/components/jobs/JobDetailActions";
+import { JobNotesInput } from "@/components/jobs/JobNotesInput";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -238,6 +239,15 @@ export default async function JobDetailPage({ params }: PageProps) {
             feedStatus={job.feedStatus}
             externalUrl={job.url}
           />
+
+          {/* Notes */}
+          <div className="mt-4">
+            <JobNotesInput
+              jobId={job.id}
+              profileId={job.profileId}
+              initialNotes={job.userNotes}
+            />
+          </div>
         </div>
       </div>
     </div>

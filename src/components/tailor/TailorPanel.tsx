@@ -152,7 +152,7 @@ export function TailorPanel({
               markdown={pdfMarkdown}
               filename={filename}
               onBack={() => setShowPreview(false)}
-              onDownload={handleExportTriggered}
+              onMarkApplied={handleExportTriggered}
             />
           </div>
         )}
@@ -197,7 +197,7 @@ export function TailorPanel({
               markdown={pdfMarkdown}
               filename={filename}
               onBack={() => setMobileTab("editor")}
-              onDownload={handleExportTriggered}
+              onMarkApplied={handleExportTriggered}
             />
           )}
         </div>

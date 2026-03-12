@@ -8,12 +8,17 @@ import { useTheme } from "next-themes";
 import { APP_CONFIG } from "@/config/app";
 
 const NAV_TABS = [
-  { label: "Feed",   href: "/dashboard", matchPath: "/dashboard", active: true },
-  { label: "Detail", href: "/dashboard", matchPath: "/jobs",      active: true },
-  { label: "Tailor", href: "/tailor",    matchPath: "/tailor",    active: false },
+  { label: "Feed",     href: "/dashboard", matchPath: "/dashboard", active: true },
+  { label: "Detail",   href: "/dashboard", matchPath: "/jobs",      active: true },
+  { label: "Pipeline", href: "/pipeline",  matchPath: "/pipeline",  active: true },
+  { label: "Tailor",   href: "/tailor",    matchPath: "/tailor",    active: false },
 ] as const;
 
-export function AppNav() {
+interface AppNavProps {
+  followUpCount?: number;
+}
+
+export function AppNav({ followUpCount = 0 }: AppNavProps) {
   const pathname = usePathname();
   const { user } = useUser();
   const { resolvedTheme, setTheme } = useTheme();
@@ -66,7 +71,7 @@ export function AppNav() {
                 key={label}
                 href={href}
                 className={[
-                  "rounded-md px-3 py-1.5 text-xs font-medium transition-all",
+                  "relative inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
                   isCurrent
                     ? "bg-[var(--bg-card)] text-[var(--text)] shadow-sm ring-1 ring-inset ring-[var(--border)]"
                     : "text-[var(--text-muted)] hover:text-[var(--text)]",
@@ -74,6 +79,11 @@ export function AppNav() {
                 aria-current={isCurrent ? "page" : undefined}
               >
                 {label}
+                {label === "Pipeline" && followUpCount > 0 && (
+                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
+                    {followUpCount}
+                  </span>
+                )}
               </Link>
             );
           })}

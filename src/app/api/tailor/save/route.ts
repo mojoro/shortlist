@@ -79,18 +79,13 @@ export async function POST(req: Request) {
             exportedResumeMarkdown: markdown,
             exportedAt: new Date(),
             ...(application.status === "INTERESTED"
-              ? { status: "APPLIED", statusUpdatedAt: new Date() }
+              ? { status: "APPLIED", statusUpdatedAt: new Date(), appliedAt: new Date() }
               : {}),
           },
         }),
         prisma.job.update({
           where: { id: jobId },
-          data: {
-            feedStatus:
-              job.feedStatus === "NEW" || job.feedStatus === "HIDDEN"
-                ? "SAVED"
-                : job.feedStatus,
-          },
+          data: { feedStatus: "ARCHIVED" },
         }),
       ]);
     }
