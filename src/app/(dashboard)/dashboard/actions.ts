@@ -137,3 +137,22 @@ export async function batchSaveJobs(
   });
   revalidatePath("/dashboard");
 }
+
+export async function updateJobNotes(
+  jobId: string,
+  profileId: string,
+  notes: string
+): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const profile = await prisma.profile.findFirst({
+    where: { id: profileId, userId },
+  });
+  if (!profile) throw new Error("Profile not found");
+
+  await prisma.job.update({
+    where: { id: jobId },
+    data: { userNotes: notes.trim() || null },
+  });
+}
