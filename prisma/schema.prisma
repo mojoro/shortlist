@@ -95,10 +95,40 @@ model Profile {
 }
 
 // ============================================================
+// JOB POOL
+// Server-owned global store of all scraped raw job listings.
+// No profile association — scraped once daily, shared across
+// all users. Profile-specific matching and AI scoring live
+// on the Job model below.
+// ============================================================
+
+model JobPool {
+  id          String        @id @default(cuid())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  externalId  String
+  source      ScraperSource
+  url         String
+  title       String
+  company     String
+  location    String?
+  description String
+  postedAt    DateTime?
+  rawData     Json?
+
+  jobs        Job[]
+
+  @@unique([source, externalId])
+  @@index([source, createdAt(sort: Desc)])
+  @@map("job_pool")
+}
+
+// ============================================================
 // JOB
-// A scraped listing, scoped to a profile (because the same
-// job may score differently against different profiles, and
-// each profile has its own feed/filters).
+// A scraped listing matched and scoped to a profile. Created
+// by filtering the global JobPool against profile criteria.
+// AI scoring is profile-specific (criteria differ per profile).
 //
 // Raw scraper output is preserved in rawData so we never
 // lose information and can re-process without re-scraping.
@@ -110,8 +140,12 @@ model Job {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Identity / dedup
-  externalId  String    // ID from the scraper (apify item ID or constructed hash)
+  // Pool reference — links back to the global job pool entry
+  jobPoolId   String?
+  jobPool     JobPool? @relation(fields: [jobPoolId], references: [id])
+
+  // Identity / dedup (kept for legacy/seeded jobs without a pool entry)
+  externalId  String
   source      ScraperSource
   url         String
 
@@ -152,7 +186,9 @@ model Job {
   profile     Profile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
   application Application?
 
-  // A job is unique per profile (same listing won't appear twice in same feed)
+  // A job is unique per profile per pool entry (pool-sourced jobs)
+  // and per profile per external ID (legacy/seeded jobs)
+  @@unique([profileId, jobPoolId])
   @@unique([profileId, externalId])
   @@index([profileId, feedStatus])
   @@index([profileId, aiScore(sort: Desc)])
@@ -275,18 +311,19 @@ model Usage {
 
 model ScrapeRun {
   id        String   @id @default(cuid())
-  profileId String
+  profileId String?  // null = global pool-level run; set = per-profile match run
   createdAt DateTime @default(now())
 
   source       ScraperSource
   status       ScrapeStatus
-  jobsFound    Int  @default(0)
-  jobsNew      Int  @default(0)  // net new after dedup
+  jobsFound    Int  @default(0)  // total raw jobs seen from source
+  jobsInPool   Int  @default(0)  // net new added to global pool (pool runs only)
+  jobsNew      Int  @default(0)  // net new matched into this profile's feed (profile runs only)
   jobsAnalyzed Int  @default(0)
   errorMessage String?
   durationMs   Int?
 
-  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@index([profileId, createdAt(sort: Desc)])
   @@map("scrape_runs")
