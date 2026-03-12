@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useState, useRef, useEffect } from "react";
+import { useTheme } from "next-themes";
 import { AutoSaveIndicator, type SaveStatus } from "@/components/tailor/AutoSaveIndicator";
 import type { ICommand } from "@uiw/react-md-editor";
 
@@ -35,6 +36,7 @@ export function GeneratePane({
   saveStatus,
   onShowPreview,
 }: GeneratePaneProps) {
+  const { resolvedTheme } = useTheme();
   const [paneState, setPaneState] = useState<PaneState>(markdown ? "editor" : "idle");
   const [additionalContext, setAdditionalContext] = useState("");
   const [streamingText, setStreamingText] = useState("");
@@ -256,7 +258,7 @@ export function GeneratePane({
           </button>
         </div>
       </div>
-      <div className="min-h-0 flex-1" data-color-mode="auto">
+      <div className="min-h-0 flex-1" data-color-mode={resolvedTheme === "dark" ? "dark" : "light"}>
         <MDEditor
           value={markdown}
           onChange={(v) => onMarkdownChange(v ?? "")}
