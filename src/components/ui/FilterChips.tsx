@@ -33,6 +33,7 @@ export function FilterChips({
   const [isPending, startTransition] = useTransition();
 
   const currentFilter = (searchParams.get("filter") ?? "all") as FilterKey;
+  const currentSort = searchParams.get("sort") === "newest" ? "newest" : "match";
 
   const counts: Record<FilterKey, number> = {
     all:     allCount,
@@ -49,6 +50,18 @@ export function FilterChips({
         params.delete("filter");
       } else {
         params.set("filter", filter);
+      }
+      router.replace(`?${params.toString()}`);
+    });
+  }
+
+  function handleSortToggle() {
+    startTransition(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (currentSort === "newest") {
+        params.delete("sort");
+      } else {
+        params.set("sort", "newest");
       }
       router.replace(`?${params.toString()}`);
     });
@@ -95,9 +108,20 @@ export function FilterChips({
         })}
       </div>
 
-      <span className="shrink-0 text-xs text-[var(--text-muted)]">
-        Sort: Match ↓
-      </span>
+      <button
+        onClick={handleSortToggle}
+        disabled={isPending}
+        className={[
+          "cursor-pointer shrink-0 inline-flex min-h-[36px] items-center rounded-full px-3 py-1 text-xs font-medium transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2",
+          currentSort === "newest"
+            ? "ring-1 ring-inset ring-[var(--border)] text-[var(--text)]"
+            : "text-[var(--text-muted)]",
+          isPending ? "opacity-60 !cursor-wait" : "",
+        ].filter(Boolean).join(" ")}
+      >
+        {currentSort === "newest" ? "Newest ↓" : "Match ↓"}
+      </button>
     </div>
   );
 }
