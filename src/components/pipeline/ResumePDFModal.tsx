@@ -27,7 +27,7 @@ export function ResumePDFModal({
 
       {/* Panel */}
       <div
-        className="fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-card)]"
+        className="fixed left-1/2 top-1/2 z-50 flex h-[90vh] w-[90vw] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-card)]"
         style={{ boxShadow: "0 8px 48px rgba(0,0,0,0.24)" }}
         role="dialog"
         aria-modal="true"
