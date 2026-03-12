@@ -593,8 +593,8 @@ datasource db {
 ```
 
 **Migration discipline:**
-- Development: `npx prisma migrate dev --name <description>`
-- Production (Vercel): `npx prisma migrate deploy` (runs in build step)
+- Development: `pnpm prisma migrate dev --name <description>`
+- Production (Vercel): `pnpm prisma migrate deploy` (runs in build step)
 - Never use `prisma db push` — it bypasses migration history
 - Add `prisma migrate deploy` to the Vercel build command:
   `"build": "prisma migrate deploy && next build"`
@@ -787,19 +787,19 @@ storage path for uploaded vs pasted resumes.
 
 ```bash
 # 1. Install dependencies
-npm install
+pnpm install
 
 # 2. Copy env file and fill in values
 cp .env.example .env.local
 
 # 3. Run database migrations
-npx prisma migrate dev
+pnpm prisma migrate dev
 
 # 4. Seed mock data
-npx prisma db seed
+pnpm prisma db seed
 
 # 5. Start dev server
-npm run dev
+pnpm dev
 ```
 
 The seed script (`prisma/seed.ts`) creates:
@@ -811,23 +811,6 @@ The seed script (`prisma/seed.ts`) creates:
 Seed data should reflect the real Berlin/Poland tech market: real company names
 (Kombo, Taktile, Cogram, No Fluff Jobs listings), realistic salary ranges, real
 tech stacks. Do not use placeholder data like "Company A" or "Job Title 1".
-
----
-
-## Schema Additions Not Yet in schema.prisma
-
-Add these fields before running the first migration:
-
-```prisma
-// On Profile model:
-onboardingCompletedAt DateTime?  // null = wizard not finished; used by middleware
-currency              String     @default("EUR")
-
-// On ScraperRun model — add profileId relation:
-profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-```
-
-Also add `NO_FLUFF_JOBS` to the `ScraperSource` enum.
 
 ---
 
@@ -1192,7 +1175,7 @@ When starting a session:
 1. Read this file in full
 2. Read `prisma/schema.prisma`
 3. State what you're about to build and what files you'll touch before writing any code
-4. After completing a task, run `npx tsc --noEmit` and fix all type errors before stopping
+4. After completing a task, run `pnpm tsc --noEmit` and fix all type errors before stopping
 
 Do not:
 - Add dependencies without stating why and confirming
