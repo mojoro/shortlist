@@ -52,6 +52,17 @@ export async function toggleSaveJob(
     where: { id: jobId },
     data: { feedStatus: save ? "SAVED" : "NEW" },
   });
+
+  // When saving a job, ensure it appears in the pipeline at INTERESTED
+  if (save) {
+    await prisma.application.upsert({
+      where:  { jobId },
+      create: { jobId, profileId, status: "INTERESTED", statusUpdatedAt: new Date() },
+      update: {}, // never downgrade an existing application
+    });
+    revalidatePath("/pipeline");
+  }
+
   revalidatePath("/dashboard");
 }
 

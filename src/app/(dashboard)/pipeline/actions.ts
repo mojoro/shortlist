@@ -17,7 +17,7 @@ export async function updateApplicationStatus(
 
   const application = await prisma.application.findFirst({
     where: { id: applicationId, profile: { userId } },
-    select: { id: true, appliedAt: true },
+    select: { id: true, jobId: true, appliedAt: true },
   });
   if (!application) throw new Error("Application not found");
 
@@ -37,6 +37,17 @@ export async function updateApplicationStatus(
     await prisma.application.update({
       where: { id: applicationId },
       data: { appliedAt: new Date() },
+    });
+  }
+
+  // Archive the job from the feed when moving to APPLIED
+  if (parsed.data.status === "APPLIED") {
+    await prisma.job.updateMany({
+      where: {
+        id: application.jobId,
+        feedStatus: { in: ["NEW", "SAVED"] },
+      },
+      data: { feedStatus: "ARCHIVED" },
     });
   }
 

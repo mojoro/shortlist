@@ -85,12 +85,7 @@ export async function POST(req: Request) {
         }),
         prisma.job.update({
           where: { id: jobId },
-          data: {
-            feedStatus:
-              job.feedStatus === "NEW" || job.feedStatus === "HIDDEN"
-                ? "SAVED"
-                : job.feedStatus,
-          },
+          data: { feedStatus: "ARCHIVED" },
         }),
       ]);
     }
