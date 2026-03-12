@@ -1,19 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
-
-const ResumePDFDocument = dynamic(
-  () =>
-    import("@/components/tailor/ResumePDFDocument").then(
-      (m) => m.ResumePDFDocument
-    ),
-  { ssr: false }
-);
-
-const PDFViewer = dynamic(
-  () => import("@react-pdf/renderer").then((m) => m.PDFViewer),
-  { ssr: false }
-);
+import { PDFViewer } from "@react-pdf/renderer";
+import { ResumePDFDocument } from "@/components/tailor/ResumePDFDocument";
 
 interface ResumePDFModalProps {
   markdown: string;

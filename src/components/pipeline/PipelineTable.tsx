@@ -1,16 +1,24 @@
 "use client";
 
 import { useState, useOptimistic, useTransition, useRef } from "react";
+import dynamic from "next/dynamic";
 import { format, formatDistanceToNow } from "date-fns";
 import type { ApplicationStatus } from "@prisma/client";
 import type { ApplicationWithJob, FieldOverrides } from "@/types";
 import { StatusSelect } from "@/components/pipeline/StatusSelect";
 import { ApplicationDrawer } from "@/components/pipeline/ApplicationDrawer";
-import { ResumePDFModal } from "@/components/pipeline/ResumePDFModal";
 import {
   updateApplicationStatus,
   updateApplicationDetail,
 } from "@/app/(dashboard)/pipeline/actions";
+
+const ResumePDFModal = dynamic(
+  () =>
+    import("@/components/pipeline/ResumePDFModal").then(
+      (m) => m.ResumePDFModal
+    ),
+  { ssr: false }
+);
 
 interface PipelineTableProps {
   activeApplications: ApplicationWithJob[];
