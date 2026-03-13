@@ -153,6 +153,26 @@ export async function batchSaveJobs(
   revalidatePath("/dashboard");
 }
 
+export async function requestAnalysis(profileId: string): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const profile = await prisma.profile.findFirst({
+    where: { id: profileId, userId },
+  });
+  if (!profile) throw new Error("Profile not found");
+
+  // Fire-and-forget — caller doesn't wait for scoring to complete
+  fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/analyze`, {
+    method:  "POST",
+    headers: {
+      "Content-Type":  "application/json",
+      Authorization:   `Bearer ${process.env.CRON_SECRET}`,
+    },
+    body: JSON.stringify({ profileId }),
+  }).catch((err) => console.error("[requestAnalysis]", err));
+}
+
 export async function updateJobNotes(
   jobId: string,
   profileId: string,
