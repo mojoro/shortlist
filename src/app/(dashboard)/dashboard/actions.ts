@@ -153,7 +153,9 @@ export async function batchSaveJobs(
   revalidatePath("/dashboard");
 }
 
-export async function requestAnalysis(profileId: string): Promise<void> {
+export async function requestAnalysis(
+  profileId: string,
+): Promise<{ error?: "CREDITS" | "UNKNOWN" }> {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
@@ -162,15 +164,23 @@ export async function requestAnalysis(profileId: string): Promise<void> {
   });
   if (!profile) throw new Error("Profile not found");
 
-  // Fire-and-forget — caller doesn't wait for scoring to complete
-  fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/analyze`, {
-    method:  "POST",
-    headers: {
-      "Content-Type":  "application/json",
-      Authorization:   `Bearer ${process.env.CRON_SECRET}`,
-    },
-    body: JSON.stringify({ profileId }),
-  }).catch((err) => console.error("[requestAnalysis]", err));
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/analyze`, {
+      method:  "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization:  `Bearer ${process.env.CRON_SECRET}`,
+      },
+      body: JSON.stringify({ profileId }),
+    });
+    if (res.status === 429) return { error: "CREDITS" };
+    if (!res.ok)            return { error: "UNKNOWN" };
+  } catch (err) {
+    console.error("[requestAnalysis]", err);
+    return { error: "UNKNOWN" };
+  }
+
+  return {};
 }
 
 export async function updateJobNotes(
