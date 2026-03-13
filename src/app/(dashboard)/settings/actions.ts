@@ -10,6 +10,7 @@ import {
   updateResumeSchema,
   createProfileSchema,
   switchProfileSchema,
+  completeOnboardingSchema,
 } from "@/lib/validations";
 
 // ─── Profile info ────────────────────────────────────────────────────────────
@@ -137,6 +138,84 @@ export async function switchProfile(data: unknown): Promise<void> {
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");
+}
+
+// ─── Complete onboarding ─────────────────────────────────────────────────────
+
+export async function completeOnboarding(
+  data: unknown,
+): Promise<{ profileId: string; jobsFound: number }> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const parsed = completeOnboardingSchema.safeParse(data);
+  if (!parsed.success) throw new Error("Invalid data");
+
+  // Upsert User row — handles missing Clerk webhook
+  await prisma.user.upsert({
+    where:  { id: userId },
+    create: { id: userId },
+    update: {},
+  });
+
+  // Mark any existing profiles inactive, then create the new one
+  await prisma.profile.updateMany({
+    where: { userId },
+    data:  { isActive: false },
+  });
+
+  const profile = await prisma.profile.create({
+    data: {
+      userId,
+      name:             parsed.data.name,
+      targetRoles:      parsed.data.targetRoles,
+      targetLocations:  parsed.data.targetLocations,
+      remotePreference: parsed.data.remotePreference,
+      currency:         parsed.data.currency,
+      targetSalaryMin:  parsed.data.targetSalaryMin,
+      targetSalaryMax:  parsed.data.targetSalaryMax,
+      masterResume:     parsed.data.masterResume ?? null,
+      isActive:         true,
+    },
+  });
+
+  // Match new profile against the existing pool — no re-scrape needed
+  const pool = await prisma.jobPool.findMany({
+    orderBy: { postedAt: "desc" },
+    take:    2000,
+  });
+
+  const matches = pool
+    .filter((p) => jobMatchesProfile(p, profile))
+    .slice(0, MAX_CANDIDATES_PER_RUN);
+
+  let jobsFound = 0;
+  if (matches.length > 0) {
+    const result = await prisma.job.createMany({
+      data: matches.map((c) => ({
+        profileId:  profile.id,
+        jobPoolId:  c.id,
+        feedStatus: "NEW" as const,
+      })),
+      skipDuplicates: true,
+    });
+    jobsFound = result.count;
+  }
+
+  // Fire-and-forget analysis for matched jobs
+  if (jobsFound > 0) {
+    fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/analyze`, {
+      method:  "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization:  `Bearer ${process.env.CRON_SECRET}`,
+      },
+      body: JSON.stringify({ profileId: profile.id }),
+    }).catch((err) => console.error("[completeOnboarding] analyze error", err));
+  }
+
+  revalidatePath("/dashboard");
+  return { profileId: profile.id, jobsFound };
 }
 
 // ─── Re-match from pool ───────────────────────────────────────────────────────

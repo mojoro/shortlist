@@ -72,6 +72,18 @@ export const switchProfileSchema = z.object({
   profileId: z.string().cuid(),
 });
 
+// ── Onboarding wizard completion ───────────────────────────────────────────
+export const completeOnboardingSchema = z.object({
+  name:             z.string().min(1).max(80),
+  targetRoles:      z.array(z.string()),
+  targetLocations:  z.array(z.string()),
+  remotePreference: z.enum(["REMOTE_ONLY", "HYBRID_OK", "ANY", "ONSITE_ONLY"]),
+  currency:         z.string().min(1).max(10),
+  targetSalaryMin:  z.number().int().positive().nullable(),
+  targetSalaryMax:  z.number().int().positive().nullable(),
+  masterResume:     z.string().optional(),
+});
+
 // ── Application detail update (notes, dates, recruiter) ───────────────────
 export const updateApplicationDetailSchema = z.object({
   applicationId:  z.string().cuid(),
