@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { completeOnboarding } from "@/app/(dashboard)/settings/actions";
 import { APP_CONFIG } from "@/config/app";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 type Phase = "form" | "loading";
 
@@ -101,7 +102,10 @@ export function OnboardingWizard() {
 
   if (phase === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--bg-subtle)] p-4">
+      <div className="relative flex min-h-screen items-center justify-center bg-[var(--bg-subtle)] p-4">
+        <div className="absolute right-4 top-4">
+          <ThemeToggle />
+        </div>
         <div className="text-center">
           <div className="mx-auto mb-6 h-12 w-12 animate-spin rounded-full border-4 border-[var(--border)] border-t-[var(--accent)]" />
           <p className="text-base font-semibold text-[var(--text)]">
@@ -116,7 +120,10 @@ export function OnboardingWizard() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--bg-subtle)] p-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-[var(--bg-subtle)] p-4">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       <div
         className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-8"
         style={{ boxShadow: "var(--shadow-card)" }}
