@@ -24,6 +24,11 @@ export const updateApplicationStatusSchema = z.object({
   ]),
 });
 
+// ── AI analysis trigger ────────────────────────────────────────────────────
+export const analyzeSchema = z.object({
+  profileId: z.string().min(1),
+});
+
 // ── Application detail update (notes, dates, recruiter) ───────────────────
 export const updateApplicationDetailSchema = z.object({
   applicationId:  z.string().cuid(),

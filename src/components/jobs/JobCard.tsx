@@ -130,19 +130,21 @@ export function JobCard({
     router.push(`/jobs/${job.id}`);
   }
 
-  const postedDate = job.postedAt
-    ? formatDistanceToNow(new Date(job.postedAt), { addSuffix: true })
+  const pool = job.jobPool;
+
+  const postedDate = pool.postedAt
+    ? formatDistanceToNow(new Date(pool.postedAt), { addSuffix: true })
     : null;
 
   const subtitleParts = [
-    job.location,
-    job.locationType ? (LOCATION_TYPE_LABELS[job.locationType] ?? null) : null,
-    job.salary,
+    pool.location,
+    pool.locationType ? (LOCATION_TYPE_LABELS[pool.locationType] ?? null) : null,
+    pool.salary,
     postedDate,
   ].filter(Boolean);
 
-  const displaySkills = job.skills.slice(0, 4);
-  const remainingCount = job.skills.length - displaySkills.length;
+  const displaySkills = pool.skills.slice(0, 4);
+  const remainingCount = pool.skills.length - displaySkills.length;
 
   return (
     <article
@@ -171,8 +173,8 @@ export function JobCard({
         {/* Title + subtitle + source */}
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-bold text-[var(--text)]">
-            {job.title}{" "}
-            <span className="font-normal text-[var(--text-muted)]">@ {job.company}</span>
+            {pool.title}{" "}
+            <span className="font-normal text-[var(--text-muted)]">@ {pool.company}</span>
           </h2>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
             {subtitleParts.length > 0 && (
@@ -180,7 +182,7 @@ export function JobCard({
                 {subtitleParts.join(" · ")}
               </span>
             )}
-            <SourceTag source={job.source} />
+            <SourceTag source={pool.source} />
           </div>
         </div>
 

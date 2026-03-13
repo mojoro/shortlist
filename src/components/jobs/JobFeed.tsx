@@ -10,6 +10,7 @@ import {
   batchSaveJobs,
 } from "@/app/(dashboard)/dashboard/actions";
 import type { JobWithApplication } from "@/types";
+import { groupJobsByDate } from "@/lib/feed";
 
 // ─── Undo Toast ───────────────────────────────────────────────────────────────
 
@@ -137,6 +138,19 @@ function BatchBar({
   );
 }
 
+// ─── Date divider ─────────────────────────────────────────────────────────────
+
+function DateDivider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 py-1">
+      <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+        {label}
+      </span>
+      <div className="flex-1 border-t border-[var(--border)]" />
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 interface JobFeedProps {
@@ -144,6 +158,7 @@ interface JobFeedProps {
   initialNextCursor: string | null;
   profileId: string;
   filter: string;
+  sort: string;
 }
 
 export function JobFeed({
@@ -151,6 +166,7 @@ export function JobFeed({
   initialNextCursor,
   profileId,
   filter,
+  sort,
 }: JobFeedProps) {
   const [jobs, setJobs] = useState<JobWithApplication[]>(initialJobs);
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
@@ -280,7 +296,7 @@ export function JobFeed({
     setError(null);
     startTransition(async () => {
       try {
-        const result = await getMoreJobs(profileId, nextCursor, filter);
+        const result = await getMoreJobs(profileId, nextCursor, filter, sort);
         setJobs((prev) => [...prev, ...result.jobs]);
         setNextCursor(result.nextCursor);
       } catch {
@@ -332,17 +348,37 @@ export function JobFeed({
 
       {/* Job list */}
       <div className="flex flex-col gap-[18px]">
-        {jobs.map((job, index) => (
-          <JobCard
-            key={job.id}
-            job={job}
-            index={index}
-            isSelected={selectedIds.has(job.id)}
-            onIgnore={handleIgnore}
-            onUnignore={handleUnignore}
-            onSelect={handleSelect}
-          />
-        ))}
+        {sort === "newest"
+          ? groupJobsByDate(jobs).map(({ bucket, jobs: bucketJobs }) => (
+              <div key={bucket} className="flex flex-col gap-[18px]">
+                <DateDivider label={bucket} />
+                {bucketJobs.map((job) => {
+                  const index = jobs.indexOf(job);
+                  return (
+                    <JobCard
+                      key={job.id}
+                      job={job}
+                      index={index}
+                      isSelected={selectedIds.has(job.id)}
+                      onIgnore={handleIgnore}
+                      onUnignore={handleUnignore}
+                      onSelect={handleSelect}
+                    />
+                  );
+                })}
+              </div>
+            ))
+          : jobs.map((job, index) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                index={index}
+                isSelected={selectedIds.has(job.id)}
+                onIgnore={handleIgnore}
+                onUnignore={handleUnignore}
+                onSelect={handleSelect}
+              />
+            ))}
       </div>
 
       {/* Load more */}

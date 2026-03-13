@@ -15,10 +15,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params;
   const job = await prisma.job.findUnique({
     where: { id },
-    select: { title: true, company: true },
+    include: { jobPool: true },
   });
   if (!job) return { title: "Job not found" };
-  return { title: `${job.title} at ${job.company}` };
+  return { title: `${job.jobPool.title} at ${job.jobPool.company}` };
 }
 
 const SCORE_CONFIGS = [
@@ -53,25 +53,28 @@ export default async function JobDetailPage({ params }: PageProps) {
   const job = await prisma.job.findUnique({
     where: { id },
     include: {
+      jobPool: true,
       profile: { select: { userId: true } },
     },
   });
 
   if (!job || job.profile.userId !== userId) notFound();
 
-  const postedDate = job.postedAt
-    ? formatDistanceToNow(new Date(job.postedAt), { addSuffix: true })
+  const pool = job.jobPool;
+
+  const postedDate = pool.postedAt
+    ? formatDistanceToNow(new Date(pool.postedAt), { addSuffix: true })
     : null;
 
-  const postedDateFull = job.postedAt
-    ? format(new Date(job.postedAt), "MMM d, yyyy")
+  const postedDateFull = pool.postedAt
+    ? format(new Date(pool.postedAt), "MMM d, yyyy")
     : null;
 
   const metaParts = [
-    job.location,
-    job.locationType ? LOCATION_TYPE_LABELS[job.locationType] : null,
-    job.jobType ? JOB_TYPE_LABELS[job.jobType] : null,
-    job.salary,
+    pool.location,
+    pool.locationType ? LOCATION_TYPE_LABELS[pool.locationType] : null,
+    pool.jobType ? JOB_TYPE_LABELS[pool.jobType] : null,
+    pool.salary,
   ].filter(Boolean);
 
   const scoreConfig = job.aiScore !== null ? getScoreConfig(job.aiScore) : null;
@@ -102,9 +105,9 @@ export default async function JobDetailPage({ params }: PageProps) {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-[var(--text)] sm:text-3xl">
-          {job.title}
+          {pool.title}
         </h1>
-        <p className="mt-1 text-lg font-medium text-[var(--text-muted)]">{job.company}</p>
+        <p className="mt-1 text-lg font-medium text-[var(--text-muted)]">{pool.company}</p>
         {(metaParts.length > 0 || postedDate) && (
           <p className="mt-1.5 text-sm text-[var(--text-muted)]">
             {metaParts.join(" · ")}
@@ -116,9 +119,9 @@ export default async function JobDetailPage({ params }: PageProps) {
             )}
           </p>
         )}
-        {job.skills.length > 0 && (
+        {pool.skills.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {job.skills.map((skill: string) => (
+            {pool.skills.map((skill: string) => (
               <span
                 key={skill}
                 className="inline-flex items-center rounded px-2 py-0.5 text-xs text-[var(--text-muted)] ring-1 ring-inset ring-[var(--border)]"
@@ -142,7 +145,7 @@ export default async function JobDetailPage({ params }: PageProps) {
             style={{ boxShadow: "var(--shadow-card)" }}
           >
             <p className="whitespace-pre-line text-sm leading-relaxed text-[var(--text)]">
-              {job.description}
+              {pool.description}
             </p>
           </div>
         </div>
@@ -237,7 +240,7 @@ export default async function JobDetailPage({ params }: PageProps) {
             jobId={job.id}
             profileId={job.profileId}
             feedStatus={job.feedStatus}
-            externalUrl={job.url}
+            externalUrl={pool.url}
           />
 
           {/* Notes */}

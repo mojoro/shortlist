@@ -1,5 +1,13 @@
 import type { FeedStatus, ApplicationStatus, Prisma } from "@prisma/client";
 
+export type SortOption = "match" | "newest";
+
+export function buildOrderBy(sort: SortOption): Prisma.JobOrderByWithRelationInput {
+  return sort === "newest"
+    ? { createdAt: "desc" }
+    : { aiScore: { sort: "desc", nulls: "last" } };
+}
+
 /**
  * Builds a Prisma `where` clause for the job feed.
  * All filters exclude HIDDEN jobs.

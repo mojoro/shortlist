@@ -24,6 +24,7 @@ export async function POST(req: Request) {
     const job = await prisma.job.findFirst({
       where: { id: jobId },
       include: {
+        jobPool: true,
         profile: {
           select: {
             userId: true,
@@ -129,7 +130,7 @@ Your task is to produce a focused, targeted resume for this job. Steps:
 10. Return only the resume markdown — no commentary, no preamble, no explanation.`;
 
     const userContent = [
-      `## Job Description\n\n${job.description}`,
+      `## Job Description\n\n${job.jobPool.description}`,
       `## Candidate's Full CV\n\n${contentSource}`,
       contactLines.length > 0
         ? `## Candidate's Contact Details\n\n${contactLines.join("\n")}`

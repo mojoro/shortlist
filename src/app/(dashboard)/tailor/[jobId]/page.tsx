@@ -15,12 +15,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const job = await prisma.job.findFirst({
     where: { id: jobId },
-    include: { profile: { select: { userId: true } } },
+    include: { profile: { select: { userId: true } }, jobPool: true },
   });
 
   if (!job || job.profile.userId !== userId) return { title: "Tailor resume" };
 
-  return { title: `Tailor — ${job.title} at ${job.company}` };
+  return { title: `Tailor — ${job.jobPool.title} at ${job.jobPool.company}` };
 }
 
 export default async function TailorPage({ params }: Props) {
@@ -31,6 +31,7 @@ export default async function TailorPage({ params }: Props) {
   const job = await prisma.job.findFirst({
     where: { id: jobId },
     include: {
+      jobPool: true,
       profile: { select: { userId: true } },
       application: {
         include: {
@@ -46,21 +47,22 @@ export default async function TailorPage({ params }: Props) {
 
   if (!job || job.profile.userId !== userId) notFound();
 
+  const pool = job.jobPool;
   const latest = job.application?.tailoredResumes[0] ?? null;
 
   return (
     <TailorPanel
       jobId={job.id}
-      jobTitle={job.title}
-      jobCompany={job.company}
-      jobDescription={job.description}
-      jobUrl={job.url}
-      jobLocation={job.location ?? null}
-      jobLocationType={job.locationType ?? null}
-      jobType={job.jobType ?? null}
-      jobSalary={job.salary ?? null}
-      jobPostedAt={job.postedAt?.toISOString() ?? null}
-      jobSkills={job.skills}
+      jobTitle={pool.title}
+      jobCompany={pool.company}
+      jobDescription={pool.description}
+      jobUrl={pool.url}
+      jobLocation={pool.location ?? null}
+      jobLocationType={pool.locationType ?? null}
+      jobType={pool.jobType ?? null}
+      jobSalary={pool.salary ?? null}
+      jobPostedAt={pool.postedAt?.toISOString() ?? null}
+      jobSkills={pool.skills}
       aiScore={job.aiScore ?? null}
       aiSummary={job.aiSummary ?? null}
       aiMatchPoints={job.aiMatchPoints}

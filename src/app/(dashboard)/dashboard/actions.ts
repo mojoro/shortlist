@@ -3,13 +3,15 @@
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { buildWhereClause } from "@/lib/jobs";
+import { buildWhereClause, buildOrderBy } from "@/lib/jobs";
+import type { SortOption } from "@/lib/jobs";
 import type { JobWithApplication } from "@/types";
 
 export async function getMoreJobs(
   profileId: string,
   cursor: string,
-  filter: string
+  filter: string,
+  sort: string,
 ): Promise<{ jobs: JobWithApplication[]; nextCursor: string | null }> {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
@@ -20,10 +22,12 @@ export async function getMoreJobs(
   });
   if (!profile) throw new Error("Profile not found");
 
+  const safeSort: SortOption = sort === "newest" ? "newest" : "match";
+
   const jobs = await prisma.job.findMany({
     where: buildWhereClause(profileId, filter),
-    include: { application: { select: { status: true } } },
-    orderBy: { aiScore: { sort: "desc", nulls: "last" } },
+    include: { jobPool: true, application: { select: { status: true } } },
+    orderBy: buildOrderBy(safeSort),
     take: 25,
     cursor: { id: cursor },
     skip: 1,

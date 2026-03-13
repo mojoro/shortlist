@@ -69,10 +69,10 @@ export function ApplicationDrawer({
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[var(--border)] p-5">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-              {application.job.company}
+              {application.job.jobPool.company}
             </p>
             <h2 className="mt-0.5 text-base font-bold leading-snug text-[var(--text)]">
-              {application.job.title}
+              {application.job.jobPool.title}
             </h2>
           </div>
           <button
@@ -238,7 +238,7 @@ export function ApplicationDrawer({
               Tailor resume
             </Link>
             <a
-              href={application.job.url}
+              href={application.job.jobPool.url}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded"

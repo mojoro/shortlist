@@ -14,7 +14,7 @@ export function FollowUpBanner({ dueApplications }: FollowUpBannerProps) {
   if (dismissed || dueApplications.length === 0) return null;
 
   const count = dueApplications.length;
-  const preview = dueApplications.slice(0, 3).map((a) => a.job.company);
+  const preview = dueApplications.slice(0, 3).map((a) => a.job.jobPool.company);
   const overflow = count - preview.length;
 
   return (
