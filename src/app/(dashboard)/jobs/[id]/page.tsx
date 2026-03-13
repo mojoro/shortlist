@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { JobDetailActions } from "@/components/jobs/JobDetailActions";
 import { JobNotesInput } from "@/components/jobs/JobNotesInput";
 import { JobDescription } from "@/components/jobs/JobDescription";
+import { AnalyzeButton } from "@/components/jobs/AnalyzeButton";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -225,11 +226,14 @@ export default async function JobDetailPage({ params }: PageProps) {
                 )}
               </>
             ) : (
-              <div className="py-2 text-center">
-                <p className="text-sm font-medium text-[var(--text)]">Not yet analyzed</p>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  A match score will appear here after the next analysis run.
-                </p>
+              <div className="space-y-3 py-2">
+                <div className="text-center">
+                  <p className="text-sm font-medium text-[var(--text)]">Not yet scored</p>
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    Request a score now or wait for the next scheduled run.
+                  </p>
+                </div>
+                <AnalyzeButton profileId={job.profileId} />
               </div>
             )}
           </div>
