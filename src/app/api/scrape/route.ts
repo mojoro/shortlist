@@ -12,50 +12,57 @@ export async function POST(req: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  const url = new URL(req.url);
+  const skipPool = url.searchParams.get("skipPool") === "1";
+
   const startMs = Date.now();
 
-  // ── POOL LAYER ────────────────────────────────────────────────────────────
-  // Scrape all sources once into the global JobPool. No profile association.
-
   let poolNew = 0;
-  let rawCount = 0;
-  let poolScrapeStatus: "SUCCESS" | "PARTIAL" | "FAILED" = "SUCCESS";
-  let poolErrorMessage: string | undefined;
 
-  try {
-    const rawJobs = await scrapeGreenhouse("_global");
-    rawCount = rawJobs.length;
+  // ── POOL LAYER ────────────────────────────────────────────────────────────
+  // Scrape all sources once into the global JobPool. Skipped when the pool is
+  // already fresh (pass ?skipPool=1 to run the match layer against existing data).
 
-    const poolData = rawJobs.map((r) =>
-      normalizeGreenhouseForPool(r.raw, r.slug, r.companyName),
-    );
+  if (!skipPool) {
+    let rawCount = 0;
+    let poolScrapeStatus: "SUCCESS" | "PARTIAL" | "FAILED" = "SUCCESS";
+    let poolErrorMessage: string | undefined;
 
-    const { count } = await prisma.jobPool.createMany({
-      data:           poolData,
-      skipDuplicates: true,
+    try {
+      const rawJobs = await scrapeGreenhouse("_global");
+      rawCount = rawJobs.length;
+
+      const poolData = rawJobs.map((r) =>
+        normalizeGreenhouseForPool(r.raw, r.slug, r.companyName),
+      );
+
+      const { count } = await prisma.jobPool.createMany({
+        data:           poolData,
+        skipDuplicates: true,
+      });
+      poolNew = count;
+    } catch (err) {
+      console.error("[/api/scrape] Pool scrape failed:", err);
+      poolScrapeStatus = "FAILED";
+      poolErrorMessage = err instanceof Error ? err.message : String(err);
+    }
+
+    // Log the pool-level run (profileId: null)
+    await prisma.scrapeRun.create({
+      data: {
+        profileId:    null,
+        source:       "GREENHOUSE",
+        status:       poolScrapeStatus,
+        jobsFound:    rawCount,
+        jobsInPool:   poolNew,
+        errorMessage: poolErrorMessage,
+        durationMs:   Date.now() - startMs,
+      },
     });
-    poolNew = count;
-  } catch (err) {
-    console.error("[/api/scrape] Pool scrape failed:", err);
-    poolScrapeStatus = "FAILED";
-    poolErrorMessage = err instanceof Error ? err.message : String(err);
-  }
 
-  // Log the pool-level run (profileId: null)
-  await prisma.scrapeRun.create({
-    data: {
-      profileId:    null,
-      source:       "GREENHOUSE",
-      status:       poolScrapeStatus,
-      jobsFound:    rawCount,
-      jobsInPool:   poolNew,
-      errorMessage: poolErrorMessage,
-      durationMs:   Date.now() - startMs,
-    },
-  });
-
-  if (poolScrapeStatus === "FAILED") {
-    return Response.json({ error: "Pool scrape failed", poolNew: 0, results: [] }, { status: 500 });
+    if (poolScrapeStatus === "FAILED") {
+      return Response.json({ error: "Pool scrape failed", poolNew: 0, results: [] }, { status: 500 });
+    }
   }
 
   // ── MATCH LAYER ───────────────────────────────────────────────────────────
@@ -123,7 +130,7 @@ export async function POST(req: Request) {
         profileId:    profile.id,
         source:       "GREENHOUSE",
         status:       profileStatus,
-        jobsFound:    rawCount,
+        jobsFound:    0,
         jobsNew,
         errorMessage: profileError,
         durationMs:   Date.now() - profileStart,
