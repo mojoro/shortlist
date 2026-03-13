@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { auth } from "@clerk/nextjs/server";
 import { APP_CONFIG } from "@/config/app";
+import { LandingNav } from "@/components/landing/LandingNav";
 
 export const metadata: Metadata = {
   title: `${APP_CONFIG.name} — ${APP_CONFIG.tagline}`,
@@ -29,37 +31,14 @@ const FEATURES = [
   },
 ] as const;
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const { userId } = await auth();
+  const isSignedIn = !!userId;
+
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
 
-      {/* ── Nav ─────────────────────────────────────────────────────── */}
-      <header className="border-b border-[var(--border)] bg-[var(--bg-card)]">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--accent)] text-[var(--accent-fg)] text-xs font-bold shadow-sm">
-              S
-            </span>
-            <span className="text-sm font-semibold tracking-tight">
-              {APP_CONFIG.name}
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/sign-in"
-              className="text-sm font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/sign-up"
-              className="inline-flex h-8 items-center rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-fg)] transition-opacity hover:opacity-90"
-            >
-              Get started
-            </Link>
-          </div>
-        </div>
-      </header>
+      <LandingNav isSignedIn={isSignedIn} />
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden border-b border-[var(--border)]">
@@ -88,31 +67,50 @@ export default function LandingPage() {
             AI-powered job search
           </div>
 
-          <h1 className="text-5xl font-bold leading-[1.05] tracking-tight text-[var(--text)] sm:text-7xl">
-            Get on the
-            <br />
-            <span className="text-[var(--accent)]">shortlist.</span>
-          </h1>
-
-          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[var(--text-muted)] sm:text-xl">
-            Find roles that actually fit your background, tailor every application
-            in seconds, and track your entire search — all in one place.
-          </p>
-
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <Link
-              href="/sign-up"
-              className="inline-flex h-11 items-center rounded-xl bg-[var(--accent)] px-7 text-sm font-semibold text-[var(--accent-fg)] shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-            >
-              Get started free
-            </Link>
-            <Link
-              href="/sign-in"
-              className="inline-flex h-11 items-center rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-7 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-            >
-              Sign in
-            </Link>
-          </div>
+          {isSignedIn ? (
+            <>
+              <h1 className="text-5xl font-bold leading-[1.05] tracking-tight text-[var(--text)] sm:text-7xl">
+                Welcome back.
+              </h1>
+              <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[var(--text-muted)] sm:text-xl">
+                Your job search is waiting. Pick up where you left off.
+              </p>
+              <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+                <Link
+                  href="/dashboard"
+                  className="inline-flex h-11 items-center rounded-xl bg-[var(--accent)] px-7 text-sm font-semibold text-[var(--accent-fg)] shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                >
+                  Go to dashboard →
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <h1 className="text-5xl font-bold leading-[1.05] tracking-tight text-[var(--text)] sm:text-7xl">
+                Get on the
+                <br />
+                <span className="text-[var(--accent)]">shortlist.</span>
+              </h1>
+              <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[var(--text-muted)] sm:text-xl">
+                Find roles that actually fit your background, tailor every application
+                in seconds, and track your entire search — all in one place.
+              </p>
+              <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+                <Link
+                  href="/sign-up"
+                  className="inline-flex h-11 items-center rounded-xl bg-[var(--accent)] px-7 text-sm font-semibold text-[var(--accent-fg)] shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                >
+                  Get started free
+                </Link>
+                <Link
+                  href="/sign-in"
+                  className="inline-flex h-11 items-center rounded-xl border border-[var(--border)] bg-[var(--bg-card)] px-7 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                >
+                  Sign in
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
@@ -146,16 +144,18 @@ export default function LandingPage() {
       <section className="border-y border-[var(--border)] bg-[var(--bg-subtle)]">
         <div className="mx-auto max-w-5xl px-6 py-16 text-center">
           <h2 className="text-2xl font-bold tracking-tight text-[var(--text)] sm:text-3xl">
-            Ready to find your next role?
+            {isSignedIn ? "Keep going." : "Ready to find your next role?"}
           </h2>
           <p className="mt-3 text-sm text-[var(--text-muted)]">
-            Set up your profile in under two minutes.
+            {isSignedIn
+              ? "Your matches are ready and waiting."
+              : "Set up your profile in under two minutes."}
           </p>
           <Link
-            href="/sign-up"
+            href={isSignedIn ? "/dashboard" : "/sign-up"}
             className="mt-7 inline-flex h-11 items-center rounded-xl bg-[var(--accent)] px-8 text-sm font-semibold text-[var(--accent-fg)] shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
           >
-            Get started free
+            {isSignedIn ? "Go to dashboard →" : "Get started free"}
           </Link>
         </div>
       </section>
