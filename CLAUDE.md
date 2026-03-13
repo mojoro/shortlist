@@ -63,47 +63,62 @@ src/
   app/
     (auth)/               # Clerk sign-in / sign-up pages
     (dashboard)/
-      onboarding/         # Profile setup wizard — shown to new users before dashboard
       dashboard/          # Job feed — default view
       jobs/[id]/          # Job detail + match analysis
       tailor/[jobId]/     # Resume tailor — JD vs resume, streaming, editor, export
-      pipeline/           # Kanban / application tracker
-      settings/           # Profile, master resume, search criteria
+      pipeline/           # Application tracker table
+      layout.tsx          # Dashboard shell — AppNav, max-width wrapper
     api/
-      scrape/             # POST — triggers Apify run, normalizes, writes to DB
+      scrape/             # POST — pool-first scrape + profile matching pipeline
       analyze/            # POST — AI scoring for unanalyzed jobs
       tailor/             # POST — streams tailored resume from Claude
+      tailor/save/        # POST — persists tailored resume draft
+      dev/seed/           # POST — dev-only seed route (not production)
       webhooks/
-        clerk/            # Clerk webhook → create User record in Neon on signup
+        clerk/            # ⚠ NOT YET IMPLEMENTED — critical for production
+                          #   must create User record in Neon on Clerk user.created event
+    onboarding/           # ⚠ Onboarding wizard not yet built
+    page.tsx              # Marketing / landing page
   components/
-    onboarding/           # Wizard steps, progress indicator, welcome screen
-    jobs/                 # JobCard, JobDetail, ScoreBadge, MatchAnalysis
-    tailor/               # TailorPanel, ResumeEditor, ExportButton
-    pipeline/             # KanbanBoard, KanbanCard, StatusSelect
-    settings/             # ProfileForm, ResumeEditor, CriteriaForm
-    ui/                   # Shared primitives: Button, Badge, Panel, etc.
+    dashboard/            # StatsRow
+    jobs/                 # JobCard, JobFeed, ScoreBadge, JobDetailActions, JobNotesInput
+    tailor/               # TailorPanel, GeneratePane, JobDescriptionPane,
+                          #   ResumePDFDocument, PDFPreview, AutoSaveIndicator, MobileTabBar
+    pipeline/             # PipelineTable, ApplicationDrawer, StatusSelect,
+                          #   FollowUpBanner, PipelineStats, ResumePDFModal
+    layout/               # AppNav
+    providers/            # ThemeProvider
+    ui/                   # Shared primitives: FilterChips, etc.
   lib/
     prisma.ts             # Prisma client singleton
-    clerk.ts              # Clerk server helpers
-    openrouter.ts         # OpenRouter client + shared helpers
-    apify.ts              # Apify client + actor helpers
-    scrapers/
-      greenhouse.ts       # Direct scraper for boards.greenhouse.io
-      lever.ts            # Direct scraper for jobs.lever.co
-      ashby.ts            # Direct scraper for jobs.ashby.io
-      linkedin.ts         # Apify-backed LinkedIn scraper
-    normalize.ts          # Source-specific raw data → Job schema
+    openrouter.ts         # OpenRouter client + MODEL constant
+    match.ts              # jobMatchesProfile() — in-process pool filtering logic
+    normalize.ts          # Source raw data → JobPool schema (normalizeGreenhouseForPool)
+    feed.ts               # groupJobsByDate() — date bucketing for feed display
+    jobs.ts               # buildWhereClause(), buildOrderBy() — feed query helpers
     validations.ts        # Zod schemas for all API request bodies
-    salary.ts             # formatSalary(amount, currency) using Intl.NumberFormat
-    pdf.ts                # react-pdf resume renderer
+    scrapers/
+      greenhouse.ts       # Direct scraper for boards-api.greenhouse.io
+      lever.ts            # ⚠ NOT YET BUILT
+      ashby.ts            # ⚠ NOT YET BUILT
+      linkedin.ts         # ⚠ NOT YET BUILT (Apify-backed)
+    apify.ts              # ⚠ NOT YET BUILT — Apify client + actor helpers
+    salary.ts             # ⚠ NOT YET BUILT — formatSalary(amount, currency)
   config/
     app.ts                # APP_CONFIG — app name lives here
+    companies.ts          # GREENHOUSE_COMPANIES — list of companies to scrape
   types/
     index.ts              # Shared TypeScript types derived from Prisma
+  env.ts                  # Environment variable validation (@t3-oss/env-nextjs)
+  middleware.ts           # Clerk auth + public route exemptions
 prisma/
   schema.prisma           # Source of truth for DB schema
   seed.ts                 # Realistic mock data seed for development
 ```
+
+**PDF rendering** lives in `components/tailor/ResumePDFDocument.tsx` (the react-pdf
+document component) and `components/tailor/PDFPreview.tsx` (the viewer). There is no
+separate `lib/pdf.ts` — rendering logic is co-located with the tailor UI.
 
 ---
 
@@ -112,24 +127,32 @@ prisma/
 Schema is defined in `prisma/schema.prisma`. Key relationships:
 
 ```
+JobPool (global — no user/profile association)
+  └── Job[] (junction rows — one per profile that matched this listing)
+
 User (Clerk ID)
   └── Profile (one user, multiple profiles e.g. "Frontend Berlin", "Automation Remote")
-        ├── Job[] (scraped listings, scoped to this profile's criteria)
+        ├── Job[] (junction rows into JobPool — AI scores and feed state live here)
         │     └── Application (created when user moves job into pipeline)
         │           └── TailoredResume[] (versions generated for this application)
-        └── ScrapeRun[] (log of each scraping execution)
+        └── ScrapeRun[] (log of each scraping execution — see Scraping section)
 
 User
   └── Usage (token consumption tracking — soft cap per user per month)
 ```
+
+**`Job` is a junction table.** It holds no job content — title, company, description,
+location, and all other content fields live on `JobPool`. Always read job content via
+`job.jobPool.*`. The `Job` row stores only what is profile-specific: AI scores,
+`feedStatus`, `viewedAt`, `userNotes`, and the `Application` relation.
 
 **Multi-tenancy rule:** Every DB query that touches `Job`, `Application`, or
 `TailoredResume` must be scoped to `profileId`. Every API route must verify that the
 requested `profileId` belongs to the authenticated Clerk user. Never trust a client-
 supplied `profileId` without this check.
 
-**Never discard raw scraper output.** Store verbatim Apify/scraper response in
-`Job.rawData: Json`. The normalized fields in the `Job` model are derived from this.
+**Never discard raw scraper output.** Store verbatim source response in
+`JobPool.rawData: Json`. The normalized fields on `JobPool` are derived from this.
 If normalization logic changes, re-process from `rawData` rather than re-scraping.
 
 ---
@@ -183,11 +206,21 @@ export const MODEL = "anthropic/claude-sonnet-4-6";
 
 ### Scoring (`/api/analyze`)
 
-Called after a scrape run for all jobs with `aiAnalyzedAt: null`.
+Called after a scrape run for all jobs with `aiAnalyzedAt: null`. Also callable
+standalone for manual re-analysis. Protected by `CRON_SECRET`.
 
-System prompt includes the user's profile criteria (roles, skills, salary range, location
-preference, excluded keywords). Each job's description is sent as user content. Response
-must be valid JSON parsed into:
+**Keyword pre-filter (no API call)**
+
+Before touching the AI, jobs whose title + description match an `excludedKeyword` are
+bulk-updated to `feedStatus: HIDDEN, aiStatus: NO_GO, aiScore: 0` with a fixed summary.
+This avoids paying for an API call on a job that would be rejected anyway.
+
+**AI scoring**
+
+System prompt includes: target roles, locations, remote preference, required skills,
+nice-to-have skills, salary target, excluded keywords, and the first 1500 characters of
+`Profile.masterResume`. Jobs are scored in batches of 5 (500ms delay between batches).
+Each job is sent as a single chat completion. Response must be valid JSON:
 
 ```ts
 {
@@ -199,14 +232,28 @@ must be valid JSON parsed into:
 }
 ```
 
+If the response can't be parsed, `aiAnalyzedAt` is left null — the job is retried on
+the next run. `NO_GO` results additionally get `feedStatus: HIDDEN`.
+
 Always write the model name to `Job.aiModel` so we can track which version scored which
 listings.
 
 ### Tailoring (`/api/tailor`)
 
-Streaming route. System prompt instructs the model to rewrite the master resume to
-mirror the JD language, reorder bullets by relevance, and remove irrelevant content.
-Master resume comes from `Profile.masterResume`. Response streams as plain markdown.
+Streaming route. System prompt instructs the model to rewrite the resume to mirror the
+JD language, reorder bullets by relevance, and remove irrelevant content.
+
+**Two resume fields serve different purposes:**
+- `Profile.curriculumVitae` — the full CV: everything the candidate has ever done. Used
+  as the content source for tailoring (what the AI rewrites from)
+- `Profile.masterResume` — the curated base resume. Used as the format/style template.
+  Falls back to `curriculumVitae` if `masterResume` is null.
+
+The system prompt also includes contact details and structured profile data:
+`displayName`, `email`, `phone`, `location`, `linkedinUrl`, `portfolioUrl`,
+`githubUrl`, `skills`. These populate a header section in the tailored output.
+
+Response streams as plain markdown.
 
 Use `ReadableStream` directly — no Vercel AI SDK dependency. Pattern:
 
@@ -244,39 +291,92 @@ Every AI call must:
 
 ## Scraping
 
-### Source adapter pattern
+### Pool-first architecture
 
-Every scraper exports a single function with this signature:
+The scrape pipeline runs in two layers via a single `POST /api/scrape` call.
 
-```ts
-export async function scrape(profileId: string): Promise<RawJob[]>
+**Layer 1 — Global pool**
+
+All sources are scraped once and written to `JobPool` — a global table with no user or
+profile association. Deduplication is enforced at `@@unique([source, externalId])` via
+`createMany({ skipDuplicates: true })`. The same listing scraped on consecutive days
+writes exactly one row. `JobPool.rawData` stores the verbatim source response — never
+discard it, normalization is always re-derivable from it.
+
+**Layer 2 — Profile matching**
+
+After the pool is populated, every profile with `scraperEnabled: true` runs the match
+filter in-process against the loaded pool (newest 2000 entries, loaded once and reused
+for all profiles). Matched jobs that aren't already in the profile's feed are inserted
+as `Job` junction rows. The same pool entry can surface in multiple profiles with
+different AI scores — scoring is always profile-specific.
+
+```
+JobPool (scraped once)
+  └── Job (profile A) ← matched + scored against A's criteria
+  └── Job (profile B) ← matched + scored against B's criteria
 ```
 
-Where `RawJob` is the verbatim output from the source. `normalize.ts` then maps each
-source's `RawJob` to the Prisma `Job` create input.
+Pass `?skipPool=1` to skip layer 1 and run matching against the existing pool. Useful
+for testing profile criteria against already-scraped data without re-hitting source APIs.
 
-The `/api/scrape` route:
-1. Calls the appropriate scraper(s) for the profile's `scraperSources`
-2. Normalizes output via `normalize.ts`
-3. Deduplicates against existing records using `@@unique([profileId, externalId])`
-4. Writes new jobs to `Job` table
-5. Triggers `/api/analyze` for new unscored jobs
-6. Writes a `ScrapeRun` log record with `jobsFound`, `jobsNew`, `status`, `durationMs`
+### Profile matching logic (`src/lib/match.ts`)
 
-### Deduplication
+`jobMatchesProfile(job, profile)` runs in-process against the pool array — no DB query
+per job. Rules applied in order, short-circuiting on first decision:
 
-`externalId` is constructed as:
-- Apify/LinkedIn: the actor's item ID
-- Greenhouse/Lever/Ashby: `[source]-[company-slug]-[job-id-from-url]`
-- Fallback: `sha256(title + company + url).slice(0, 16)`
+1. **Hard exclude** — any `excludedKeyword` in title → reject immediately
+2. **Location filter** — if `targetLocations` is set, job must match a target city or
+   be remote-friendly (`remote`, `anywhere`, `worldwide`, `distributed` in location
+   string). `REMOTE_ONLY` profiles only accept remote-signalled locations.
+3. **Role token match** — each `targetRole` is tokenized; generic stopwords (`engineer`,
+   `developer`, `senior`, `software`, etc.) are stripped; remaining tokens matched
+   against title. If all tokens were stopwords, falls back to exact phrase match.
+4. **Skill fallback** — any `requiredSkill` in title → match (catches "React Developer"
+   for a "Frontend Engineer" search)
+5. **No criteria** — if profile has no roles or skills, everything passes through
+
+Cap: `MAX_CANDIDATES_PER_RUN = 30` per profile per run.
+
+### Scrape run logging
+
+Two types of `ScrapeRun` record per run:
+- `profileId: null` — pool-level run. Records `jobsFound` (raw count from source) and
+  `jobsInPool` (net new added to pool)
+- `profileId: set` — per-profile match run. Records `jobsNew` (net new matched into feed)
+
+After matching, if any new jobs were added for a profile, `POST /api/analyze` is
+triggered fire-and-forget for that profile.
+
+### Scraper adapter pattern
+
+Every scraper exports a function that returns verbatim source output. `normalize.ts`
+maps each source's raw type to `Prisma.JobPoolUncheckedCreateInput`. The scraper
+function currently receives a `_profileId` parameter that is unused — it is reserved
+for when the company list moves to per-profile settings.
+
+### Greenhouse scraper (`src/lib/scrapers/greenhouse.ts`)
+
+Uses the public Greenhouse Boards API — no auth, no bot detection:
+```
+GET https://boards-api.greenhouse.io/v1/boards/{slug}/jobs?content=true
+```
+Per-company failures are silently skipped. Company list: `src/config/companies.ts`
+(`GREENHOUSE_COMPANIES` array). This is the only file to edit to add/remove companies
+until per-profile company management is built in settings.
+
+`externalId` format: `greenhouse-{slug}-{numericJobId}`
+
+HTML job descriptions are stripped to plain text via regex in `normalize.ts` — no DOM
+dependency, runs safely in a Route Handler.
 
 ### Priority sources for Berlin/Poland market
 
-1. **Greenhouse** — `boards.greenhouse.io/[company]` — free, clean, no bot detection
-2. **Lever** — `jobs.lever.co/[company]` — free, consistent markup
-3. **Ashby** — `jobs.ashby.io/[company]` — free, clean API-style endpoints
-4. **LinkedIn** — Apify actor, costs money, use for premium signal
-5. **No Fluff Jobs** — Polish market, Apify actor
+1. **Greenhouse** — `boards-api.greenhouse.io` — free, clean, no bot detection ✓ built
+2. **Lever** — `jobs.lever.co` — free, consistent markup — ⚠ not yet built
+3. **Ashby** — `jobs.ashby.io` — free, clean API-style endpoints — ⚠ not yet built
+4. **LinkedIn** — Apify actor, costs money, use for premium signal — ⚠ not yet built
+5. **No Fluff Jobs** — Polish market, Apify actor — ⚠ not yet built
 
 ---
 
@@ -627,6 +727,14 @@ Return a 202 immediately and let the cron job do the work.
 
 ## Clerk Webhook Verification
 
+**⚠ This route is not yet implemented — it is critical for production.**
+
+Without it, new users who sign up via Clerk will have a valid auth session but no `User`
+row in the database. Since `Profile` has a foreign key to `User`, any attempt to create
+a profile (i.e. complete onboarding) will fail with a FK constraint error. The app
+currently works in development only because the seed script creates the test user
+directly. This must be built before the app can accept real users.
+
 The `/api/webhooks/clerk` route must verify the Svix signature on every request or it
 is an unauthenticated endpoint that anyone can call to create arbitrary User records.
 
@@ -953,6 +1061,8 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/webhooks/clerk",
+  "/api/scrape",   // protected by CRON_SECRET instead
+  "/api/analyze",  // protected by CRON_SECRET instead
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
@@ -1192,3 +1302,7 @@ Do not:
 - Use offset pagination (`skip`/`take`) on the job feed — use cursor-based pagination
 - Format dates with `toLocaleDateString()` — use `date-fns`
 - Store secrets in `NEXT_PUBLIC_*` env vars
+- Read job content fields (title, company, description, location, etc.) directly from
+  `Job` — `Job` is a junction table, all content lives on `JobPool`. Always use
+  `job.jobPool.title`, `job.jobPool.description`, etc., and include `jobPool: true` in
+  Prisma queries that need job content
