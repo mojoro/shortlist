@@ -144,7 +144,7 @@ export async function switchProfile(data: unknown): Promise<void> {
 
 export async function completeOnboarding(
   data: unknown,
-): Promise<{ profileId: string }> {
+): Promise<{ profileId: string; jobsFound: number }> {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
@@ -179,18 +179,43 @@ export async function completeOnboarding(
     },
   });
 
-  // Fire-and-forget initial scrape so the user sees jobs immediately
-  fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/scrape`, {
-    method:  "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization:  `Bearer ${process.env.CRON_SECRET}`,
-    },
-    body: JSON.stringify({ profileId: profile.id }),
-  }).catch((err) => console.error("[completeOnboarding] scrape error", err));
+  // Match new profile against the existing pool — no re-scrape needed
+  const pool = await prisma.jobPool.findMany({
+    orderBy: { postedAt: "desc" },
+    take:    2000,
+  });
+
+  const matches = pool
+    .filter((p) => jobMatchesProfile(p, profile))
+    .slice(0, MAX_CANDIDATES_PER_RUN);
+
+  let jobsFound = 0;
+  if (matches.length > 0) {
+    const result = await prisma.job.createMany({
+      data: matches.map((c) => ({
+        profileId:  profile.id,
+        jobPoolId:  c.id,
+        feedStatus: "NEW" as const,
+      })),
+      skipDuplicates: true,
+    });
+    jobsFound = result.count;
+  }
+
+  // Fire-and-forget analysis for matched jobs
+  if (jobsFound > 0) {
+    fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/analyze`, {
+      method:  "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization:  `Bearer ${process.env.CRON_SECRET}`,
+      },
+      body: JSON.stringify({ profileId: profile.id }),
+    }).catch((err) => console.error("[completeOnboarding] analyze error", err));
+  }
 
   revalidatePath("/dashboard");
-  return { profileId: profile.id };
+  return { profileId: profile.id, jobsFound };
 }
 
 // ─── Re-match from pool ───────────────────────────────────────────────────────
