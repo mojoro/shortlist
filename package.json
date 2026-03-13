@@ -14,6 +14,7 @@
     "@prisma/client": "^6.19.2",
     "@react-pdf/renderer": "^4.3.2",
     "@t3-oss/env-nextjs": "^0.13.10",
+    "@types/turndown": "^5.0.6",
     "@uiw/react-md-editor": "^4.0.11",
     "date-fns": "^4.1.0",
     "next": "^15.5.12",
@@ -24,6 +25,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "svix": "^1.87.0",
+    "turndown": "^7.2.2",
     "zod": "^4.3.6"
   },
   "pnpm": {

@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { JobDetailActions } from "@/components/jobs/JobDetailActions";
 import { JobNotesInput } from "@/components/jobs/JobNotesInput";
+import { JobDescription } from "@/components/jobs/JobDescription";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -144,9 +145,7 @@ export default async function JobDetailPage({ params }: PageProps) {
             className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6"
             style={{ boxShadow: "var(--shadow-card)" }}
           >
-            <p className="whitespace-pre-line text-sm leading-relaxed text-[var(--text)]">
-              {pool.description}
-            </p>
+            <JobDescription source={pool.description} />
           </div>
         </div>
 

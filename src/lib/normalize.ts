@@ -1,17 +1,11 @@
 import type { Prisma } from "@prisma/client";
 import type { GreenhouseJob } from "@/lib/scrapers/greenhouse";
+import TurndownService from "turndown";
 
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, " ")
-    .trim();
+const td = new TurndownService({ headingStyle: "atx", bulletListMarker: "-" });
+
+function htmlToMarkdown(html: string): string {
+  return html ? td.turndown(html).trim() : "";
 }
 
 /**
@@ -29,7 +23,7 @@ export function normalizeGreenhouseForPool(
     title:       raw.title,
     company:     companyName,
     location:    raw.location?.name ?? null,
-    description: raw.content ? stripHtml(raw.content) : "",
+    description: raw.content ? htmlToMarkdown(raw.content) : "",
     postedAt:    raw.updated_at ? new Date(raw.updated_at) : null,
     rawData:     raw as unknown as Prisma.InputJsonValue,
   };
