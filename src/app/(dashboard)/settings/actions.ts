@@ -10,6 +10,7 @@ import {
   updateResumeSchema,
   createProfileSchema,
   switchProfileSchema,
+  completeOnboardingSchema,
 } from "@/lib/validations";
 
 // ─── Profile info ────────────────────────────────────────────────────────────
@@ -137,6 +138,59 @@ export async function switchProfile(data: unknown): Promise<void> {
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");
+}
+
+// ─── Complete onboarding ─────────────────────────────────────────────────────
+
+export async function completeOnboarding(
+  data: unknown,
+): Promise<{ profileId: string }> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const parsed = completeOnboardingSchema.safeParse(data);
+  if (!parsed.success) throw new Error("Invalid data");
+
+  // Upsert User row — handles missing Clerk webhook
+  await prisma.user.upsert({
+    where:  { id: userId },
+    create: { id: userId },
+    update: {},
+  });
+
+  // Mark any existing profiles inactive, then create the new one
+  await prisma.profile.updateMany({
+    where: { userId },
+    data:  { isActive: false },
+  });
+
+  const profile = await prisma.profile.create({
+    data: {
+      userId,
+      name:             parsed.data.name,
+      targetRoles:      parsed.data.targetRoles,
+      targetLocations:  parsed.data.targetLocations,
+      remotePreference: parsed.data.remotePreference,
+      currency:         parsed.data.currency,
+      targetSalaryMin:  parsed.data.targetSalaryMin,
+      targetSalaryMax:  parsed.data.targetSalaryMax,
+      masterResume:     parsed.data.masterResume ?? null,
+      isActive:         true,
+    },
+  });
+
+  // Fire-and-forget initial scrape so the user sees jobs immediately
+  fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/scrape`, {
+    method:  "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization:  `Bearer ${process.env.CRON_SECRET}`,
+    },
+    body: JSON.stringify({ profileId: profile.id }),
+  }).catch((err) => console.error("[completeOnboarding] scrape error", err));
+
+  revalidatePath("/dashboard");
+  return { profileId: profile.id };
 }
 
 // ─── Re-match from pool ───────────────────────────────────────────────────────
