@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { completeOnboarding } from "@/app/(dashboard)/settings/actions";
 import { APP_CONFIG } from "@/config/app";
 
+type Phase = "form" | "loading";
+
 type WizardData = {
   name: string;
   targetRoles: string;
@@ -34,6 +36,7 @@ const HINT_CLS  = "mt-1.5 text-xs text-[var(--text-muted)]";
 
 export function OnboardingWizard() {
   const router = useRouter();
+  const [phase, setPhase] = useState<Phase>("form");
   const [step, setStep] = useState(1);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -63,9 +66,9 @@ export function OnboardingWizard() {
   }
 
   function handleComplete() {
+    setPhase("loading");
     startTransition(async () => {
       try {
-        setError(null);
         const roles = data.targetRoles
           .split(",")
           .map((s) => s.trim())
@@ -90,9 +93,26 @@ export function OnboardingWizard() {
         document.cookie = "shortlist-onboarded=1; path=/";
         router.push("/dashboard");
       } catch {
+        setPhase("form");
         setError("Something went wrong. Please try again.");
       }
     });
+  }
+
+  if (phase === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--bg-subtle)] p-4">
+        <div className="text-center">
+          <div className="mx-auto mb-6 h-12 w-12 animate-spin rounded-full border-4 border-[var(--border)] border-t-[var(--accent)]" />
+          <p className="text-base font-semibold text-[var(--text)]">
+            Finding your matches…
+          </p>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">
+            Searching the job pool for roles that fit your profile.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
