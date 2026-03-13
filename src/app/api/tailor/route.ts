@@ -204,6 +204,12 @@ Your task is to produce a focused, targeted resume for this job. Steps:
     });
   } catch (err) {
     console.error("[/api/tailor]", err);
+    if ((err as { status?: number }).status === 402) {
+      return Response.json(
+        { error: "Insufficient AI credits.", code: "INSUFFICIENT_CREDITS" },
+        { status: 402 },
+      );
+    }
     return Response.json(
       { error: "Resume generation failed. Please try again." },
       { status: 500 }
