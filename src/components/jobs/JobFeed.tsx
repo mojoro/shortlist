@@ -309,15 +309,31 @@ export function JobFeed({
   const isIgnoredView = filter === "ignored";
 
   if (jobs.length === 0) {
+    const isAll = filter === "all" || !filter;
     return (
       <div className="py-16 text-center">
-        <p className="text-base text-[var(--text-muted)]">
+        <p className="text-base font-medium text-[var(--text)]">
           {filter === "new"     && "No new jobs right now."}
-          {filter === "saved"   && "You haven't saved any jobs yet."}
+          {filter === "saved"   && "No saved jobs yet."}
           {filter === "applied" && "No applications yet."}
-          {filter === "ignored" && "Nothing hidden yet. Tap × on a job card to hide it."}
-          {(filter === "all" || !filter) && "No jobs found yet. We'll find matches for you soon."}
+          {filter === "ignored" && "Nothing hidden."}
+          {isAll                && "No jobs matched your profile."}
         </p>
+        <p className="mt-2 text-sm text-[var(--text-muted)]">
+          {filter === "new"     && "Check back soon — new listings are added daily."}
+          {filter === "saved"   && "Bookmark a job you like and it'll appear here."}
+          {filter === "applied" && "Move a job to Applied in the pipeline to track it here."}
+          {filter === "ignored" && "Tap × on a job card to hide it from your feed."}
+          {isAll                && "Try adjusting your search criteria in Settings, or check back after the next daily update."}
+        </p>
+        {isAll && (
+          <a
+            href="/settings"
+            className="mt-5 inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-2 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-subtle)]"
+          >
+            Open Settings
+          </a>
+        )}
       </div>
     );
   }
