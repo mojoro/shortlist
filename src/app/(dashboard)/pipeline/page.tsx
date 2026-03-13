@@ -5,13 +5,49 @@ import { prisma } from "@/lib/prisma";
 import { PipelineStats } from "@/components/pipeline/PipelineStats";
 import { FollowUpBanner } from "@/components/pipeline/FollowUpBanner";
 import { PipelineTable } from "@/components/pipeline/PipelineTable";
+import { PipelineSortBar } from "@/components/pipeline/PipelineSortBar";
 import type { ApplicationWithJob } from "@/types";
+import type { Prisma } from "@prisma/client";
 
 export const metadata: Metadata = { title: "Your pipeline" };
 
-export default async function PipelinePage() {
+const VALID_SORTS = ["updated", "status", "applied", "score"] as const;
+const VALID_DIRS  = ["asc", "desc"] as const;
+type PipelineSort = (typeof VALID_SORTS)[number];
+type SortDir = (typeof VALID_DIRS)[number];
+
+interface PageProps {
+  searchParams: Promise<{ sort?: string; dir?: string }>;
+}
+
+function buildPipelineOrderBy(
+  sort: PipelineSort,
+  dir: SortDir
+): Prisma.ApplicationOrderByWithRelationInput {
+  const order = dir;
+  switch (sort) {
+    case "status":
+      return { status: order };
+    case "applied":
+      return { appliedAt: { sort: order, nulls: "last" } };
+    case "score":
+      return { job: { aiScore: { sort: dir === "asc" ? "asc" : "desc", nulls: "last" } } };
+    default:
+      return { updatedAt: order };
+  }
+}
+
+export default async function PipelinePage({ searchParams }: PageProps) {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
+
+  const { sort = "updated", dir = "desc" } = await searchParams;
+  const safeSort: PipelineSort = (VALID_SORTS as readonly string[]).includes(sort)
+    ? (sort as PipelineSort)
+    : "updated";
+  const safeDir: SortDir = (VALID_DIRS as readonly string[]).includes(dir)
+    ? (dir as SortDir)
+    : "desc";
 
   try {
     const profile = await prisma.profile.findFirst({
@@ -40,7 +76,7 @@ export default async function PipelinePage() {
           include: { jobPool: true },
         },
       },
-      orderBy: { updatedAt: "desc" },
+      orderBy: buildPipelineOrderBy(safeSort, safeDir),
     });
 
     const TERMINAL = new Set(["ACCEPTED", "REJECTED", "WITHDRAWN", "GHOSTED"]);
@@ -74,6 +110,8 @@ export default async function PipelinePage() {
         {followUpDue.length > 0 && (
           <FollowUpBanner dueApplications={followUpDue as ApplicationWithJob[]} />
         )}
+
+        <PipelineSortBar />
 
         <PipelineTable
           activeApplications={activeApps as ApplicationWithJob[]}
