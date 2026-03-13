@@ -85,7 +85,7 @@ export async function POST(req: Request) {
     try {
       // IDs of pool jobs already in this profile's feed
       const existing = await prisma.job.findMany({
-        where:  { profileId: profile.id, jobPoolId: { not: null } },
+        where:  { profileId: profile.id },
         select: { jobPoolId: true },
       });
       const existingIds = new Set(existing.map((j) => j.jobPoolId));
@@ -98,18 +98,9 @@ export async function POST(req: Request) {
       if (candidates.length > 0) {
         const { count } = await prisma.job.createMany({
           data: candidates.map((c) => ({
-            profileId:   profile.id,
-            jobPoolId:   c.id,
-            externalId:  c.externalId,
-            source:      c.source,
-            url:         c.url,
-            title:       c.title,
-            company:     c.company,
-            location:    c.location,
-            description: c.description,
-            postedAt:    c.postedAt,
-            rawData:     c.rawData ?? undefined,
-            feedStatus:  "NEW" as const,
+            profileId: profile.id,
+            jobPoolId: c.id,
+            feedStatus: "NEW" as const,
           })),
           skipDuplicates: true,
         });

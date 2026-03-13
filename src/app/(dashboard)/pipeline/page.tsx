@@ -37,7 +37,7 @@ export default async function PipelinePage() {
       where: { profileId: profile.id },
       include: {
         job: {
-          select: { id: true, title: true, company: true, aiScore: true, url: true },
+          include: { jobPool: true },
         },
       },
       orderBy: { updatedAt: "desc" },

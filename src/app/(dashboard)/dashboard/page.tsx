@@ -81,7 +81,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         }),
         prisma.job.findMany({
           where: buildWhereClause(profile.id, safeFilter),
-          include: { application: { select: { status: true } } },
+          include: { jobPool: true, application: { select: { status: true } } },
           orderBy: buildOrderBy(safeSort),
           take: 25,
         }),

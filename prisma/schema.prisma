@@ -107,15 +107,29 @@ model JobPool {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
+  // Identity
   externalId  String
   source      ScraperSource
   url         String
+
+  // Core content
   title       String
   company     String
   location    String?
   description String
   postedAt    DateTime?
   rawData     Json?
+
+  // Enriched fields — nullable, populated by richer scrapers (Apify, LinkedIn)
+  locationType LocationType?
+  salary       String?
+  salaryMin    Int?
+  salaryMax    Int?
+  currency     String?
+  jobType      JobType?
+  skills       String[]
+  companySize  String?
+  industry     String?
 
   jobs        Job[]
 
@@ -126,12 +140,10 @@ model JobPool {
 
 // ============================================================
 // JOB
-// A scraped listing matched and scoped to a profile. Created
-// by filtering the global JobPool against profile criteria.
-// AI scoring is profile-specific (criteria differ per profile).
-//
-// Raw scraper output is preserved in rawData so we never
-// lose information and can re-process without re-scraping.
+// A profile-scoped link to a JobPool entry. Thin junction table:
+// stores only what is specific to this user's profile — AI
+// scoring results and feed state. All job content is read
+// from the jobPool relation.
 // ============================================================
 
 model Job {
@@ -140,59 +152,31 @@ model Job {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Pool reference — links back to the global job pool entry
-  jobPoolId   String?
-  jobPool     JobPool? @relation(fields: [jobPoolId], references: [id])
+  // Pool reference
+  jobPoolId String
+  jobPool   JobPool @relation(fields: [jobPoolId], references: [id])
 
-  // Identity / dedup (kept for legacy/seeded jobs without a pool entry)
-  externalId  String
-  source      ScraperSource
-  url         String
-
-  // Core fields (normalized)
-  title       String
-  company     String
-  location    String?
-  locationType LocationType? // REMOTE, HYBRID, ONSITE
-  salary      String?       // raw string e.g. "€55,000–70,000"
-  salaryMin   Int?          // parsed, EUR/year
-  salaryMax   Int?
-  currency    String?
-  jobType     JobType?      // FULL_TIME, CONTRACT, etc.
-  postedAt    DateTime?
-  description String        // full JD, plain text (HTML stripped)
-  skills      String[]      // extracted tags
-  companySize String?
-  industry    String?
-
-  // AI analysis
-  aiScore        Int?          // 0–100
-  aiStatus       AiStatus?     // GO, NO_GO, EXAMINE
-  aiSummary      String?       // 1–2 sentence overview
-  aiMatchPoints  String[]      // what aligns
-  aiGapPoints    String[]      // what doesn't
+  // AI analysis (profile-specific — same pool job scores differently per profile)
+  aiScore        Int?
+  aiStatus       AiStatus?
+  aiSummary      String?
+  aiMatchPoints  String[]
+  aiGapPoints    String[]
   aiAnalyzedAt   DateTime?
-  aiModel        String?       // which model was used
+  aiModel        String?
 
   // Feed state
-  feedStatus  FeedStatus  @default(NEW)   // NEW, SAVED, ARCHIVED, HIDDEN
+  feedStatus  FeedStatus  @default(NEW)
   viewedAt    DateTime?
   userNotes   String?
-
-  // Raw scraper output — never discard
-  rawData     Json?
 
   // Relations
   profile     Profile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
   application Application?
 
-  // A job is unique per profile per pool entry (pool-sourced jobs)
-  // and per profile per external ID (legacy/seeded jobs)
   @@unique([profileId, jobPoolId])
-  @@unique([profileId, externalId])
   @@index([profileId, feedStatus])
   @@index([profileId, aiScore(sort: Desc)])
-  @@index([profileId, postedAt(sort: Desc)])
   @@map("jobs")
 }
 

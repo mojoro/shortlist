@@ -361,10 +361,10 @@ export function PipelineTable({
                       {/* Job — sticky left column */}
                       <td className="sticky left-0 z-10 bg-[var(--bg-card)] px-4 py-3 w-[140px] max-w-[140px]">
                         <div className="truncate font-medium text-[var(--text)]">
-                          {app.job.title}
+                          {app.job.jobPool.title}
                         </div>
                         <div className="mt-0.5 truncate text-xs text-[var(--text-muted)]">
-                          {app.job.company}
+                          {app.job.jobPool.company}
                         </div>
                       </td>
 
@@ -562,8 +562,8 @@ export function PipelineTable({
       {pdfPreviewApp?.exportedResumeMarkdown && (
         <ResumePDFModal
           markdown={pdfPreviewApp.exportedResumeMarkdown}
-          jobTitle={pdfPreviewApp.job.title}
-          company={pdfPreviewApp.job.company}
+          jobTitle={pdfPreviewApp.job.jobPool.title}
+          company={pdfPreviewApp.job.jobPool.company}
           onClose={() => setPdfPreviewFor(null)}
         />
       )}

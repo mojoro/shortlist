@@ -26,7 +26,7 @@ export async function getMoreJobs(
 
   const jobs = await prisma.job.findMany({
     where: buildWhereClause(profileId, filter),
-    include: { application: { select: { status: true } } },
+    include: { jobPool: true, application: { select: { status: true } } },
     orderBy: buildOrderBy(safeSort),
     take: 25,
     cursor: { id: cursor },

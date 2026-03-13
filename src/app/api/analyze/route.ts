@@ -118,9 +118,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // Load unscored, visible jobs
+    // Load unscored, visible jobs (include pool for content fields)
     const unscoredJobs = await prisma.job.findMany({
-      where: { profileId, aiAnalyzedAt: null, feedStatus: { not: "HIDDEN" } },
+      where:   { profileId, aiAnalyzedAt: null, feedStatus: { not: "HIDDEN" } },
+      include: { jobPool: true },
     });
 
     if (unscoredJobs.length === 0) {
@@ -133,7 +134,7 @@ export async function POST(req: Request) {
     const toScore: typeof unscoredJobs = [];
 
     for (const job of unscoredJobs) {
-      const haystack = `${job.title} ${job.description}`.toLowerCase();
+      const haystack = `${job.jobPool.title} ${job.jobPool.description}`.toLowerCase();
       const matched = excludedLower.some((kw) => haystack.includes(kw));
       if (matched) {
         toHide.push(job);
@@ -173,7 +174,7 @@ export async function POST(req: Request) {
                 { role: "system", content: systemPrompt },
                 {
                   role: "user",
-                  content: `## ${job.title} at ${job.company}\n\n${job.description.slice(0, 8000)}`,
+                  content: `## ${job.jobPool.title} at ${job.jobPool.company}\n\n${job.jobPool.description.slice(0, 8000)}`,
                 },
               ],
               max_tokens: 1500,
