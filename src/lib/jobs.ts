@@ -1,11 +1,22 @@
 import type { FeedStatus, ApplicationStatus, Prisma } from "@prisma/client";
 
-export type SortOption = "match" | "newest";
+export type SortOption = "match" | "newest" | "salary";
+export type SortDir = "asc" | "desc";
 
-export function buildOrderBy(sort: SortOption): Prisma.JobOrderByWithRelationInput {
-  return sort === "newest"
-    ? { createdAt: "desc" }
-    : { aiScore: { sort: "desc", nulls: "last" } };
+export function buildOrderBy(
+  sort: SortOption,
+  dir: SortDir = "desc"
+): Prisma.JobOrderByWithRelationInput {
+  const order = dir;
+  switch (sort) {
+    case "newest":
+      return { createdAt: order };
+    case "salary":
+      return { jobPool: { salaryMax: { sort: order, nulls: "last" } } };
+    default:
+      // match score — always desc (higher is better), direction toggle ignored
+      return { aiScore: { sort: "desc", nulls: "last" } };
+  }
 }
 
 /**
