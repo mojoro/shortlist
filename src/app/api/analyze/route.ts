@@ -16,23 +16,34 @@ interface AiAnalysisResult {
   gapPoints: string[];
 }
 
+function isValidResult(parsed: unknown): boolean {
+  if (typeof parsed !== "object" || parsed === null) return false;
+  const p = parsed as Record<string, unknown>;
+  return (
+    typeof p.score === "number" &&
+    ["GO", "NO_GO", "EXAMINE"].includes(p.status as string) &&
+    typeof p.summary === "string" &&
+    Array.isArray(p.matchPoints) &&
+    Array.isArray(p.gapPoints)
+  );
+}
+
 function parseAiResponse(text: string): AiAnalysisResult | null {
   try {
-    const cleaned = text.replace(/^```json\s*/i, "").replace(/\s*```$/i, "").trim();
-    const parsed = JSON.parse(cleaned);
-    if (
-      typeof parsed.score === "number" &&
-      ["GO", "NO_GO", "EXAMINE"].includes(parsed.status) &&
-      typeof parsed.summary === "string" &&
-      Array.isArray(parsed.matchPoints) &&
-      Array.isArray(parsed.gapPoints)
-    ) {
-      return parsed as AiAnalysisResult;
-    }
-    return null;
-  } catch {
-    return null;
-  }
+    // Try direct parse first (model followed instructions perfectly)
+    const direct = JSON.parse(text.trim());
+    if (isValidResult(direct)) return direct as AiAnalysisResult;
+  } catch {}
+
+  try {
+    // Extract first {...} block — handles preamble/postamble text and code fences
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    const parsed = JSON.parse(match[0]);
+    if (isValidResult(parsed)) return parsed as AiAnalysisResult;
+  } catch {}
+
+  return null;
 }
 
 function buildSystemPrompt(profile: {
