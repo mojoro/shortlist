@@ -1091,6 +1091,24 @@ Note: Use a cookie (`shortlist-onboarded`) for the onboarding check in middlewar
 than a DB query — middleware runs on every request and a DB query here would add
 unacceptable latency to every page load.
 
+**DB fallback pattern:** The cookie-only approach breaks when users sign in on a new
+device or clear their browser storage. To handle this, when the `shortlist-onboarded`
+cookie is absent, middleware calls the internal `/api/check-onboarding` route (forwarding
+the Clerk session cookie). That route uses Prisma to query
+`profile.count({ where: { userId, onboardingCompletedAt: { not: null } } })`. If count
+> 0, the cookie is set on the response and the request proceeds. If count === 0, the
+user is redirected to `/onboarding`. This is a one-time cost per session/device — once
+the cookie is restored, all subsequent requests short-circuit at the cookie check.
+
+`onboardingCompletedAt` is written by `completeOnboarding()` in
+`src/app/(dashboard)/settings/actions.ts` when the onboarding wizard creates the first
+Profile record.
+
+**Why an internal API route instead of direct Prisma in middleware:** Next.js middleware
+runs in the Edge Runtime, which does not support Node.js APIs that Prisma depends on.
+`@neondatabase/serverless` (the Edge-compatible Neon driver) is not in this project's
+dependencies — the internal route approach avoids adding that dependency.
+
 ---
 
 ## Vercel Cron Configuration
