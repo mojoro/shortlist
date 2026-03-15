@@ -8,6 +8,7 @@ import { FilterChips } from "@/components/ui/FilterChips";
 import { JobFeed } from "@/components/jobs/JobFeed";
 import { StatsRow } from "@/components/dashboard/StatsRow";
 import { ProfileSwitcher } from "@/components/dashboard/ProfileSwitcher";
+import { ImportJobButton } from "@/components/jobs/ImportJobModal";
 import { APP_CONFIG } from "@/config/app";
 import type { JobWithApplication } from "@/types";
 
@@ -111,7 +112,10 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           <h1 className="text-lg font-semibold uppercase tracking-wide text-[var(--text-muted)]">
             Job Feed
           </h1>
-          <ProfileSwitcher profiles={allProfiles} activeProfileId={profile.id} />
+          <div className="flex items-center gap-2">
+            <ImportJobButton profileId={profile.id} />
+            <ProfileSwitcher profiles={allProfiles} activeProfileId={profile.id} />
+          </div>
         </div>
 
         <StatsRow
