@@ -625,7 +625,7 @@ English (C2), German (B2)`;
     next: "Go to /dashboard to see your feed",
   });
 
-  response.cookies.set("shortlist-onboarded", "1", { path: "/" });
+  response.cookies.set("shortlist-onboarded", "true", { path: "/" });
   response.cookies.set("shortlist-active-profile", profile.id, { path: "/" });
 
   return response;

@@ -84,7 +84,7 @@ export const completeOnboardingSchema = z.object({
   masterResume:     z.string().optional(),
   // Contact details (step 3)
   displayName:      z.string().optional(),
-  email:            z.string().email().optional(),
+  email:            z.string().email().optional().or(z.literal("")),
   phone:            z.string().optional(),
   contactLocation:  z.string().optional(),
   linkedinUrl:      z.string().url().optional().or(z.literal("")),

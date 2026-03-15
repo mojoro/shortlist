@@ -68,8 +68,9 @@ export default clerkMiddleware(async (auth, req) => {
         }
       }
     } catch (err) {
-      // Network error calling the internal route — fail open to avoid infinite
-      // redirect loops. The user may briefly see /onboarding if this path fails.
+      // Network error calling the internal route — fail closed: redirect to /onboarding.
+      // Safe: once the user completes onboarding the cookie will be set and this path
+      // won't be hit again.
       if (process.env.NODE_ENV === "development") {
         console.error("[middleware] check-onboarding fetch failed:", err);
       }
