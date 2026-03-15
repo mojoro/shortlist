@@ -190,6 +190,40 @@ export async function requestAnalysis(
   return {};
 }
 
+export async function discardAnalysis(
+  jobId: string,
+  profileId: string,
+): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const profile = await prisma.profile.findFirst({
+    where: { id: profileId, userId },
+  });
+  if (!profile) throw new Error("Profile not found");
+
+  const job = await prisma.job.findFirst({ where: { id: jobId, profileId } });
+  if (!job) throw new Error("Job not found");
+
+  await prisma.job.update({
+    where: { id: jobId },
+    data: {
+      aiScore:       null,
+      aiStatus:      null,
+      aiSummary:     null,
+      aiMatchPoints: [],
+      aiGapPoints:   [],
+      aiAnalyzedAt:  null,
+      aiModel:       null,
+      // Restore hidden jobs so they reappear after re-analysis
+      ...(job.feedStatus === "HIDDEN" ? { feedStatus: "NEW" } : {}),
+    },
+  });
+
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath("/dashboard");
+}
+
 export async function updateJobNotes(
   jobId: string,
   profileId: string,

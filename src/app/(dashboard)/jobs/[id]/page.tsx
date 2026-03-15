@@ -8,6 +8,7 @@ import { JobDetailActions } from "@/components/jobs/JobDetailActions";
 import { JobNotesInput } from "@/components/jobs/JobNotesInput";
 import { JobDescription } from "@/components/jobs/JobDescription";
 import { AnalyzeButton } from "@/components/jobs/AnalyzeButton";
+import { ReanalyzeButton } from "@/components/jobs/ReanalyzeButton";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -224,6 +225,7 @@ export default async function JobDetailPage({ params }: PageProps) {
                     </ul>
                   </div>
                 )}
+                <ReanalyzeButton jobId={job.id} profileId={job.profileId} />
               </>
             ) : (
               <div className="space-y-3 py-2">
