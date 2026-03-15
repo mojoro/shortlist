@@ -1,8 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { env } from "@/env";
 import { scrapeGreenhouse } from "@/lib/scrapers/greenhouse";
-import { normalizeGreenhouseForPool } from "@/lib/normalize";
+import { scrapeLever } from "@/lib/scrapers/lever";
+import { scrapeAshby } from "@/lib/scrapers/ashby";
+import {
+  normalizeGreenhouseForPool,
+  normalizeLeverForPool,
+  normalizeAshbyForPool,
+} from "@/lib/normalize";
 import { jobMatchesProfile, MAX_CANDIDATES_PER_RUN } from "@/lib/match";
+import type { ScraperSource } from "@prisma/client";
 
 export const maxDuration = 60;
 
@@ -21,69 +28,101 @@ export async function POST(req: Request) {
     console.log("[/api/scrape] Entry — skipPool:", skipPool);
   }
 
-  let poolNew = 0;
+  let totalPoolNew = 0;
 
   // ── POOL LAYER ────────────────────────────────────────────────────────────
-  // Scrape all sources once into the global JobPool. Skipped when the pool is
-  // already fresh (pass ?skipPool=1 to run the match layer against existing data).
+  // Scrape all sources in parallel, write each to the pool, log per-source.
 
   if (!skipPool) {
-    let rawCount = 0;
-    let poolScrapeStatus: "SUCCESS" | "PARTIAL" | "FAILED" = "SUCCESS";
-    let poolErrorMessage: string | undefined;
+    const [ghSettled, leverSettled, ashbySettled] = await Promise.allSettled([
+      scrapeGreenhouse("_global"),
+      scrapeLever("_global"),
+      scrapeAshby("_global"),
+    ]);
 
-    try {
-      const rawJobs = await scrapeGreenhouse("_global");
-      rawCount = rawJobs.length;
+    type SourceSpec = {
+      source: ScraperSource;
+      settled: typeof ghSettled | typeof leverSettled | typeof ashbySettled;
+      normalize: (results: unknown[]) => ReturnType<typeof normalizeGreenhouseForPool>[];
+    };
 
-      const poolData = rawJobs.map((r) =>
-        normalizeGreenhouseForPool(r.raw, r.slug, r.companyName),
-      );
-
-      const { count } = await prisma.jobPool.createMany({
-        data:           poolData,
-        skipDuplicates: true,
-      });
-      poolNew = count;
-
-      if (process.env.NODE_ENV === "development") {
-        console.log(`[/api/scrape] Pool write — rawCount: ${rawCount}, poolNew: ${poolNew}`);
-      }
-    } catch (err) {
-      console.error("[/api/scrape] Pool scrape failed:", err);
-      poolScrapeStatus = "FAILED";
-      poolErrorMessage = err instanceof Error ? err.message : String(err);
-    }
-
-    // Log the pool-level run (profileId: null)
-    await prisma.scrapeRun.create({
-      data: {
-        profileId:    null,
-        source:       "GREENHOUSE",
-        status:       poolScrapeStatus,
-        jobsFound:    rawCount,
-        jobsInPool:   poolNew,
-        errorMessage: poolErrorMessage,
-        durationMs:   Date.now() - startMs,
+    const sources: SourceSpec[] = [
+      {
+        source:    "GREENHOUSE",
+        settled:   ghSettled,
+        normalize: (r) =>
+          (r as Awaited<ReturnType<typeof scrapeGreenhouse>>).map((j) =>
+            normalizeGreenhouseForPool(j.raw, j.slug, j.companyName),
+          ),
       },
-    });
+      {
+        source:    "LEVER",
+        settled:   leverSettled,
+        normalize: (r) =>
+          (r as Awaited<ReturnType<typeof scrapeLever>>).map((j) =>
+            normalizeLeverForPool(j.raw, j.slug, j.companyName),
+          ),
+      },
+      {
+        source:    "ASHBY",
+        settled:   ashbySettled,
+        normalize: (r) =>
+          (r as Awaited<ReturnType<typeof scrapeAshby>>).map((j) =>
+            normalizeAshbyForPool(j.raw, j.slug, j.companyName),
+          ),
+      },
+    ];
 
-    if (poolScrapeStatus === "FAILED") {
-      return Response.json({ error: "Pool scrape failed", poolNew: 0, results: [] }, { status: 500 });
+    for (const { source, settled, normalize } of sources) {
+      const sourceStart = Date.now();
+      let rawCount = 0;
+      let poolNew  = 0;
+      let status: "SUCCESS" | "FAILED" = "SUCCESS";
+      let errorMessage: string | undefined;
+
+      try {
+        if (settled.status === "rejected") throw settled.reason as Error;
+
+        const rawJobs  = settled.value as unknown[];
+        rawCount       = rawJobs.length;
+        const poolData = normalize(rawJobs);
+
+        const { count } = await prisma.jobPool.createMany({
+          data:           poolData,
+          skipDuplicates: true,
+        });
+        poolNew      = count;
+        totalPoolNew += count;
+
+        if (process.env.NODE_ENV === "development") {
+          console.log(`[/api/scrape] ${source} — rawCount: ${rawCount}, poolNew: ${poolNew}`);
+        }
+      } catch (err) {
+        console.error(`[/api/scrape] ${source} pool scrape failed:`, err);
+        status       = "FAILED";
+        errorMessage = err instanceof Error ? err.message : String(err);
+      }
+
+      await prisma.scrapeRun.create({
+        data: {
+          profileId:    null,
+          source,
+          status,
+          jobsFound:    rawCount,
+          jobsInPool:   poolNew,
+          errorMessage,
+          durationMs:   Date.now() - sourceStart,
+        },
+      });
     }
   }
 
   // ── MATCH LAYER ───────────────────────────────────────────────────────────
-  // For each enabled profile, filter the pool by profile criteria and
-  // surface only the most relevant candidates into their Job feed.
 
   const profiles = await prisma.profile.findMany({
     where: { scraperEnabled: true },
   });
 
-  // Load the full pool once and reuse for all profiles.
-  // take: 2000 covers all realistic pool sizes; order newest-first so the
-  // per-profile cap naturally picks the most recent matching jobs.
   const pool = await prisma.jobPool.findMany({
     orderBy: { postedAt: "desc" },
     take:    2000,
@@ -102,14 +141,12 @@ export async function POST(req: Request) {
     }
 
     try {
-      // IDs of pool jobs already in this profile's feed
       const existing = await prisma.job.findMany({
         where:  { profileId: profile.id },
         select: { jobPoolId: true },
       });
       const existingIds = new Set(existing.map((j) => j.jobPoolId));
 
-      // Filter pool against profile criteria, skip already-seen, cap at limit
       const candidates = pool
         .filter((p) => !existingIds.has(p.id) && jobMatchesProfile(p, profile))
         .slice(0, MAX_CANDIDATES_PER_RUN);
@@ -128,10 +165,6 @@ export async function POST(req: Request) {
           skipDuplicates: true,
         });
         jobsNew = count;
-
-        if (process.env.NODE_ENV === "development") {
-          console.log(`[/api/scrape] Jobs inserted — profileId: ${profile.id}, jobsNew: ${jobsNew}`);
-        }
       }
 
       await prisma.profile.update({
@@ -144,7 +177,6 @@ export async function POST(req: Request) {
       profileError  = err instanceof Error ? err.message : String(err);
     }
 
-    // Log per-profile run
     await prisma.scrapeRun.create({
       data: {
         profileId:    profile.id,
@@ -157,7 +189,6 @@ export async function POST(req: Request) {
       },
     });
 
-    // Fire-and-forget analyze for new jobs
     if (jobsNew > 0) {
       fetch(`${env.NEXT_PUBLIC_APP_URL}/api/analyze`, {
         method:  "POST",
@@ -175,10 +206,10 @@ export async function POST(req: Request) {
   }
 
   if (process.env.NODE_ENV === "development") {
-    console.log(`[/api/scrape] Exit — poolNew: ${poolNew}, profiles: ${results.length}, durationMs: ${Date.now() - startMs}`);
+    console.log(`[/api/scrape] Exit — totalPoolNew: ${totalPoolNew}, profiles: ${results.length}, durationMs: ${Date.now() - startMs}`);
   }
 
-  return Response.json({ poolNew, results });
+  return Response.json({ poolNew: totalPoolNew, results });
 }
 
 // Vercel cron jobs send GET requests — delegate to the same handler
