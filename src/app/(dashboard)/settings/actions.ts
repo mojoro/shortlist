@@ -19,6 +19,10 @@ export async function updateProfileInfo(data: unknown): Promise<void> {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
+  if (process.env.NODE_ENV === "development") {
+    console.log("[settings/actions] updateProfileInfo entry — userId:", userId);
+  }
+
   const parsed = updateProfileInfoSchema.safeParse(data);
   if (!parsed.success) throw new Error("Invalid data");
 
@@ -33,6 +37,10 @@ export async function updateProfileInfo(data: unknown): Promise<void> {
     data:  fields,
   });
 
+  if (process.env.NODE_ENV === "development") {
+    console.log("[settings/actions] updateProfileInfo success — profileId:", profileId);
+  }
+
   revalidatePath("/settings");
 }
 
@@ -41,6 +49,10 @@ export async function updateProfileInfo(data: unknown): Promise<void> {
 export async function updateSearchCriteria(data: unknown): Promise<void> {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("[settings/actions] updateSearchCriteria entry — userId:", userId);
+  }
 
   const parsed = updateSearchCriteriaSchema.safeParse(data);
   if (!parsed.success) throw new Error("Invalid data");
@@ -56,6 +68,10 @@ export async function updateSearchCriteria(data: unknown): Promise<void> {
     data:  fields,
   });
 
+  if (process.env.NODE_ENV === "development") {
+    console.log("[settings/actions] updateSearchCriteria success — profileId:", profileId);
+  }
+
   revalidatePath("/settings");
 }
 
@@ -64,6 +80,10 @@ export async function updateSearchCriteria(data: unknown): Promise<void> {
 export async function updateResume(data: unknown): Promise<void> {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("[settings/actions] updateResume entry — userId:", userId);
+  }
 
   const parsed = updateResumeSchema.safeParse(data);
   if (!parsed.success) throw new Error("Invalid data");
@@ -79,6 +99,10 @@ export async function updateResume(data: unknown): Promise<void> {
     data:  fields,
   });
 
+  if (process.env.NODE_ENV === "development") {
+    console.log("[settings/actions] updateResume success — profileId:", profileId);
+  }
+
   revalidatePath("/settings");
 }
 
@@ -87,6 +111,10 @@ export async function updateResume(data: unknown): Promise<void> {
 export async function createProfile(data: unknown): Promise<{ profileId: string }> {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("[settings/actions] createProfile entry — userId:", userId);
+  }
 
   const parsed = createProfileSchema.safeParse(data);
   if (!parsed.success) throw new Error("Invalid data");
@@ -106,6 +134,10 @@ export async function createProfile(data: unknown): Promise<{ profileId: string 
     },
   });
 
+  if (process.env.NODE_ENV === "development") {
+    console.log("[settings/actions] createProfile success — profileId:", profile.id);
+  }
+
   revalidatePath("/settings");
   return { profileId: profile.id };
 }
@@ -115,6 +147,10 @@ export async function createProfile(data: unknown): Promise<{ profileId: string 
 export async function switchProfile(data: unknown): Promise<void> {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("[settings/actions] switchProfile entry — userId:", userId);
+  }
 
   const parsed = switchProfileSchema.safeParse(data);
   if (!parsed.success) throw new Error("Invalid data");
@@ -136,6 +172,10 @@ export async function switchProfile(data: unknown): Promise<void> {
     }),
   ]);
 
+  if (process.env.NODE_ENV === "development") {
+    console.log("[settings/actions] switchProfile success — profileId:", parsed.data.profileId);
+  }
+
   revalidatePath("/settings");
   revalidatePath("/dashboard");
 }
@@ -147,6 +187,10 @@ export async function completeOnboarding(
 ): Promise<{ profileId: string; jobsFound: number }> {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("[settings/actions] completeOnboarding entry — userId:", userId);
+  }
 
   const parsed = completeOnboardingSchema.safeParse(data);
   if (!parsed.success) throw new Error("Invalid data");
@@ -214,6 +258,10 @@ export async function completeOnboarding(
     }).catch((err) => console.error("[completeOnboarding] analyze error", err));
   }
 
+  if (process.env.NODE_ENV === "development") {
+    console.log(`[settings/actions] completeOnboarding success — profileId: ${profile.id}, jobsFound: ${jobsFound}`);
+  }
+
   revalidatePath("/dashboard");
   return { profileId: profile.id, jobsFound };
 }
@@ -225,6 +273,10 @@ export async function rematchProfile(
 ): Promise<{ removed: number; added: number }> {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
+
+  if (process.env.NODE_ENV === "development") {
+    console.log(`[settings/actions] rematchProfile entry — userId: ${userId}, profileId: ${profileId}`);
+  }
 
   const profile = await prisma.profile.findFirst({
     where: { id: profileId, userId },
@@ -290,6 +342,10 @@ export async function rematchProfile(
       },
       body: JSON.stringify({ profileId }),
     }).catch(console.error);
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    console.log(`[settings/actions] rematchProfile success — profileId: ${profileId}, removed: ${toHide.length}, added: ${added}`);
   }
 
   revalidatePath("/dashboard");

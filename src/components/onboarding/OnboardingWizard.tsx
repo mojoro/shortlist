@@ -66,7 +66,24 @@ export function OnboardingWizard() {
     return true;
   }
 
+  function handleStepAdvance(nextStep: number) {
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[OnboardingWizard] Step advance — from: ${step}, to: ${nextStep}`);
+    }
+    setStep((s) => s + 1);
+  }
+
+  function handleStepBack(prevStep: number) {
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[OnboardingWizard] Step back — from: ${step}, to: ${prevStep}`);
+    }
+    setStep((s) => s - 1);
+  }
+
   function handleComplete() {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[OnboardingWizard] Submitting — step:", step, "roles:", data.targetRoles);
+    }
     setPhase("loading");
     startTransition(async () => {
       try {
@@ -74,7 +91,7 @@ export function OnboardingWizard() {
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean);
-        await completeOnboarding({
+        const result = await completeOnboarding({
           name:             data.name.trim() || roles[0] || "My Profile",
           targetRoles:      roles,
           targetLocations:  data.targetLocations
@@ -91,9 +108,15 @@ export function OnboardingWizard() {
             : null,
           masterResume:     data.masterResume.trim() || undefined,
         });
+        if (process.env.NODE_ENV === "development") {
+          console.log("[OnboardingWizard] completeOnboarding response:", result);
+        }
         document.cookie = "shortlist-onboarded=1; path=/";
         router.push("/dashboard");
-      } catch {
+      } catch (err) {
+        if (process.env.NODE_ENV === "development") {
+          console.log("[OnboardingWizard] completeOnboarding error:", err);
+        }
         setPhase("form");
         setError("Something went wrong. Please try again.");
       }
@@ -361,7 +384,7 @@ export function OnboardingWizard() {
         <div className="mt-8 flex items-center justify-between">
           {step > 1 ? (
             <button
-              onClick={() => setStep((s) => s - 1)}
+              onClick={() => handleStepBack(step - 1)}
               disabled={isPending}
               className="cursor-pointer rounded-lg border border-[var(--border)] bg-[var(--bg)] px-4 py-2 text-sm font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text)] disabled:opacity-50"
             >
@@ -373,7 +396,7 @@ export function OnboardingWizard() {
 
           {step < TOTAL_STEPS ? (
             <button
-              onClick={() => setStep((s) => s + 1)}
+              onClick={() => handleStepAdvance(step + 1)}
               disabled={!canAdvance()}
               className="cursor-pointer rounded-lg bg-[var(--accent)] px-6 py-2 text-sm font-semibold text-[var(--accent-fg)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
             >

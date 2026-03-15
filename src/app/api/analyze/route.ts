@@ -103,6 +103,10 @@ export async function POST(req: Request) {
 
     const { profileId } = parsed.data;
 
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[/api/analyze] Entry — profileId: ${profileId}`);
+    }
+
     const profile = await prisma.profile.findUnique({
       where: { id: profileId },
       include: { user: { include: { usage: true } } },
@@ -143,6 +147,10 @@ export async function POST(req: Request) {
       }
     }
 
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[/api/analyze] Pre-filter — toHide: ${toHide.length}, toScore: ${toScore.length}`);
+    }
+
     if (toHide.length > 0) {
       await prisma.job.updateMany({
         where: { id: { in: toHide.map((j) => j.id) } },
@@ -165,8 +173,16 @@ export async function POST(req: Request) {
     for (let i = 0; i < toScore.length; i += BATCH_SIZE) {
       const batch = toScore.slice(i, i + BATCH_SIZE);
 
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[/api/analyze] Batch start — index: ${i}, size: ${batch.length}`);
+      }
+
       await Promise.all(
         batch.map(async (job) => {
+          if (process.env.NODE_ENV === "development") {
+            console.log(`[/api/analyze] Scoring job — id: ${job.id}, title: "${job.jobPool.title}"`);
+          }
+
           try {
             const response = await openrouter.chat.completions.create({
               model: MODEL,
@@ -188,7 +204,14 @@ export async function POST(req: Request) {
 
             if (!result) {
               console.error(`[/api/analyze] Could not parse response for job ${job.id}`);
+              if (process.env.NODE_ENV === "development") {
+                console.log(`[/api/analyze] Parse failure — raw response: ${text.slice(0, 200)}`);
+              }
               return; // leave aiAnalyzedAt null — will retry on next run
+            }
+
+            if (process.env.NODE_ENV === "development") {
+              console.log(`[/api/analyze] Scored job — id: ${job.id}, score: ${result.score}, status: ${result.status}`);
             }
 
             await prisma.job.update({
@@ -211,6 +234,10 @@ export async function POST(req: Request) {
           }
         }),
       );
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[/api/analyze] Batch end — index: ${i}, jobsScored so far: ${jobsScored}`);
+      }
 
       if (i + BATCH_SIZE < toScore.length) {
         await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
@@ -237,6 +264,10 @@ export async function POST(req: Request) {
           analysisCallCount:        { increment: jobsScored },
         },
       });
+    }
+
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[/api/analyze] Complete — jobsScored: ${jobsScored}, autoHidden: ${toHide.length}, inputTokens: ${totalInputTokens}, outputTokens: ${totalOutputTokens}`);
     }
 
     return Response.json({ jobsScored: jobsScored + toHide.length });

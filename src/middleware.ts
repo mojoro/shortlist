@@ -11,10 +11,17 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
+  if (process.env.NODE_ENV === "development") {
+    console.log(`[middleware] ${req.method} ${req.nextUrl.pathname}`);
+  }
+
   if (isPublicRoute(req)) return NextResponse.next();
 
   const { userId } = await auth();
   if (!userId) {
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[middleware] Unauthenticated — redirecting to sign-in from: ${req.nextUrl.pathname}`);
+    }
     const signInUrl = new URL("/sign-in", req.url);
     signInUrl.searchParams.set("redirect_url", req.url);
     return NextResponse.redirect(signInUrl);
@@ -24,7 +31,14 @@ export default clerkMiddleware(async (auth, req) => {
   const onboarded = req.cookies.get("shortlist-onboarded")?.value;
   const isOnboardingRoute = req.nextUrl.pathname.startsWith("/onboarding");
 
+  if (process.env.NODE_ENV === "development") {
+    console.log(`[middleware] userId: ${userId}, onboarded: ${!!onboarded}, isOnboardingRoute: ${isOnboardingRoute}, path: ${req.nextUrl.pathname}`);
+  }
+
   if (!onboarded && !isOnboardingRoute) {
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[middleware] Not onboarded — redirecting to /onboarding from: ${req.nextUrl.pathname}`);
+    }
     return NextResponse.redirect(new URL("/onboarding", req.url));
   }
 
