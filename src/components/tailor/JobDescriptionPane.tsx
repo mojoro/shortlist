@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { formatDistanceToNow, format } from "date-fns";
+import { JobDescription } from "@/components/jobs/JobDescription";
 
 const LOCATION_TYPE_LABELS: Record<string, string> = {
   REMOTE: "Remote",
@@ -221,9 +222,7 @@ export function JobDescriptionPane({
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
             Job description
           </p>
-          <div className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">
-            {description}
-          </div>
+          <JobDescription source={description} />
         </div>
       </div>
     </div>
