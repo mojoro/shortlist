@@ -8,13 +8,12 @@ const td = new TurndownService({ headingStyle: "atx", bulletListMarker: "-" });
 
 const URL_RE = /^https?:\/\//i;
 
-const EXTRACTION_SYSTEM_PROMPT = `Extract structured job listing data from the text below. Return ONLY valid JSON — no markdown fences, no explanation:
+const EXTRACTION_SYSTEM_PROMPT = `Extract structured job listing metadata from the text below. Return ONLY valid JSON — no markdown fences, no explanation:
 {
   "title": "string",
   "company": "string",
   "location": "string or null",
   "locationType": "REMOTE" | "HYBRID" | "ONSITE" | null,
-  "description": "string — the full job description, cleaned of nav/footer boilerplate",
   "url": "string or null",
   "postedAt": "YYYY-MM-DD or null",
   "jobType": "FULL_TIME" | "PART_TIME" | "CONTRACT" | "FREELANCE" | "INTERNSHIP" | null,
@@ -23,14 +22,13 @@ const EXTRACTION_SYSTEM_PROMPT = `Extract structured job listing data from the t
   "currency": "string or null",
   "skills": ["string"]
 }
-Use null for any field you cannot determine with confidence.`;
+Use null for any field you cannot determine with confidence. Do not include a description field.`;
 
 interface ExtractionResult {
   title: string;
   company: string;
   location: string | null;
   locationType: "REMOTE" | "HYBRID" | "ONSITE" | null;
-  description: string;
   url: string | null;
   postedAt: string | null;
   jobType: "FULL_TIME" | "PART_TIME" | "CONTRACT" | "FREELANCE" | "INTERNSHIP" | null;
@@ -107,7 +105,7 @@ export async function POST(req: Request) {
   try {
     const response = await openrouter.chat.completions.create({
       model: MODEL,
-      max_tokens: 500,
+      max_tokens: 250,
       messages: [
         { role: "system", content: EXTRACTION_SYSTEM_PROMPT },
         { role: "user",   content: cleanedText.slice(0, 12000) },
@@ -128,7 +126,7 @@ export async function POST(req: Request) {
     // If the user gave us a URL we already know it — don't trust the AI to reproduce it
     if (isUrl) result.url = input.trim();
 
-    return Response.json(result);
+    return Response.json({ ...result, description: cleanedText.slice(0, 50000) });
   } catch (err) {
     console.error("[/api/jobs/extract]", err);
     return Response.json(
