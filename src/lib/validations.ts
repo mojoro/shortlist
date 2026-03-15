@@ -82,6 +82,18 @@ export const completeOnboardingSchema = z.object({
   targetSalaryMin:  z.number().int().positive().nullable(),
   targetSalaryMax:  z.number().int().positive().nullable(),
   masterResume:     z.string().optional(),
+  // Contact details (step 3)
+  displayName:      z.string().optional(),
+  email:            z.string().email().optional(),
+  phone:            z.string().optional(),
+  contactLocation:  z.string().optional(),
+  linkedinUrl:      z.string().url().optional().or(z.literal("")),
+  portfolioUrl:     z.string().url().optional().or(z.literal("")),
+  githubUrl:        z.string().url().optional().or(z.literal("")),
+  // Full CV (step 4)
+  curriculumVitae:  z.string().optional(),
+  // Excluded keywords (step 5)
+  excludedKeywords: z.array(z.string()).optional(),
 });
 
 // ── Application detail update (notes, dates, recruiter) ───────────────────

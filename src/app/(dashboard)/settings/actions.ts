@@ -219,6 +219,18 @@ export async function completeOnboarding(
       targetSalaryMin:      parsed.data.targetSalaryMin,
       targetSalaryMax:      parsed.data.targetSalaryMax,
       masterResume:         parsed.data.masterResume ?? null,
+      // Contact details
+      displayName:          parsed.data.displayName ?? null,
+      email:                parsed.data.email ?? null,
+      phone:                parsed.data.phone ?? null,
+      location:             parsed.data.contactLocation ?? null,
+      linkedinUrl:          parsed.data.linkedinUrl || null,
+      portfolioUrl:         parsed.data.portfolioUrl || null,
+      githubUrl:            parsed.data.githubUrl || null,
+      // Full CV
+      curriculumVitae:      parsed.data.curriculumVitae ?? null,
+      // Excluded keywords
+      excludedKeywords:     parsed.data.excludedKeywords ?? [],
       isActive:             true,
       onboardingCompletedAt: new Date(),
     },
