@@ -1,13 +1,11 @@
 export type CompanyConfig = {
-  slug: string;  // boards-api.greenhouse.io/v1/boards/{slug}/jobs
-  name: string;  // display name used for Job.company
+  slug: string;
+  name: string;
 };
 
-/**
- * Berlin / EU tech companies known to use Greenhouse.
- * This is the single file to edit until profile-level company management
- * is wired up through the settings UI.
- */
+// ── Greenhouse ────────────────────────────────────────────────────────────────
+// Edit: boards-api.greenhouse.io/v1/boards/{slug}/jobs
+
 export const GREENHOUSE_COMPANIES: CompanyConfig[] = [
   { slug: "personio",       name: "Personio" },
   { slug: "getyourguide",   name: "GetYourGuide" },
@@ -30,4 +28,34 @@ export const GREENHOUSE_COMPANIES: CompanyConfig[] = [
   { slug: "kombo",          name: "Kombo" },
   { slug: "taktile",        name: "Taktile" },
   { slug: "cogram",         name: "Cogram" },
+];
+
+// ── Lever ─────────────────────────────────────────────────────────────────────
+// Edit: api.lever.co/v0/postings/{slug}?mode=json
+
+export const LEVER_COMPANIES: CompanyConfig[] = [
+  { slug: "remote",        name: "Remote" },
+  { slug: "netlify",       name: "Netlify" },
+  { slug: "deliveroo",     name: "Deliveroo" },
+  { slug: "factorial",     name: "Factorial" },
+  { slug: "zara",          name: "Zara" },
+  { slug: "flixbus",       name: "FlixBus" },
+  { slug: "ecosia",        name: "Ecosia" },
+  { slug: "klarna",        name: "Klarna" },
+  { slug: "wolt",          name: "Wolt" },
+  { slug: "gorillas",      name: "Gorillas" },
+];
+
+// ── Ashby ─────────────────────────────────────────────────────────────────────
+// Edit: api.ashbyhq.com/posting-api/job-board/{slug}
+
+export const ASHBY_COMPANIES: CompanyConfig[] = [
+  { slug: "linear",        name: "Linear" },
+  { slug: "vercel",        name: "Vercel" },
+  { slug: "supabase",      name: "Supabase" },
+  { slug: "luma",          name: "Luma" },
+  { slug: "raycast",       name: "Raycast" },
+  { slug: "infisical",     name: "Infisical" },
+  { slug: "posthog",       name: "PostHog" },
+  { slug: "turso",         name: "Turso" },
 ];
