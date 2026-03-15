@@ -17,6 +17,10 @@ export async function POST(req: Request) {
 
   const startMs = Date.now();
 
+  if (process.env.NODE_ENV === "development") {
+    console.log("[/api/scrape] Entry — skipPool:", skipPool);
+  }
+
   let poolNew = 0;
 
   // ── POOL LAYER ────────────────────────────────────────────────────────────
@@ -41,6 +45,10 @@ export async function POST(req: Request) {
         skipDuplicates: true,
       });
       poolNew = count;
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[/api/scrape] Pool write — rawCount: ${rawCount}, poolNew: ${poolNew}`);
+      }
     } catch (err) {
       console.error("[/api/scrape] Pool scrape failed:", err);
       poolScrapeStatus = "FAILED";
@@ -89,6 +97,10 @@ export async function POST(req: Request) {
     let profileStatus: "SUCCESS" | "FAILED" = "SUCCESS";
     let profileError: string | undefined;
 
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[/api/scrape] Match start — profileId: ${profile.id}`);
+    }
+
     try {
       // IDs of pool jobs already in this profile's feed
       const existing = await prisma.job.findMany({
@@ -102,6 +114,10 @@ export async function POST(req: Request) {
         .filter((p) => !existingIds.has(p.id) && jobMatchesProfile(p, profile))
         .slice(0, MAX_CANDIDATES_PER_RUN);
 
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[/api/scrape] Match result — profileId: ${profile.id}, candidates: ${candidates.length}`);
+      }
+
       if (candidates.length > 0) {
         const { count } = await prisma.job.createMany({
           data: candidates.map((c) => ({
@@ -112,6 +128,10 @@ export async function POST(req: Request) {
           skipDuplicates: true,
         });
         jobsNew = count;
+
+        if (process.env.NODE_ENV === "development") {
+          console.log(`[/api/scrape] Jobs inserted — profileId: ${profile.id}, jobsNew: ${jobsNew}`);
+        }
       }
 
       await prisma.profile.update({
@@ -152,6 +172,10 @@ export async function POST(req: Request) {
     }
 
     results.push({ profileId: profile.id, jobsNew, status: profileStatus });
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    console.log(`[/api/scrape] Exit — poolNew: ${poolNew}, profiles: ${results.length}, durationMs: ${Date.now() - startMs}`);
   }
 
   return Response.json({ poolNew, results });

@@ -25,6 +25,7 @@ interface TailorPanelProps {
   aiGapPoints: string[];
   initialMarkdown: string;
   initialTailoredResumeId: string | null;
+  masterResume: string;
 }
 
 export function TailorPanel({
@@ -45,6 +46,7 @@ export function TailorPanel({
   aiGapPoints,
   initialMarkdown,
   initialTailoredResumeId,
+  masterResume,
 }: TailorPanelProps) {
   const [markdown, setMarkdown] = useState(initialMarkdown);
   const [pdfMarkdown, setPdfMarkdown] = useState(initialMarkdown);
@@ -142,6 +144,7 @@ export function TailorPanel({
             onMarkdownChange={handleMarkdownChange}
             saveStatus={saveStatus}
             onShowPreview={handleShowPreview}
+            masterResume={masterResume}
           />
         </div>
 
@@ -190,6 +193,7 @@ export function TailorPanel({
               onMarkdownChange={handleMarkdownChange}
               saveStatus={saveStatus}
               onShowPreview={() => setMobileTab("preview")}
+              masterResume={masterResume}
             />
           )}
           {mobileTab === "preview" && (

@@ -44,7 +44,7 @@ Never write the string `"Shortlist"` directly outside this file.
 | Database | Neon (PostgreSQL) |
 | ORM | Prisma |
 | Auth | Clerk |
-| AI | OpenRouter API (`anthropic/claude-sonnet-4-6`) |
+| AI | OpenRouter API (`anthropic/claude-3-haiku`) |
 | Scraping | Apify (LinkedIn); direct HTTP for Greenhouse/Lever/Ashby |
 | Scheduling | Vercel Cron |
 | Theme | next-themes |
@@ -201,7 +201,7 @@ export const openrouter = new OpenAI({
   },
 });
 
-export const MODEL = "anthropic/claude-sonnet-4-6";
+export const MODEL = "anthropic/claude-3-haiku-20240307";
 ```
 
 ### Scoring (`/api/analyze`)
@@ -1090,6 +1090,24 @@ export const config = {
 Note: Use a cookie (`shortlist-onboarded`) for the onboarding check in middleware rather
 than a DB query — middleware runs on every request and a DB query here would add
 unacceptable latency to every page load.
+
+**DB fallback pattern:** The cookie-only approach breaks when users sign in on a new
+device or clear their browser storage. To handle this, when the `shortlist-onboarded`
+cookie is absent, middleware calls the internal `/api/check-onboarding` route (forwarding
+the Clerk session cookie). That route uses Prisma to query
+`profile.count({ where: { userId, onboardingCompletedAt: { not: null } } })`. If count
+> 0, the cookie is set on the response and the request proceeds. If count === 0, the
+user is redirected to `/onboarding`. This is a one-time cost per session/device — once
+the cookie is restored, all subsequent requests short-circuit at the cookie check.
+
+`onboardingCompletedAt` is written by `completeOnboarding()` in
+`src/app/(dashboard)/settings/actions.ts` when the onboarding wizard creates the first
+Profile record.
+
+**Why an internal API route instead of direct Prisma in middleware:** Next.js middleware
+runs in the Edge Runtime, which does not support Node.js APIs that Prisma depends on.
+`@neondatabase/serverless` (the Edge-compatible Neon driver) is not in this project's
+dependencies — the internal route approach avoids adding that dependency.
 
 ---
 

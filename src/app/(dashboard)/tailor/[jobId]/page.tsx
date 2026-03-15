@@ -32,7 +32,7 @@ export default async function TailorPage({ params }: Props) {
     where: { id: jobId },
     include: {
       jobPool: true,
-      profile: { select: { userId: true } },
+      profile: { select: { userId: true, masterResume: true } },
       application: {
         include: {
           tailoredResumes: {
@@ -69,6 +69,7 @@ export default async function TailorPage({ params }: Props) {
       aiGapPoints={job.aiGapPoints}
       initialMarkdown={latest?.markdown ?? ""}
       initialTailoredResumeId={latest?.id ?? null}
+      masterResume={job.profile.masterResume ?? ""}
     />
   );
 }

@@ -2,6 +2,8 @@
 
 import dynamic from "next/dynamic";
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { SignOutButton } from "@clerk/nextjs";
 import type { Profile } from "@prisma/client";
 import {
   updateProfileInfo,
@@ -99,6 +101,7 @@ interface Props {
 // ─── Profiles section ─────────────────────────────────────────────────────────
 
 function ProfilesSection({ profile, allProfiles }: Props) {
+  const router = useRouter();
   const [newName, setNewName]       = useState("");
   const [creating, startCreating]   = useTransition();
   const [switching, startSwitching] = useTransition();
@@ -112,6 +115,7 @@ function ProfilesSection({ profile, allProfiles }: Props) {
       try {
         await createProfile({ name: newName.trim() });
         setNewName("");
+        router.refresh();
       } catch {
         setCreateError("Couldn't create profile. Please try again.");
       }
@@ -121,6 +125,7 @@ function ProfilesSection({ profile, allProfiles }: Props) {
   function handleSwitch(profileId: string) {
     startSwitching(async () => {
       await switchProfile({ profileId });
+      router.refresh();
     });
   }
 
@@ -537,6 +542,18 @@ export function SettingsClient({ profile, allProfiles }: Props) {
       <SearchCriteriaSection profile={profile} />
       <Divider />
       <ResumeSection profile={profile} />
+      <Divider />
+      <section>
+        <SectionHeading>Account</SectionHeading>
+        <p className="mt-1 mb-4 text-sm text-[var(--text-muted)]">
+          Sign out of your account on this device.
+        </p>
+        <SignOutButton redirectUrl="/">
+          <button className="inline-flex min-h-[36px] items-center rounded-lg border border-[var(--border)] px-4 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">
+            Sign out
+          </button>
+        </SignOutButton>
+      </section>
     </div>
   );
 }

@@ -21,6 +21,10 @@ export async function POST(req: Request) {
 
     const { jobId, additionalContext } = parsed.data;
 
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[/api/tailor] Entry — userId: ${userId}, jobId: ${jobId}`);
+    }
+
     const job = await prisma.job.findFirst({
       where: { id: jobId },
       include: {
@@ -146,6 +150,10 @@ Your task is to produce a focused, targeted resume for this job. Steps:
       .filter(Boolean)
       .join("\n\n---\n\n");
 
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[/api/tailor] Stream start — jobId: ${jobId}, hasCV: ${!!job.profile.curriculumVitae}, hasMasterResume: ${!!job.profile.masterResume}`);
+    }
+
     const stream = await openrouter.chat.completions.create({
       model: MODEL,
       stream: true,
@@ -173,6 +181,9 @@ Your task is to produce a focused, targeted resume for this job. Steps:
             }
           }
         } finally {
+          if (process.env.NODE_ENV === "development") {
+            console.log(`[/api/tailor] Stream complete — jobId: ${jobId}, inputTokens: ${inputTokens}, outputTokens: ${outputTokens}`);
+          }
           controller.close();
           // Increment usage counters — non-blocking, best-effort
           prisma.usage
@@ -204,6 +215,15 @@ Your task is to produce a focused, targeted resume for this job. Steps:
     });
   } catch (err) {
     console.error("[/api/tailor]", err);
+    if (process.env.NODE_ENV === "development") {
+      console.log("[/api/tailor] Caught error:", err instanceof Error ? err.message : String(err));
+    }
+    if ((err as { status?: number }).status === 402) {
+      return Response.json(
+        { error: "Insufficient AI credits.", code: "INSUFFICIENT_CREDITS" },
+        { status: 402 },
+      );
+    }
     return Response.json(
       { error: "Resume generation failed. Please try again." },
       { status: 500 }

@@ -31,7 +31,7 @@ export default async function SettingsPage() {
           Manage your profile, search criteria, and resume.
         </p>
       </div>
-      <SettingsClient profile={profile} allProfiles={allProfiles} />
+      <SettingsClient key={profile.id} profile={profile} allProfiles={allProfiles} />
     </div>
   );
 }

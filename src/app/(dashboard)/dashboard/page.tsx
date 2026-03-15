@@ -2,41 +2,53 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { buildWhereClause, buildOrderBy } from "@/lib/jobs";
+import { buildWhereClause, buildOrderBy, type SortDir } from "@/lib/jobs";
 import { formatDistanceToNow } from "date-fns";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { JobFeed } from "@/components/jobs/JobFeed";
 import { StatsRow } from "@/components/dashboard/StatsRow";
+import { ProfileSwitcher } from "@/components/dashboard/ProfileSwitcher";
 import { APP_CONFIG } from "@/config/app";
 import type { JobWithApplication } from "@/types";
 
 export const metadata: Metadata = { title: "Your matches" };
 
 const VALID_FILTERS = ["all", "new", "saved", "applied", "ignored"] as const;
-const VALID_SORTS   = ["match", "newest"] as const;
+const VALID_SORTS   = ["match", "newest", "salary"] as const;
+const VALID_DIRS    = ["asc", "desc"] as const;
 type SortOption = (typeof VALID_SORTS)[number];
 
 interface PageProps {
-  searchParams: Promise<{ filter?: string; sort?: string }>;
+  searchParams: Promise<{ filter?: string; sort?: string; dir?: string }>;
 }
 
 export default async function DashboardPage({ searchParams }: PageProps) {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  const { filter = "all", sort = "match" } = await searchParams;
+  const { filter = "all", sort = "match", dir = "desc" } = await searchParams;
   const safeFilter = (VALID_FILTERS as readonly string[]).includes(filter)
     ? filter
     : "all";
   const safeSort: SortOption = (VALID_SORTS as readonly string[]).includes(sort)
     ? (sort as SortOption)
     : "match";
+  const safeDir: SortDir = (VALID_DIRS as readonly string[]).includes(dir)
+    ? (dir as SortDir)
+    : "desc";
 
   try {
-    const profile = await prisma.profile.findFirst({
-      where: { userId },
-      orderBy: { isActive: "desc" },
-    });
+    const [profile, allProfiles] = await Promise.all([
+      prisma.profile.findFirst({
+        where: { userId },
+        orderBy: { isActive: "desc" },
+      }),
+      prisma.profile.findMany({
+        where: { userId },
+        select: { id: true, name: true, isActive: true },
+        orderBy: { createdAt: "asc" },
+      }),
+    ]);
 
     if (!profile) {
       return (
@@ -82,7 +94,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         prisma.job.findMany({
           where: buildWhereClause(profile.id, safeFilter),
           include: { jobPool: true, application: { select: { status: true } } },
-          orderBy: buildOrderBy(safeSort),
+          orderBy: buildOrderBy(safeSort, safeDir),
           take: 25,
         }),
       ]);
@@ -95,10 +107,11 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
     return (
       <div className="space-y-6">
-        <div>
+        <div className="flex items-center justify-between gap-4">
           <h1 className="text-lg font-semibold uppercase tracking-wide text-[var(--text-muted)]">
             Job Feed
           </h1>
+          <ProfileSwitcher profiles={allProfiles} activeProfileId={profile.id} />
         </div>
 
         <StatsRow
@@ -121,7 +134,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         />
 
         <JobFeed
-          key={`${safeFilter}-${safeSort}`}
+          key={`${profile.id}-${safeFilter}-${safeSort}-${safeDir}`}
           initialJobs={jobs as unknown as JobWithApplication[]}
           initialNextCursor={nextCursor}
           profileId={profile.id}

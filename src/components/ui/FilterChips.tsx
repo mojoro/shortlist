@@ -19,7 +19,14 @@ const CHIPS = [
   { key: "ignored", label: "ignored" },
 ] as const;
 
+const SORT_OPTIONS = [
+  { key: "match",   label: "Match" },
+  { key: "newest",  label: "Newest" },
+  { key: "salary",  label: "Salary" },
+] as const;
+
 type FilterKey = (typeof CHIPS)[number]["key"];
+type SortKey = (typeof SORT_OPTIONS)[number]["key"];
 
 export function FilterChips({
   allCount,
@@ -33,7 +40,11 @@ export function FilterChips({
   const [isPending, startTransition] = useTransition();
 
   const currentFilter = (searchParams.get("filter") ?? "all") as FilterKey;
-  const currentSort = searchParams.get("sort") === "newest" ? "newest" : "match";
+  const rawSort = searchParams.get("sort") ?? "match";
+  const currentSort: SortKey = (["match", "newest", "salary"] as string[]).includes(rawSort)
+    ? (rawSort as SortKey)
+    : "match";
+  const currentDir = searchParams.get("dir") === "asc" ? "asc" : "desc";
 
   const counts: Record<FilterKey, number> = {
     all:     allCount,
@@ -43,29 +54,32 @@ export function FilterChips({
     ignored: ignoredCount,
   };
 
-  function handleFilterChange(filter: FilterKey) {
+  function navigate(updates: Record<string, string | null>) {
     startTransition(() => {
       const params = new URLSearchParams(searchParams.toString());
-      if (filter === "all") {
-        params.delete("filter");
-      } else {
-        params.set("filter", filter);
+      for (const [k, v] of Object.entries(updates)) {
+        if (v === null) params.delete(k);
+        else params.set(k, v);
       }
       router.replace(`?${params.toString()}`);
     });
   }
 
-  function handleSortToggle() {
-    startTransition(() => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (currentSort === "newest") {
-        params.delete("sort");
-      } else {
-        params.set("sort", "newest");
-      }
-      router.replace(`?${params.toString()}`);
-    });
+  function handleFilterChange(filter: FilterKey) {
+    navigate({ filter: filter === "all" ? null : filter });
   }
+
+  function handleSortChange(sort: SortKey) {
+    if (sort === currentSort) {
+      // Toggle direction
+      navigate({ dir: currentDir === "desc" ? "asc" : null });
+    } else {
+      // Switch to new sort (reset dir to default desc)
+      navigate({ sort: sort === "match" ? null : sort, dir: null });
+    }
+  }
+
+  const showDirToggle = currentSort !== "match";
 
   return (
     <div className="flex items-center justify-between gap-2">
@@ -108,20 +122,31 @@ export function FilterChips({
         })}
       </div>
 
-      <button
-        onClick={handleSortToggle}
-        disabled={isPending}
-        className={[
-          "cursor-pointer shrink-0 inline-flex min-h-[36px] items-center rounded-full px-3 py-1 text-xs font-medium transition-colors",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2",
-          currentSort === "newest"
-            ? "ring-1 ring-inset ring-[var(--border)] text-[var(--text)]"
-            : "text-[var(--text-muted)]",
-          isPending ? "opacity-60 !cursor-wait" : "",
-        ].filter(Boolean).join(" ")}
-      >
-        {currentSort === "newest" ? "Newest ↓" : "Match ↓"}
-      </button>
+      <div className="flex shrink-0 items-center gap-1">
+        {SORT_OPTIONS.map(({ key, label }) => {
+          const isActive = currentSort === key;
+          return (
+            <button
+              key={key}
+              onClick={() => handleSortChange(key)}
+              disabled={isPending}
+              className={[
+                "cursor-pointer inline-flex min-h-[36px] items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2",
+                isActive
+                  ? "ring-1 ring-inset ring-[var(--border)] text-[var(--text)] bg-[var(--bg-card)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text)]",
+                isPending ? "opacity-60 !cursor-wait" : "",
+              ].filter(Boolean).join(" ")}
+            >
+              {label}
+              {isActive && showDirToggle && (
+                <span aria-hidden="true">{currentDir === "desc" ? "↓" : "↑"}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

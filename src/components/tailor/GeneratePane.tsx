@@ -25,6 +25,7 @@ interface GeneratePaneProps {
   onMarkdownChange: (value: string) => void;
   saveStatus: SaveStatus;
   onShowPreview: () => void;
+  masterResume: string;
 }
 
 export function GeneratePane({
@@ -35,6 +36,7 @@ export function GeneratePane({
   onMarkdownChange,
   saveStatus,
   onShowPreview,
+  masterResume,
 }: GeneratePaneProps) {
   const { resolvedTheme } = useTheme();
   const [paneState, setPaneState] = useState<PaneState>(markdown ? "editor" : "idle");
@@ -88,8 +90,15 @@ export function GeneratePane({
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error((data as { error?: string }).error ?? "Generation failed. Please try again.");
+        const data = await res.json().catch(() => ({})) as { error?: string; code?: string };
+        if (res.status === 402 || data.code === "INSUFFICIENT_CREDITS") {
+          // Fall back to master resume so the user can edit manually
+          if (masterResume) onMarkdownChange(masterResume);
+          setError("Not enough AI credits — your base resume has been loaded. Edit it directly or top up your OpenRouter account.");
+          setPaneState(masterResume ? "editor" : "idle");
+          return;
+        }
+        throw new Error(data.error ?? "Generation failed. Please try again.");
       }
 
       const reader = res.body!.getReader();
