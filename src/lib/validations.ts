@@ -100,6 +100,29 @@ export const completeOnboardingSchema = z.object({
   excludedKeywords: z.array(z.string()).optional(),
 });
 
+// ── Job import ─────────────────────────────────────────────────────────────
+export const extractJobSchema = z.object({
+  input:     z.string().min(1).max(50000),
+  profileId: z.string().cuid(),
+});
+
+export const importJobSchema = z.object({
+  profileId:     z.string().cuid(),
+  originalInput: z.string().min(1),
+  title:         z.string().min(1).max(300),
+  company:       z.string().min(1).max(300),
+  description:   z.string().min(1),
+  location:      z.string().max(300).optional(),
+  locationType:  z.enum(["REMOTE", "HYBRID", "ONSITE"]).nullable().optional(),
+  url:           z.string().url().optional().or(z.literal("")),
+  postedAt:      z.string().optional().nullable(),
+  jobType:       z.enum(["FULL_TIME", "PART_TIME", "CONTRACT", "FREELANCE", "INTERNSHIP"]).nullable().optional(),
+  salaryMin:     z.number().int().positive().nullable().optional(),
+  salaryMax:     z.number().int().positive().nullable().optional(),
+  currency:      z.string().max(10).optional(),
+  skills:        z.array(z.string()).optional(),
+});
+
 // ── Application detail update (notes, dates, recruiter) ───────────────────
 export const updateApplicationDetailSchema = z.object({
   applicationId:  z.string().cuid(),
