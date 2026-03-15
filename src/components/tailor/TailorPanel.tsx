@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { JobDescription } from "@/components/jobs/JobDescription";
 import { JobDescriptionPane } from "@/components/tailor/JobDescriptionPane";
 import { GeneratePane } from "@/components/tailor/GeneratePane";
 import { PDFPreview } from "@/components/tailor/PDFPreview";
@@ -57,6 +59,7 @@ export function TailorPanel({
   const [jdCollapsed, setJdCollapsed] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [mobileTab, setMobileTab] = useState<MobileTab>("editor");
+  const router = useRouter();
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pdfTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -102,6 +105,9 @@ export function TailorPanel({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tailoredResumeId, jobId, markdown, wasExported: true }),
     }).catch(console.error);
+    // Open original job listing in new tab, redirect current tab to pipeline
+    window.open(jobUrl, "_blank", "noopener,noreferrer");
+    router.push("/pipeline");
   }
 
   const filename = `${jobTitle.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-resume.pdf`;
@@ -179,9 +185,7 @@ export function TailorPanel({
               </a>
               <h2 className="mb-1 text-sm font-bold text-[var(--text)]">{jobTitle}</h2>
               <p className="mb-4 text-xs text-[var(--text-muted)]">{jobCompany}</p>
-              <div className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text)]">
-                {jobDescription}
-              </div>
+              <JobDescription source={jobDescription} />
             </div>
           )}
           {mobileTab === "editor" && (
