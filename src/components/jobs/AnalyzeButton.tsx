@@ -49,15 +49,12 @@ export function AnalyzeButton({ profileId }: { profileId: string }) {
     );
   }
 
-  if (state === "requested") {
-    return (
-      <p className="text-xs text-[var(--text-muted)]">
-        Scoring your matches — checking for results…
-      </p>
-    );
-  }
+  const isLoading = isPending || state === "pending" || state === "requested";
 
-  const isLoading = isPending || state === "pending";
+  const label =
+    state === "requested" ? "Analyzing your listing…" :
+    isLoading             ? "Sending your request…"   :
+                            "Get match score";
 
   return (
     <button
@@ -71,7 +68,7 @@ export function AnalyzeButton({ profileId }: { profileId: string }) {
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
       )}
-      {isLoading ? "Requesting score…" : "Get match score"}
+      {label}
     </button>
   );
 }
