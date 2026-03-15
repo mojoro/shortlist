@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { buildWhereClause, buildOrderBy } from "@/lib/jobs";
@@ -165,7 +166,13 @@ export async function requestAnalysis(
   if (!profile) throw new Error("Profile not found");
 
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/analyze`, {
+    // Derive the base URL from the current request host so this works correctly
+    // in local dev, preview deployments, and production without relying on
+    // NEXT_PUBLIC_APP_URL (which may point to a different deployment).
+    const h = await headers();
+    const host = h.get("host") ?? "";
+    const proto = host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https";
+    const res = await fetch(`${proto}://${host}/api/analyze`, {
       method:  "POST",
       headers: {
         "Content-Type": "application/json",
