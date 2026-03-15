@@ -58,6 +58,25 @@ body {
   background-color: var(--bg-subtle);
 }
 
+/* Restore list styles stripped by Tailwind preflight — the library relies on browser defaults */
+.wmde-markdown ul {
+  list-style: disc;
+  padding-left: 1.5em;
+}
+.wmde-markdown ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+}
+.wmde-markdown li + li {
+  margin-top: 0.25em;
+}
+.wmde-markdown ul ul,
+.wmde-markdown ol ol,
+.wmde-markdown ul ol,
+.wmde-markdown ol ul {
+  margin-top: 0.25em;
+}
+
 @keyframes toast-slide-in {
   from { transform: translateY(16px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
