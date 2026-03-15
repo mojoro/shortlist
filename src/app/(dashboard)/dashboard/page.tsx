@@ -134,7 +134,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         />
 
         <JobFeed
-          key={`${safeFilter}-${safeSort}-${safeDir}`}
+          key={`${profile.id}-${safeFilter}-${safeSort}-${safeDir}`}
           initialJobs={jobs as unknown as JobWithApplication[]}
           initialNextCursor={nextCursor}
           profileId={profile.id}
