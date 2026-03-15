@@ -37,9 +37,15 @@ export function AnalyzeButton({ profileId }: { profileId: string }) {
 
   if (state === "error") {
     return (
-      <p className="text-xs text-red-500 dark:text-red-400">
-        Scoring failed. Please try again in a moment.
-      </p>
+      <div className="flex items-center gap-2">
+        <p className="text-xs text-red-500 dark:text-red-400">Scoring failed.</p>
+        <button
+          onClick={handleClick}
+          className="text-xs text-[var(--accent)] underline hover:opacity-80"
+        >
+          Try again
+        </button>
+      </div>
     );
   }
 
