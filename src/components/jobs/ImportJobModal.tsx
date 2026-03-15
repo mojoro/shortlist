@@ -53,12 +53,7 @@ const JOB_TYPE_LABELS: Record<string, string> = {
 
 function Spinner() {
   return (
-    <svg
-      className="h-4 w-4 animate-spin"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
     </svg>
@@ -67,15 +62,7 @@ function Spinner() {
 
 // ─── Field ────────────────────────────────────────────────────────────────────
 
-function Field({
-  label,
-  required,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
       <label className="text-xs font-medium text-[var(--text-muted)]">
@@ -92,7 +79,38 @@ const inputCls =
   "text-[var(--text)] placeholder:text-[var(--text-muted)] transition-colors " +
   "focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent";
 
-const selectCls = inputCls;
+// ─── Discard confirmation overlay ─────────────────────────────────────────────
+
+function DiscardConfirm({ onKeep, onDiscard }: { onKeep: () => void; onDiscard: () => void }) {
+  return (
+    <div className="absolute inset-0 z-10 flex items-end justify-center rounded-2xl p-4 sm:items-center">
+      {/* Frosted backdrop over the modal content */}
+      <div className="absolute inset-0 rounded-2xl bg-[var(--bg-card)]/80 backdrop-blur-sm" />
+
+      {/* Card */}
+      <div className="relative w-full max-w-xs rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-6 shadow-2xl">
+        <p className="text-sm font-semibold text-[var(--text)]">Discard this listing?</p>
+        <p className="mt-1 text-xs text-[var(--text-muted)]">
+          Your extracted details will be lost.
+        </p>
+        <div className="mt-5 flex flex-col gap-2">
+          <button
+            onClick={onDiscard}
+            className="cursor-pointer w-full rounded-lg bg-[var(--bg-subtle)] px-4 py-2 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+          >
+            Discard
+          </button>
+          <button
+            onClick={onKeep}
+            className="cursor-pointer w-full rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--accent-fg)] transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
+          >
+            Keep editing
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -113,6 +131,7 @@ function ImportJobModal({ profileId, open, onClose }: ImportJobModalProps) {
   const [skillsText,   setSkillsText]   = useState("");
   const [isSaving,     setIsSaving]     = useState(false);
   const [saveError,    setSaveError]    = useState<string | null>(null);
+  const [showConfirm,  setShowConfirm]  = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -123,19 +142,21 @@ function ImportJobModal({ profileId, open, onClose }: ImportJobModalProps) {
     }
   }, [open, phase]);
 
-  // Close on Escape
+  // Close on Escape — go through requestClose so dirty check applies
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      // If the confirm sheet is already showing, Escape dismisses it
+      if (showConfirm) { setShowConfirm(false); return; }
       const isDirty = inputValue.trim().length > 0;
-      if (isDirty && !window.confirm("Close without saving? Your progress will be lost.")) return;
+      if (isDirty) { setShowConfirm(true); return; }
       reset();
       onClose();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [open, inputValue, onClose]);
+  }, [open, inputValue, showConfirm, onClose]);
 
   function reset() {
     setPhase("input");
@@ -146,21 +167,24 @@ function ImportJobModal({ profileId, open, onClose }: ImportJobModalProps) {
     setSkillsText("");
     setIsSaving(false);
     setSaveError(null);
+    setShowConfirm(false);
   }
 
-  function handleClose() {
+  // Attempt to close — show in-app confirm if there's work in progress
+  function requestClose() {
     const isDirty = inputValue.trim().length > 0;
-    if (isDirty && !window.confirm("Close without saving? Your progress will be lost.")) return;
+    if (isDirty) { setShowConfirm(true); return; }
+    reset();
+    onClose();
+  }
+
+  function confirmDiscard() {
     reset();
     onClose();
   }
 
   const isUrl      = URL_RE.test(inputValue.trim());
-  const detectHint = inputValue.trim()
-    ? isUrl
-      ? "URL detected"
-      : "Text detected"
-    : null;
+  const detectHint = inputValue.trim() ? (isUrl ? "URL detected" : "Text detected") : null;
 
   async function handleExtract() {
     setExtractError(null);
@@ -177,7 +201,7 @@ function ImportJobModal({ profileId, open, onClose }: ImportJobModalProps) {
         return;
       }
       const extracted = data as Partial<ExtractedFields>;
-      const merged: ExtractedFields = {
+      setFields({
         title:        extracted.title        ?? "",
         company:      extracted.company      ?? "",
         description:  extracted.description  ?? "",
@@ -190,8 +214,7 @@ function ImportJobModal({ profileId, open, onClose }: ImportJobModalProps) {
         salaryMax:    extracted.salaryMax    ?? null,
         currency:     extracted.currency     ?? "",
         skills:       extracted.skills       ?? [],
-      };
-      setFields(merged);
+      });
       setSkillsText((extracted.skills ?? []).join(", "));
       setPhase("review");
     } catch {
@@ -205,11 +228,7 @@ function ImportJobModal({ profileId, open, onClose }: ImportJobModalProps) {
     setSaveError(null);
     setIsSaving(true);
     try {
-      const parsedSkills = skillsText
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-
+      const parsedSkills = skillsText.split(",").map((s) => s.trim()).filter(Boolean);
       const res = await fetch("/api/jobs/import", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
@@ -217,7 +236,7 @@ function ImportJobModal({ profileId, open, onClose }: ImportJobModalProps) {
           profileId,
           originalInput: inputValue,
           ...fields,
-          skills: parsedSkills,
+          skills:    parsedSkills,
           salaryMin: fields.salaryMin || null,
           salaryMax: fields.salaryMax || null,
         }),
@@ -228,7 +247,8 @@ function ImportJobModal({ profileId, open, onClose }: ImportJobModalProps) {
         return;
       }
       router.refresh();
-      handleClose();
+      reset();
+      onClose();
     } catch {
       setSaveError("Something went wrong. Please try again.");
     } finally {
@@ -239,12 +259,13 @@ function ImportJobModal({ profileId, open, onClose }: ImportJobModalProps) {
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
-    >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop — clicking it triggers requestClose */}
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={requestClose}
+        aria-hidden="true"
+      />
 
       {/* Dialog */}
       <div
@@ -254,6 +275,14 @@ function ImportJobModal({ profileId, open, onClose }: ImportJobModalProps) {
         aria-modal="true"
         aria-label="Import job listing"
       >
+        {/* Discard confirmation — overlays the dialog content */}
+        {showConfirm && (
+          <DiscardConfirm
+            onKeep={() => setShowConfirm(false)}
+            onDiscard={confirmDiscard}
+          />
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border)] px-6 py-4">
           <div>
@@ -265,7 +294,7 @@ function ImportJobModal({ profileId, open, onClose }: ImportJobModalProps) {
             </p>
           </div>
           <button
-            onClick={handleClose}
+            onClick={requestClose}
             className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
             aria-label="Close"
           >
@@ -317,7 +346,6 @@ function ImportJobModal({ profileId, open, onClose }: ImportJobModalProps) {
             </div>
           ) : (
             <div className="flex flex-col gap-5">
-              {/* Back */}
               <button
                 onClick={() => { setPhase("input"); setSaveError(null); }}
                 className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded"
@@ -328,157 +356,86 @@ function ImportJobModal({ profileId, open, onClose }: ImportJobModalProps) {
                 Back
               </button>
 
-              {/* Required fields */}
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Job title" required>
-                  <input
-                    type="text"
-                    value={fields.title}
+                  <input type="text" value={fields.title}
                     onChange={(e) => setFields((f) => ({ ...f, title: e.target.value }))}
-                    className={inputCls}
-                    placeholder="e.g. Frontend Engineer"
-                  />
+                    className={inputCls} placeholder="e.g. Frontend Engineer" />
                 </Field>
                 <Field label="Company" required>
-                  <input
-                    type="text"
-                    value={fields.company}
+                  <input type="text" value={fields.company}
                     onChange={(e) => setFields((f) => ({ ...f, company: e.target.value }))}
-                    className={inputCls}
-                    placeholder="e.g. Acme Corp"
-                  />
+                    className={inputCls} placeholder="e.g. Acme Corp" />
                 </Field>
               </div>
 
               <Field label="Listing URL">
-                <input
-                  type="url"
-                  value={fields.url}
+                <input type="url" value={fields.url}
                   onChange={(e) => setFields((f) => ({ ...f, url: e.target.value }))}
-                  className={inputCls}
-                  placeholder="https://…"
-                />
+                  className={inputCls} placeholder="https://…" />
               </Field>
 
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Location">
-                  <input
-                    type="text"
-                    value={fields.location}
+                  <input type="text" value={fields.location}
                     onChange={(e) => setFields((f) => ({ ...f, location: e.target.value }))}
-                    className={inputCls}
-                    placeholder="e.g. Berlin, Germany"
-                  />
+                    className={inputCls} placeholder="e.g. Berlin, Germany" />
                 </Field>
                 <Field label="Work arrangement">
-                  <select
-                    value={fields.locationType ?? ""}
-                    onChange={(e) =>
-                      setFields((f) => ({
-                        ...f,
-                        locationType: (e.target.value || null) as ExtractedFields["locationType"],
-                      }))
-                    }
-                    className={selectCls}
-                  >
+                  <select value={fields.locationType ?? ""}
+                    onChange={(e) => setFields((f) => ({ ...f, locationType: (e.target.value || null) as ExtractedFields["locationType"] }))}
+                    className={inputCls}>
                     <option value="">Not specified</option>
-                    {Object.entries(LOCATION_TYPE_LABELS).map(([v, l]) => (
-                      <option key={v} value={v}>{l}</option>
-                    ))}
+                    {Object.entries(LOCATION_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                   </select>
                 </Field>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Job type">
-                  <select
-                    value={fields.jobType ?? ""}
-                    onChange={(e) =>
-                      setFields((f) => ({
-                        ...f,
-                        jobType: (e.target.value || null) as ExtractedFields["jobType"],
-                      }))
-                    }
-                    className={selectCls}
-                  >
+                  <select value={fields.jobType ?? ""}
+                    onChange={(e) => setFields((f) => ({ ...f, jobType: (e.target.value || null) as ExtractedFields["jobType"] }))}
+                    className={inputCls}>
                     <option value="">Not specified</option>
-                    {Object.entries(JOB_TYPE_LABELS).map(([v, l]) => (
-                      <option key={v} value={v}>{l}</option>
-                    ))}
+                    {Object.entries(JOB_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                   </select>
                 </Field>
                 <Field label="Posted date">
-                  <input
-                    type="date"
-                    value={fields.postedAt}
+                  <input type="date" value={fields.postedAt}
                     onChange={(e) => setFields((f) => ({ ...f, postedAt: e.target.value }))}
-                    className={inputCls}
-                  />
+                    className={inputCls} />
                 </Field>
               </div>
 
-              {/* Salary */}
               <div className="grid grid-cols-3 gap-3">
                 <Field label="Salary min">
-                  <input
-                    type="number"
-                    value={fields.salaryMin ?? ""}
-                    onChange={(e) =>
-                      setFields((f) => ({
-                        ...f,
-                        salaryMin: e.target.value ? parseInt(e.target.value, 10) : null,
-                      }))
-                    }
-                    className={inputCls}
-                    placeholder="60000"
-                    min={0}
-                  />
+                  <input type="number" value={fields.salaryMin ?? ""}
+                    onChange={(e) => setFields((f) => ({ ...f, salaryMin: e.target.value ? parseInt(e.target.value, 10) : null }))}
+                    className={inputCls} placeholder="60000" min={0} />
                 </Field>
                 <Field label="Salary max">
-                  <input
-                    type="number"
-                    value={fields.salaryMax ?? ""}
-                    onChange={(e) =>
-                      setFields((f) => ({
-                        ...f,
-                        salaryMax: e.target.value ? parseInt(e.target.value, 10) : null,
-                      }))
-                    }
-                    className={inputCls}
-                    placeholder="90000"
-                    min={0}
-                  />
+                  <input type="number" value={fields.salaryMax ?? ""}
+                    onChange={(e) => setFields((f) => ({ ...f, salaryMax: e.target.value ? parseInt(e.target.value, 10) : null }))}
+                    className={inputCls} placeholder="90000" min={0} />
                 </Field>
                 <Field label="Currency">
-                  <input
-                    type="text"
-                    value={fields.currency}
+                  <input type="text" value={fields.currency}
                     onChange={(e) => setFields((f) => ({ ...f, currency: e.target.value }))}
-                    className={inputCls}
-                    placeholder="EUR"
-                    maxLength={10}
-                  />
+                    className={inputCls} placeholder="EUR" maxLength={10} />
                 </Field>
               </div>
 
               <Field label="Skills (comma-separated)">
-                <input
-                  type="text"
-                  value={skillsText}
+                <input type="text" value={skillsText}
                   onChange={(e) => setSkillsText(e.target.value)}
-                  className={inputCls}
-                  placeholder="TypeScript, React, Node.js"
-                />
+                  className={inputCls} placeholder="TypeScript, React, Node.js" />
               </Field>
 
               <Field label="Description" required>
-                <textarea
-                  value={fields.description}
+                <textarea value={fields.description}
                   onChange={(e) => setFields((f) => ({ ...f, description: e.target.value }))}
-                  rows={10}
-                  className={`${inputCls} resize-y`}
-                  placeholder="Paste or edit the job description…"
-                />
+                  rows={10} className={`${inputCls} resize-y`}
+                  placeholder="Paste or edit the job description…" />
               </Field>
 
               {saveError && (
