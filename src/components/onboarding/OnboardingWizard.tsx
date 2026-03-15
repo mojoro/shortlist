@@ -17,9 +17,21 @@ type WizardData = {
   currency: string;
   targetSalaryMin: string;
   targetSalaryMax: string;
+  // Contact details (step 3)
+  displayName: string;
+  email: string;
+  phone: string;
+  contactLocation: string;
+  linkedinUrl: string;
+  portfolioUrl: string;
+  githubUrl: string;
+  // Full CV (step 4)
+  curriculumVitae: string;
+  // Excluded keywords (step 5)
+  excludedKeywords: string[];
 };
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 7;
 
 const REMOTE_OPTIONS = [
   { value: "ANY",         label: "Anywhere — remote, hybrid, or on-site" },
@@ -51,7 +63,19 @@ export function OnboardingWizard() {
     currency:         "EUR",
     targetSalaryMin:  "",
     targetSalaryMax:  "",
+    displayName:      "",
+    email:            "",
+    phone:            "",
+    contactLocation:  "",
+    linkedinUrl:      "",
+    portfolioUrl:     "",
+    githubUrl:        "",
+    curriculumVitae:  "",
+    excludedKeywords: [],
   });
+
+  // Keyword chip input state
+  const [keywordInput, setKeywordInput] = useState("");
 
   function update(field: keyof WizardData) {
     return (
@@ -59,6 +83,31 @@ export function OnboardingWizard() {
         HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
       >,
     ) => setData((prev) => ({ ...prev, [field]: e.target.value }));
+  }
+
+  function addKeyword(raw: string) {
+    const kw = raw.trim().toLowerCase();
+    if (!kw) return;
+    setData((prev) => ({
+      ...prev,
+      excludedKeywords: prev.excludedKeywords.includes(kw)
+        ? prev.excludedKeywords
+        : [...prev.excludedKeywords, kw],
+    }));
+    setKeywordInput("");
+  }
+
+  function removeKeyword(kw: string) {
+    setData((prev) => ({
+      ...prev,
+      excludedKeywords: prev.excludedKeywords.filter((k) => k !== kw),
+    }));
+  }
+
+  function handleUrlBlur(field: keyof WizardData, value: string) {
+    if (value && !value.startsWith("http://") && !value.startsWith("https://")) {
+      setData((prev) => ({ ...prev, [field]: `https://${value}` }));
+    }
   }
 
   function canAdvance() {
@@ -107,6 +156,17 @@ export function OnboardingWizard() {
             ? parseInt(data.targetSalaryMax, 10)
             : null,
           masterResume:     data.masterResume.trim() || undefined,
+          displayName:      data.displayName.trim() || undefined,
+          email:            data.email.trim() || undefined,
+          phone:            data.phone.trim() || undefined,
+          contactLocation:  data.contactLocation.trim() || undefined,
+          linkedinUrl:      data.linkedinUrl.trim() || undefined,
+          portfolioUrl:     data.portfolioUrl.trim() || undefined,
+          githubUrl:        data.githubUrl.trim() || undefined,
+          curriculumVitae:  data.curriculumVitae.trim() || undefined,
+          excludedKeywords: data.excludedKeywords.length > 0
+            ? data.excludedKeywords
+            : undefined,
         });
         if (process.env.NODE_ENV === "development") {
           console.log("[OnboardingWizard] completeOnboarding response:", result);
@@ -220,6 +280,7 @@ export function OnboardingWizard() {
 
         {/* Step content */}
         <div className="space-y-5">
+          {/* ── Step 1: Target roles ──────────────────────────── */}
           {step === 1 && (
             <>
               <div>
@@ -278,6 +339,7 @@ export function OnboardingWizard() {
             </>
           )}
 
+          {/* ── Step 2: Location & remote preference ─────────── */}
           {step === 2 && (
             <>
               <div>
@@ -300,7 +362,7 @@ export function OnboardingWizard() {
                   value={data.targetLocations}
                   onChange={update("targetLocations")}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" && canAdvance()) {
                       handleStepAdvance(step + 1);
                     }
                   }}
@@ -331,7 +393,234 @@ export function OnboardingWizard() {
             </>
           )}
 
+          {/* ── Step 3: Contact details (NEW) ─────────────────── */}
           {step === 3 && (
+            <>
+              <div>
+                <p className="text-lg font-semibold text-[var(--text)]">
+                  Your contact details
+                </p>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">
+                  These appear at the top of your tailored resume. All fields are
+                  optional — you can fill them in later.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={LABEL_CLS} htmlFor="displayName">
+                    Your full name
+                  </label>
+                  <input
+                    id="displayName"
+                    type="text"
+                    className={INPUT_CLS}
+                    placeholder="Jane Smith"
+                    value={data.displayName}
+                    onChange={update("displayName")}
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className={LABEL_CLS} htmlFor="contactEmail">
+                    Email address
+                  </label>
+                  <input
+                    id="contactEmail"
+                    type="email"
+                    className={INPUT_CLS}
+                    placeholder="jane@example.com"
+                    value={data.email}
+                    onChange={update("email")}
+                  />
+                </div>
+                <div>
+                  <label className={LABEL_CLS} htmlFor="phone">
+                    Phone number
+                  </label>
+                  <input
+                    id="phone"
+                    type="text"
+                    className={INPUT_CLS}
+                    placeholder="+49 123 456 789"
+                    value={data.phone}
+                    onChange={update("phone")}
+                  />
+                </div>
+                <div>
+                  <label className={LABEL_CLS} htmlFor="contactLocation">
+                    Your location
+                  </label>
+                  <input
+                    id="contactLocation"
+                    type="text"
+                    className={INPUT_CLS}
+                    placeholder="Berlin, Germany"
+                    value={data.contactLocation}
+                    onChange={update("contactLocation")}
+                  />
+                  <p className={HINT_CLS}>City, country — for your resume header.</p>
+                </div>
+              </div>
+              <div>
+                <label className={LABEL_CLS} htmlFor="linkedinUrl">
+                  LinkedIn URL
+                </label>
+                <input
+                  id="linkedinUrl"
+                  type="text"
+                  className={INPUT_CLS}
+                  placeholder="https://linkedin.com/in/janesmith"
+                  value={data.linkedinUrl}
+                  onChange={update("linkedinUrl")}
+                  onBlur={(e) => handleUrlBlur("linkedinUrl", e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={LABEL_CLS} htmlFor="portfolioUrl">
+                    Portfolio / website
+                  </label>
+                  <input
+                    id="portfolioUrl"
+                    type="text"
+                    className={INPUT_CLS}
+                    placeholder="https://janesmith.dev"
+                    value={data.portfolioUrl}
+                    onChange={update("portfolioUrl")}
+                    onBlur={(e) => handleUrlBlur("portfolioUrl", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className={LABEL_CLS} htmlFor="githubUrl">
+                    GitHub
+                  </label>
+                  <input
+                    id="githubUrl"
+                    type="text"
+                    className={INPUT_CLS}
+                    placeholder="https://github.com/janesmith"
+                    value={data.githubUrl}
+                    onChange={update("githubUrl")}
+                    onBlur={(e) => handleUrlBlur("githubUrl", e.target.value)}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Step 4: Full CV (NEW) ─────────────────────────── */}
+          {step === 4 && (
+            <>
+              <div>
+                <p className="text-lg font-semibold text-[var(--text)]">
+                  Paste your complete work history
+                </p>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">
+                  This is your full career history — every role, project, and skill
+                  you&apos;ve ever had. The AI uses this to write tailored resumes
+                  for each job. The more detail, the better the output.
+                </p>
+              </div>
+              <div>
+                <label className={LABEL_CLS} htmlFor="curriculumVitae">
+                  Full CV / work history{" "}
+                  <span className="font-normal text-[var(--text-muted)]">
+                    (optional — you can add it later)
+                  </span>
+                </label>
+                <textarea
+                  id="curriculumVitae"
+                  className={[
+                    INPUT_CLS,
+                    "min-h-[260px] resize-y font-[var(--font-geist-mono)] text-xs leading-relaxed",
+                  ].join(" ")}
+                  placeholder={`Jane Smith\n\nExperience\n──────────\nSenior Software Engineer — Acme Corp  (2021–present)\n- Built and maintained APIs serving 2M daily active users\n- Led migration from monolith to microservices, cutting p99 latency by 40%\n- Mentored 3 junior engineers\n\nSoftware Engineer — Beta Ltd  (2019–2021)\n- Developed React dashboards used by 500 internal analysts\n- Integrated third-party payment APIs (Stripe, Adyen)\n\nEducation\n─────────\nBSc Computer Science — University of Warsaw  (2015–2019)\n\nSkills\n──────\nTypeScript, React, Next.js, Node.js, PostgreSQL, Docker, AWS`}
+                  value={data.curriculumVitae}
+                  onChange={update("curriculumVitae")}
+                  autoFocus
+                />
+                <p className={HINT_CLS}>
+                  Include everything — dates, company names, responsibilities, achievements,
+                  and skills. Plain text or light markdown both work.
+                </p>
+              </div>
+            </>
+          )}
+
+          {/* ── Step 5: Excluded keywords (NEW) ──────────────── */}
+          {step === 5 && (
+            <>
+              <div>
+                <p className="text-lg font-semibold text-[var(--text)]">
+                  Any roles you want to skip?
+                </p>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">
+                  Jobs containing these words will be hidden from your feed — saves
+                  you time scrolling past things that aren&apos;t a fit.
+                </p>
+              </div>
+              <div>
+                <label className={LABEL_CLS} htmlFor="keywordInput">
+                  Keywords to exclude{" "}
+                  <span className="font-normal text-[var(--text-muted)]">(optional)</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="keywordInput"
+                    type="text"
+                    className={INPUT_CLS}
+                    placeholder="e.g. manager, lead, senior"
+                    value={keywordInput}
+                    onChange={(e) => setKeywordInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === ",") {
+                        e.preventDefault();
+                        addKeyword(keywordInput);
+                      }
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addKeyword(keywordInput)}
+                    className="cursor-pointer rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm font-medium text-[var(--text-muted)] whitespace-nowrap transition-colors hover:text-[var(--text)]"
+                  >
+                    Add
+                  </button>
+                </div>
+                <p className={HINT_CLS}>Press Enter or comma to add. Case-insensitive.</p>
+              </div>
+              {data.excludedKeywords.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {data.excludedKeywords.map((kw) => (
+                    <span
+                      key={kw}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--bg-subtle)] px-3 py-1 text-xs font-medium text-[var(--text)]"
+                    >
+                      {kw}
+                      <button
+                        type="button"
+                        onClick={() => removeKeyword(kw)}
+                        aria-label={`Remove ${kw}`}
+                        className="cursor-pointer leading-none text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {data.excludedKeywords.length === 0 && (
+                <p className="text-sm text-[var(--text-muted)]">
+                  No keywords added yet. You can skip this step and add them later in
+                  Settings.
+                </p>
+              )}
+            </>
+          )}
+
+          {/* ── Step 6: Master resume ─────────────────────────── */}
+          {step === 6 && (
             <>
               <div>
                 <p className="text-lg font-semibold text-[var(--text)]">
@@ -368,7 +657,8 @@ export function OnboardingWizard() {
             </>
           )}
 
-          {step === 4 && (
+          {/* ── Step 7: Salary ────────────────────────────────── */}
+          {step === 7 && (
             <>
               <div>
                 <p className="text-lg font-semibold text-[var(--text)]">
@@ -454,7 +744,17 @@ export function OnboardingWizard() {
               disabled={!canAdvance()}
               className="cursor-pointer rounded-lg bg-[var(--accent)] px-6 py-2 text-sm font-semibold text-[var(--accent-fg)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Next
+              {/* Steps 3–6 are all optional; show "Skip" when empty, "Next" when filled */}
+              {step >= 3 && step <= 6
+                ? (
+                    (step === 3 && !data.displayName.trim() && !data.email.trim() && !data.contactLocation.trim() && !data.phone.trim() && !data.linkedinUrl.trim() && !data.portfolioUrl.trim() && !data.githubUrl.trim()) ||
+                    (step === 4 && !data.curriculumVitae.trim()) ||
+                    (step === 5 && data.excludedKeywords.length === 0) ||
+                    (step === 6 && !data.masterResume.trim())
+                      ? "Skip"
+                      : "Next"
+                  )
+                : "Next"}
             </button>
           ) : (
             <button
