@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { auth } from "@clerk/nextjs/server";
 import { APP_CONFIG } from "@/config/app";
+import { prisma } from "@/lib/prisma";
 import { LandingNav } from "@/components/landing/LandingNav";
 
 export const metadata: Metadata = {
@@ -34,6 +35,22 @@ const FEATURES = [
 export default async function LandingPage() {
   const { userId } = await auth();
   const isSignedIn = !!userId;
+
+  let activeProfile: { name: string; displayName: string | null } | null = null;
+  if (isSignedIn && userId) {
+    // Try to get active profile
+    activeProfile = await prisma.profile.findFirst({
+      where: { userId, isActive: true },
+      select: { name: true, displayName: true },
+    });
+    // Fallback: get any profile if no active one
+    if (!activeProfile) {
+      activeProfile = await prisma.profile.findFirst({
+        where: { userId },
+        select: { name: true, displayName: true },
+      });
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
@@ -70,17 +87,22 @@ export default async function LandingPage() {
           {isSignedIn ? (
             <>
               <h1 className="text-5xl font-bold leading-[1.05] tracking-tight text-[var(--text)] sm:text-7xl">
-                Welcome back.
+                Welcome back{activeProfile?.displayName ? `, ${activeProfile.displayName.split(" ")[0]}` : ""}.
               </h1>
+              {activeProfile && (
+                <p className="mx-auto mt-2 text-sm text-[var(--text-muted)]">
+                  Active search: {activeProfile.name}
+                </p>
+              )}
               <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[var(--text-muted)] sm:text-xl">
                 Your job search is waiting. Pick up where you left off.
               </p>
               <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
                 <Link
-                  href="/dashboard"
+                  href={activeProfile ? "/dashboard" : "/onboarding"}
                   className="inline-flex h-11 items-center rounded-xl bg-[var(--accent)] px-7 text-sm font-semibold text-[var(--accent-fg)] shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                 >
-                  Go to dashboard →
+                  {activeProfile ? "Go to dashboard →" : "Complete setup"}
                 </Link>
               </div>
             </>
