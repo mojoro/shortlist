@@ -33,17 +33,18 @@ const styles = StyleSheet.create({
 
 type Line =
   | { type: "h1" | "h2" | "h3" | "paragraph"; text: string }
-  | { type: "bullet"; text: string };
+  | { type: "bullet"; text: string }
+  | { type: "hr" };
 
 type Span =
   | { kind: "text"; text: string }
   | { kind: "bold"; text: string }
+  | { kind: "italic"; text: string }
   | { kind: "link"; text: string; url: string };
 
 function parseInline(raw: string): Span[] {
   const spans: Span[] = [];
-  // Match **bold** or [text](url) — whichever comes first
-  const re = /\*\*(.+?)\*\*|\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
+  const re = /\*\*(.+?)\*\*|\*(.+?)\*|_(.+?)_|\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
   let last = 0;
   let match: RegExpExecArray | null;
 
@@ -52,11 +53,13 @@ function parseInline(raw: string): Span[] {
       spans.push({ kind: "text", text: raw.slice(last, match.index) });
     }
     if (match[1] !== undefined) {
-      // bold: **text**
       spans.push({ kind: "bold", text: match[1] });
+    } else if (match[2] !== undefined) {
+      spans.push({ kind: "italic", text: match[2] });
+    } else if (match[3] !== undefined) {
+      spans.push({ kind: "italic", text: match[3] });
     } else {
-      // link: [text](url)
-      spans.push({ kind: "link", text: match[2], url: match[3] });
+      spans.push({ kind: "link", text: match[4], url: match[5] });
     }
     last = match.index + match[0].length;
   }
@@ -74,6 +77,7 @@ function InlineText({ text, baseStyle }: { text: string; baseStyle: Styles[strin
     <Text style={baseStyle}>
       {spans.map((span, i) => {
         if (span.kind === "bold") return <Text key={i} style={styles.bold}>{span.text}</Text>;
+        if (span.kind === "italic") return <Text key={i} style={{ fontFamily: "Helvetica-Oblique" }}>{span.text}</Text>;
         if (span.kind === "link") return <Link key={i} src={span.url} style={styles.link}>{span.text}</Link>;
         return <Text key={i}>{span.text}</Text>;
       })}
@@ -85,6 +89,7 @@ function parseMarkdown(markdown: string): Line[] {
   return markdown
     .split("\n")
     .map((line): Line | null => {
+      if (line.trim() === "---") return { type: "hr" };
       if (line.startsWith("# ")) return { type: "h1", text: line.slice(2).trim() };
       if (line.startsWith("## ")) return { type: "h2", text: line.slice(3).trim() };
       if (line.startsWith("### ")) return { type: "h3", text: line.slice(4).trim() };
@@ -102,6 +107,8 @@ export function ResumePDFDocument({ markdown }: { markdown: string }) {
     <Document>
       <Page size="A4" style={styles.page}>
         {lines.map((line, i) => {
+          if (line.type === "hr")
+            return <View key={i} style={{ borderBottomWidth: 0.5, borderBottomColor: "#ccc", marginVertical: 6 }} />;
           if (line.type === "h1")
             return <Text key={i} style={styles.name}>{line.text}</Text>;
           if (line.type === "h2")
