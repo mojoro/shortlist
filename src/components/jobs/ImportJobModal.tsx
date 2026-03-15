@@ -127,11 +127,15 @@ function ImportJobModal({ profileId, open, onClose }: ImportJobModalProps) {
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      const isDirty = inputValue.trim().length > 0;
+      if (isDirty && !window.confirm("Close without saving? Your progress will be lost.")) return;
+      reset();
+      onClose();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [open, onClose]);
+  }, [open, inputValue, onClose]);
 
   function reset() {
     setPhase("input");
@@ -145,6 +149,8 @@ function ImportJobModal({ profileId, open, onClose }: ImportJobModalProps) {
   }
 
   function handleClose() {
+    const isDirty = inputValue.trim().length > 0;
+    if (isDirty && !window.confirm("Close without saving? Your progress will be lost.")) return;
     reset();
     onClose();
   }
