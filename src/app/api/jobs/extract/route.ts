@@ -125,6 +125,9 @@ export async function POST(req: Request) {
       );
     }
 
+    // If the user gave us a URL we already know it — don't trust the AI to reproduce it
+    if (isUrl) result.url = input.trim();
+
     return Response.json(result);
   } catch (err) {
     console.error("[/api/jobs/extract]", err);
