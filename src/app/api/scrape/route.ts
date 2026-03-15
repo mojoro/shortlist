@@ -180,3 +180,6 @@ export async function POST(req: Request) {
 
   return Response.json({ poolNew, results });
 }
+
+// Vercel cron jobs send GET requests — delegate to the same handler
+export { POST as GET };
