@@ -72,6 +72,10 @@ export const switchProfileSchema = z.object({
   profileId: z.string().cuid(),
 });
 
+export const deleteProfileSchema = z.object({
+  profileId: z.string().cuid(),
+});
+
 // ── Onboarding wizard completion ───────────────────────────────────────────
 export const completeOnboardingSchema = z.object({
   name:             z.string().min(1).max(80),

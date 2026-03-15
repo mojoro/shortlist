@@ -11,6 +11,7 @@ import {
   updateResume,
   createProfile,
   switchProfile,
+  deleteProfile,
   rematchProfile,
 } from "@/app/(dashboard)/settings/actions";
 
@@ -102,9 +103,11 @@ interface Props {
 
 function ProfilesSection({ profile, allProfiles }: Props) {
   const router = useRouter();
-  const [newName, setNewName]       = useState("");
-  const [creating, startCreating]   = useTransition();
-  const [switching, startSwitching] = useTransition();
+  const [newName, setNewName]         = useState("");
+  const [creating, startCreating]     = useTransition();
+  const [switching, startSwitching]   = useTransition();
+  const [deleting, startDeleting]     = useTransition();
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
 
   function handleCreate(e: React.FormEvent) {
@@ -125,6 +128,14 @@ function ProfilesSection({ profile, allProfiles }: Props) {
   function handleSwitch(profileId: string) {
     startSwitching(async () => {
       await switchProfile({ profileId });
+      router.refresh();
+    });
+  }
+
+  function handleDelete(profileId: string) {
+    startDeleting(async () => {
+      await deleteProfile({ profileId });
+      setConfirmDeleteId(null);
       router.refresh();
     });
   }
@@ -154,15 +165,43 @@ function ProfilesSection({ profile, allProfiles }: Props) {
                 <p className="text-xs text-[var(--accent)]">Active</p>
               )}
             </div>
-            {!p.isActive && (
-              <button
-                onClick={() => handleSwitch(p.id)}
-                disabled={switching}
-                className="cursor-pointer text-xs font-medium text-[var(--text-muted)] underline underline-offset-2 transition-colors hover:text-[var(--text)] disabled:opacity-50"
-              >
-                {switching ? "Switching…" : "Make active"}
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {!p.isActive && (
+                <button
+                  onClick={() => handleSwitch(p.id)}
+                  disabled={switching}
+                  className="cursor-pointer text-xs font-medium text-[var(--text-muted)] underline underline-offset-2 transition-colors hover:text-[var(--text)] disabled:opacity-50"
+                >
+                  {switching ? "Switching…" : "Make active"}
+                </button>
+              )}
+              {confirmDeleteId === p.id ? (
+                <span className="flex items-center gap-2">
+                  <span className="text-xs text-[var(--text-muted)]">Delete?</span>
+                  <button
+                    onClick={() => handleDelete(p.id)}
+                    disabled={deleting}
+                    className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 disabled:opacity-50"
+                  >
+                    {deleting ? "Deleting…" : "Yes, delete"}
+                  </button>
+                  <button
+                    onClick={() => setConfirmDeleteId(null)}
+                    className="text-xs text-[var(--text-muted)] hover:text-[var(--text)]"
+                  >
+                    Cancel
+                  </button>
+                </span>
+              ) : (
+                <button
+                  onClick={() => setConfirmDeleteId(p.id)}
+                  className="text-xs text-[var(--text-muted)] hover:text-red-600 dark:hover:text-red-400"
+                  aria-label={`Delete profile ${p.name}`}
+                >
+                  Delete
+                </button>
+              )}
+            </div>
           </li>
         ))}
       </ul>

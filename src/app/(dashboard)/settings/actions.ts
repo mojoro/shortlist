@@ -1,6 +1,8 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { jobMatchesProfile, MAX_CANDIDATES_PER_RUN } from "@/lib/match";
@@ -10,6 +12,7 @@ import {
   updateResumeSchema,
   createProfileSchema,
   switchProfileSchema,
+  deleteProfileSchema,
   completeOnboardingSchema,
 } from "@/lib/validations";
 
@@ -175,6 +178,45 @@ export async function switchProfile(data: unknown): Promise<void> {
   if (process.env.NODE_ENV === "development") {
     console.log("[settings/actions] switchProfile success — profileId:", parsed.data.profileId);
   }
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+}
+
+// ─── Delete profile ───────────────────────────────────────────────────────────
+
+export async function deleteProfile(data: unknown): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const parsed = deleteProfileSchema.safeParse(data);
+  if (!parsed.success) throw new Error("Invalid data");
+
+  const profile = await prisma.profile.findFirst({
+    where: { id: parsed.data.profileId, userId },
+  });
+  if (!profile) throw new Error("Profile not found");
+
+  const allProfiles = await prisma.profile.findMany({ where: { userId } });
+
+  if (allProfiles.length === 1) {
+    // Last profile — delete and send user through onboarding again
+    await prisma.profile.delete({ where: { id: parsed.data.profileId } });
+    const cookieStore = await cookies();
+    cookieStore.delete("shortlist-onboarded");
+    redirect("/onboarding");
+  }
+
+  // If active, promote another profile before deleting
+  if (profile.isActive) {
+    const next = allProfiles.find((p) => p.id !== parsed.data.profileId)!;
+    await prisma.profile.update({
+      where: { id: next.id },
+      data:  { isActive: true },
+    });
+  }
+
+  await prisma.profile.delete({ where: { id: parsed.data.profileId } });
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");
