@@ -6,7 +6,7 @@ import { completeOnboarding } from "@/app/(dashboard)/settings/actions";
 import { APP_CONFIG } from "@/config/app";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
-type Phase = "form" | "loading";
+type Phase = "form" | "loading" | "zero-match";
 
 type WizardData = {
   name: string;
@@ -111,14 +111,22 @@ export function OnboardingWizard() {
         if (process.env.NODE_ENV === "development") {
           console.log("[OnboardingWizard] completeOnboarding response:", result);
         }
-        document.cookie = "shortlist-onboarded=1; path=/";
-        router.push("/dashboard");
+        document.cookie = "shortlist-onboarded=true; path=/";
+        if (result.jobsFound === 0) {
+          setPhase("zero-match");
+        } else {
+          router.push("/dashboard");
+        }
       } catch (err) {
         if (process.env.NODE_ENV === "development") {
           console.log("[OnboardingWizard] completeOnboarding error:", err);
         }
         setPhase("form");
-        setError("Something went wrong. Please try again.");
+        const message =
+          err instanceof Error && err.message
+            ? err.message
+            : "Something went wrong. Please try again, or contact support if this keeps happening.";
+        setError(message);
       }
     });
   }
@@ -137,6 +145,37 @@ export function OnboardingWizard() {
           <p className="mt-2 text-sm text-[var(--text-muted)]">
             Searching the job pool for roles that fit your profile.
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "zero-match") {
+    return (
+      <div className="relative flex min-h-screen items-center justify-center bg-[var(--bg-subtle)] p-4">
+        <div className="absolute right-4 top-4">
+          <ThemeToggle />
+        </div>
+        <div
+          className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-8 text-center"
+          style={{ boxShadow: "var(--shadow-card)" }}
+        >
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--bg-subtle)] text-2xl">
+            🔍
+          </span>
+          <p className="mt-4 text-lg font-semibold text-[var(--text)]">
+            No matches yet
+          </p>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">
+            We didn&apos;t find any matches yet — we&apos;ll search again tomorrow,
+            or you can adjust your criteria in Settings.
+          </p>
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="mt-6 cursor-pointer rounded-lg bg-[var(--accent)] px-6 py-2 text-sm font-semibold text-[var(--accent-fg)] transition-opacity hover:opacity-90"
+          >
+            Go to dashboard
+          </button>
         </div>
       </div>
     );
@@ -202,6 +241,11 @@ export function OnboardingWizard() {
                   placeholder="Software Engineer, Full-Stack Developer…"
                   value={data.targetRoles}
                   onChange={update("targetRoles")}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && canAdvance()) {
+                      handleStepAdvance(step + 1);
+                    }
+                  }}
                   autoFocus
                 />
                 <p className={HINT_CLS}>Separate multiple titles with commas.</p>
@@ -220,6 +264,11 @@ export function OnboardingWizard() {
                   placeholder="e.g. Frontend Engineer — Berlin"
                   value={data.name}
                   onChange={update("name")}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && canAdvance()) {
+                      handleStepAdvance(step + 1);
+                    }
+                  }}
                 />
                 <p className={HINT_CLS}>
                   A short name for this search — handy if you run multiple job
@@ -250,6 +299,11 @@ export function OnboardingWizard() {
                   placeholder="Berlin, Warsaw, Amsterdam…"
                   value={data.targetLocations}
                   onChange={update("targetLocations")}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleStepAdvance(step + 1);
+                    }
+                  }}
                   autoFocus
                 />
                 <p className={HINT_CLS}>
