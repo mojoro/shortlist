@@ -11,4 +11,4 @@ export const openrouter = new OpenAI({
   },
 });
 
-export const MODEL = "anthropic/claude-3-haiku-20240307";
+export const MODEL = "anthropic/claude-3-haiku";

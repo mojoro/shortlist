@@ -137,7 +137,7 @@ English (C2), German (B2)`;
         aiMatchPoints: ["TypeScript + React + Next.js — exact match", "Hybrid Berlin within your range", "€80–100k salary band", "Design systems experience valued"],
         aiGapPoints: ["GraphQL listed as strong plus — brush up on mutations"],
         aiAnalyzedAt: daysAgo(1),
-        aiModel: "anthropic/claude-3-haiku-20240307",
+        aiModel: "anthropic/claude-3-haiku",
         jobPool: {
           create: {
             externalId: "greenhouse-kombo-fe-001",
@@ -173,7 +173,7 @@ English (C2), German (B2)`;
         aiMatchPoints: ["React + TypeScript frontend", "Berlin hybrid", "€85–110k — slightly above your max but achievable"],
         aiGapPoints: ["Python backend expected — you'll need basic familiarity", "Fintech domain knowledge a plus"],
         aiAnalyzedAt: daysAgo(2),
-        aiModel: "anthropic/claude-3-haiku-20240307",
+        aiModel: "anthropic/claude-3-haiku",
         jobPool: {
           create: {
             externalId: "lever-taktile-fe-001",
@@ -209,7 +209,7 @@ English (C2), German (B2)`;
         aiMatchPoints: ["TypeScript + React — core match", "Tailwind in the stack", "€75–95k within your band"],
         aiGapPoints: ["Browser extension experience not on your resume", "Startup stage means broad scope"],
         aiAnalyzedAt: daysAgo(3),
-        aiModel: "anthropic/claude-3-haiku-20240307",
+        aiModel: "anthropic/claude-3-haiku",
         jobPool: {
           create: {
             externalId: "ashby-cogram-fe-001",
@@ -246,7 +246,7 @@ English (C2), German (B2)`;
         aiMatchPoints: ["TypeScript experience transfers", "€90–120k above your target — room to negotiate", "Well-known brand for your CV"],
         aiGapPoints: ["Angular primary codebase — not your specialty", "Large enterprise culture", "Strong testing culture expected"],
         aiAnalyzedAt: daysAgo(4),
-        aiModel: "anthropic/claude-3-haiku-20240307",
+        aiModel: "anthropic/claude-3-haiku",
         jobPool: {
           create: {
             externalId: "greenhouse-personio-fe-001",
@@ -282,7 +282,7 @@ English (C2), German (B2)`;
         aiMatchPoints: ["React + TypeScript — exact stack match", "Berlin-based"],
         aiGapPoints: ["Fully onsite — conflicts with your hybrid preference", "€70–85k at the low end of your target", "Logistics domain may not excite"],
         aiAnalyzedAt: daysAgo(5),
-        aiModel: "anthropic/claude-3-haiku-20240307",
+        aiModel: "anthropic/claude-3-haiku",
         jobPool: {
           create: {
             externalId: "lever-forto-fe-001",
@@ -318,7 +318,7 @@ English (C2), German (B2)`;
         aiMatchPoints: ["React + TypeScript baseline match", "GraphQL experience applicable"],
         aiGapPoints: ["€65–80k below your minimum", "React Native web not on your resume", "Quick commerce may not align with interests"],
         aiAnalyzedAt: daysAgo(6),
-        aiModel: "anthropic/claude-3-haiku-20240307",
+        aiModel: "anthropic/claude-3-haiku",
         jobPool: {
           create: {
             externalId: "ashby-gorillas-fe-001",
@@ -355,7 +355,7 @@ English (C2), German (B2)`;
         aiMatchPoints: [],
         aiGapPoints: ["Java — not your stack", "No frontend component", "Large enterprise culture", "SAP ecosystem knowledge required"],
         aiAnalyzedAt: daysAgo(7),
-        aiModel: "anthropic/claude-3-haiku-20240307",
+        aiModel: "anthropic/claude-3-haiku",
         jobPool: {
           create: {
             externalId: "greenhouse-sap-java-001",
@@ -391,7 +391,7 @@ English (C2), German (B2)`;
         aiMatchPoints: [],
         aiGapPoints: ["Swift/iOS — not your stack", "No web frontend component"],
         aiAnalyzedAt: daysAgo(8),
-        aiModel: "anthropic/claude-3-haiku-20240307",
+        aiModel: "anthropic/claude-3-haiku",
         jobPool: {
           create: {
             externalId: "lever-zalando-ios-001",
