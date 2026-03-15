@@ -5,7 +5,7 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useTransition } from "react";
 import { ScoreBadge } from "@/components/jobs/ScoreBadge";
-import { toggleSaveJob } from "@/app/(dashboard)/dashboard/actions";
+import { toggleSaveJob, requestAnalysis } from "@/app/(dashboard)/dashboard/actions";
 import type { JobWithApplication } from "@/types";
 
 // ─── Source tag styles (light + dark variants) ───────────────────────────────
@@ -105,6 +105,23 @@ export function JobCard({
   const router = useRouter();
   const [savePending, startSaveTransition] = useTransition();
   const [isSaved, setIsSaved] = useState(job.feedStatus === "SAVED");
+  const [scoreState, setScoreState] = useState<"idle" | "pending" | "done" | "error">("idle");
+  const [, startScoreTransition] = useTransition();
+
+  function handleRequestScore(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (scoreState === "pending" || scoreState === "done") return;
+    setScoreState("pending");
+    startScoreTransition(async () => {
+      const result = await requestAnalysis(job.profileId);
+      if (result.error) {
+        setScoreState("error");
+        return;
+      }
+      setScoreState("done");
+      setTimeout(() => router.refresh(), 10_000);
+    });
+  }
 
   const isIgnoredView = job.feedStatus === "ARCHIVED";
 
@@ -168,7 +185,34 @@ export function JobCard({
       {/* Top row: score · title/subtitle/source · bookmark · ×/✓ */}
       <div className="flex items-start gap-4">
         {/* Score badge — top left */}
-        <ScoreBadge score={job.aiScore} />
+        {job.aiScore === null && !isIgnoredView ? (
+          <button
+            onClick={handleRequestScore}
+            disabled={scoreState === "pending" || scoreState === "done"}
+            title={
+              scoreState === "done"    ? "Scoring in progress…" :
+              scoreState === "error"   ? "Failed — click to retry" :
+              "Request a match score"
+            }
+            aria-label="Request match score"
+            className="inline-flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-md bg-[var(--border)] text-[var(--text-muted)] transition-colors hover:bg-[var(--accent-muted)] hover:text-[var(--accent)] disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+          >
+            {scoreState === "pending" ? (
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : scoreState === "done" ? (
+              <span className="animate-pulse text-[9px] font-semibold leading-tight text-center px-0.5">scoring</span>
+            ) : scoreState === "error" ? (
+              <span className="text-xs font-bold text-red-500">!</span>
+            ) : (
+              <span className="text-[9px] font-semibold leading-tight text-center px-0.5">Score?</span>
+            )}
+          </button>
+        ) : (
+          <ScoreBadge score={job.aiScore} />
+        )}
 
         {/* Title + subtitle + source */}
         <div className="min-w-0 flex-1">

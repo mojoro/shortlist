@@ -57,13 +57,21 @@ export function AnalyzeButton({ profileId }: { profileId: string }) {
     );
   }
 
+  const isLoading = isPending || state === "pending";
+
   return (
     <button
       onClick={handleClick}
-      disabled={isPending || state === "pending"}
-      className="cursor-pointer inline-flex min-h-[36px] w-full items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg)] px-4 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:cursor-wait disabled:opacity-60"
+      disabled={isLoading}
+      className="cursor-pointer inline-flex min-h-[36px] w-full items-center justify-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-4 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:cursor-wait disabled:opacity-60"
     >
-      {isPending || state === "pending" ? "Requesting…" : "Get match score"}
+      {isLoading && (
+        <svg className="animate-spin h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+      )}
+      {isLoading ? "Requesting score…" : "Get match score"}
     </button>
   );
 }
