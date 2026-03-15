@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
 });
 
 type Line =
-  | { type: "h1" | "h2" | "h3" | "paragraph"; text: string }
+  | { type: "h1" | "h2" | "h3" | "h4" | "paragraph"; text: string }
   | { type: "bullet"; text: string }
   | { type: "hr" };
 
@@ -90,9 +90,10 @@ function parseMarkdown(markdown: string): Line[] {
     .split("\n")
     .map((line): Line | null => {
       if (line.trim() === "---") return { type: "hr" };
-      if (line.startsWith("# ")) return { type: "h1", text: line.slice(2).trim() };
-      if (line.startsWith("## ")) return { type: "h2", text: line.slice(3).trim() };
+      if (line.startsWith("#### ")) return { type: "h4", text: line.slice(5).trim() };
       if (line.startsWith("### ")) return { type: "h3", text: line.slice(4).trim() };
+      if (line.startsWith("## ")) return { type: "h2", text: line.slice(3).trim() };
+      if (line.startsWith("# ")) return { type: "h1", text: line.slice(2).trim() };
       if (line.startsWith("- ") || line.startsWith("* "))
         return { type: "bullet", text: line.slice(2).trim() };
       if (line.trim()) return { type: "paragraph", text: line.trim() };
@@ -115,6 +116,8 @@ export function ResumePDFDocument({ markdown }: { markdown: string }) {
             return <Text key={i} style={styles.sectionHeader}>{line.text}</Text>;
           if (line.type === "h3")
             return <InlineText key={i} text={line.text} baseStyle={{ ...styles.paragraph, ...styles.bold }} />;
+          if (line.type === "h4")
+            return <InlineText key={i} text={line.text} baseStyle={{ ...styles.paragraph, fontFamily: "Helvetica-Oblique" }} />;
           if (line.type === "bullet")
             return (
               <View key={i} style={styles.bullet}>
