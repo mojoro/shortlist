@@ -5,6 +5,7 @@ import { extractJobSchema } from "@/lib/validations";
 import TurndownService from "turndown";
 
 const td = new TurndownService({ headingStyle: "atx", bulletListMarker: "-" });
+td.remove(["script", "style", "noscript", "iframe"]);
 
 const URL_RE = /^https?:\/\//i;
 
