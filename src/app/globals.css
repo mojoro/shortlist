@@ -45,6 +45,19 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+/* Override @uiw/react-markdown-preview light-mode text to meet WCAG AA contrast */
+[data-color-mode="light"] .wmde-markdown,
+[data-color-mode="light"] .wmde-markdown p,
+[data-color-mode="light"] .wmde-markdown li,
+[data-color-mode="light"] .wmde-markdown td,
+[data-color-mode="light"] .wmde-markdown th {
+  color: var(--text);
+}
+[data-color-mode="light"] .wmde-markdown code {
+  color: var(--text);
+  background-color: var(--bg-subtle);
+}
+
 @keyframes toast-slide-in {
   from { transform: translateY(16px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
