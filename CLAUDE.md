@@ -44,7 +44,7 @@ Never write the string `"Shortlist"` directly outside this file.
 | Database | Neon (PostgreSQL) |
 | ORM | Prisma |
 | Auth | Clerk |
-| AI | OpenRouter API (`anthropic/claude-sonnet-4-6`) |
+| AI | OpenRouter API (`anthropic/claude-3-haiku`) |
 | Scraping | Apify (LinkedIn); direct HTTP for Greenhouse/Lever/Ashby |
 | Scheduling | Vercel Cron |
 | Theme | next-themes |
@@ -201,7 +201,7 @@ export const openrouter = new OpenAI({
   },
 });
 
-export const MODEL = "anthropic/claude-sonnet-4-6";
+export const MODEL = "anthropic/claude-3-haiku-20240307";
 ```
 
 ### Scoring (`/api/analyze`)
