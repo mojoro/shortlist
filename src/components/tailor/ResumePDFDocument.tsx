@@ -117,7 +117,7 @@ export function ResumePDFDocument({ markdown }: { markdown: string }) {
           if (line.type === "h3")
             return <InlineText key={i} text={line.text} baseStyle={{ ...styles.paragraph, ...styles.bold }} />;
           if (line.type === "h4")
-            return <InlineText key={i} text={line.text} baseStyle={{ ...styles.paragraph, fontFamily: "Helvetica-Oblique" }} />;
+            return <InlineText key={i} text={line.text} baseStyle={{ ...styles.paragraph, ...styles.bold }} />;
           if (line.type === "bullet")
             return (
               <View key={i} style={styles.bullet}>
