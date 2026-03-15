@@ -82,6 +82,20 @@ export async function POST(req: Request) {
   let cleanedText: string;
   const isUrl = URL_RE.test(input.trim());
 
+  // Dedup check — skip AI entirely if this URL is already in the profile's feed
+  if (isUrl) {
+    const existing = await prisma.job.findFirst({
+      where: { profileId, jobPool: { source: "CUSTOM", externalId: input.trim() } },
+      select: { id: true },
+    });
+    if (existing) {
+      return Response.json(
+        { error: "You've already imported this job listing." },
+        { status: 409 },
+      );
+    }
+  }
+
   if (isUrl) {
     try {
       const res = await fetch(input.trim(), {
