@@ -211,15 +211,16 @@ export async function completeOnboarding(
   const profile = await prisma.profile.create({
     data: {
       userId,
-      name:             parsed.data.name,
-      targetRoles:      parsed.data.targetRoles,
-      targetLocations:  parsed.data.targetLocations,
-      remotePreference: parsed.data.remotePreference,
-      currency:         parsed.data.currency,
-      targetSalaryMin:  parsed.data.targetSalaryMin,
-      targetSalaryMax:  parsed.data.targetSalaryMax,
-      masterResume:     parsed.data.masterResume ?? null,
-      isActive:         true,
+      name:                 parsed.data.name,
+      targetRoles:          parsed.data.targetRoles,
+      targetLocations:      parsed.data.targetLocations,
+      remotePreference:     parsed.data.remotePreference,
+      currency:             parsed.data.currency,
+      targetSalaryMin:      parsed.data.targetSalaryMin,
+      targetSalaryMax:      parsed.data.targetSalaryMax,
+      masterResume:         parsed.data.masterResume ?? null,
+      isActive:             true,
+      onboardingCompletedAt: new Date(),
     },
   });
 
