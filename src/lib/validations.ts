@@ -63,6 +63,15 @@ export const updateResumeSchema = z.object({
   curriculumVitae: z.string().optional(),
 });
 
+// ── Settings: resume writing rules ────────────────────────────────────────
+export const updateResumeWritingRulesSchema = z.object({
+  profileId:        z.string().cuid(),
+  protectedPhrases: z.array(z.string()),
+  bannedPhrases:    z.array(z.string()),
+  verifiedMetrics:  z.array(z.string()),
+  neverClaim:       z.array(z.string()),
+});
+
 // ── Settings: profile create / switch ─────────────────────────────────────
 export const createProfileSchema = z.object({
   name: z.string().min(1).max(80),

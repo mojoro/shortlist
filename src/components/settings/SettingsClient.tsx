@@ -9,6 +9,7 @@ import {
   updateProfileInfo,
   updateSearchCriteria,
   updateResume,
+  updateResumeWritingRules,
   createProfile,
   switchProfile,
   deleteProfile,
@@ -569,6 +570,113 @@ function ResumeSection({ profile }: { profile: Profile }) {
   );
 }
 
+// ─── Resume writing rules section ─────────────────────────────────────────────
+
+function ResumeWritingRulesSection({ profile }: { profile: Profile }) {
+  function toText(arr: string[]): string {
+    return arr.join("\n");
+  }
+  function fromText(val: string): string[] {
+    return val.split("\n").map((s) => s.trim()).filter(Boolean);
+  }
+
+  const [fields, setFields] = useState({
+    protectedPhrases: toText(profile.protectedPhrases),
+    bannedPhrases:    toText(profile.bannedPhrases),
+    verifiedMetrics:  toText(profile.verifiedMetrics),
+    neverClaim:       toText(profile.neverClaim),
+  });
+  const [isPending, startTransition] = useTransition();
+  const [saved,     setSaved]        = useState(false);
+  const [error,     setError]        = useState<string | null>(null);
+
+  function handleChange(key: keyof typeof fields) {
+    return (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setFields((prev) => ({ ...prev, [key]: e.target.value }));
+      setSaved(false);
+    };
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      try {
+        await updateResumeWritingRules({
+          profileId:        profile.id,
+          protectedPhrases: fromText(fields.protectedPhrases),
+          bannedPhrases:    fromText(fields.bannedPhrases),
+          verifiedMetrics:  fromText(fields.verifiedMetrics),
+          neverClaim:       fromText(fields.neverClaim),
+        });
+        setSaved(true);
+      } catch {
+        setError("Couldn't save. Please try again.");
+      }
+    });
+  }
+
+  const textareaClass =
+    "w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] resize-y";
+
+  return (
+    <section>
+      <SectionHeading>Resume writing rules</SectionHeading>
+      <p className="mt-1 mb-5 text-sm text-[var(--text-muted)]">
+        Fine-tune how the AI writes your resume. One entry per line.
+      </p>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <Label>Protected phrases</Label>
+          <textarea
+            rows={3}
+            className={textareaClass}
+            value={fields.protectedPhrases}
+            onChange={handleChange("protectedPhrases")}
+            placeholder={"cross-functional collaboration\nzero-downtime deployments"}
+          />
+          <Hint>Use these verbatim — the AI will never paraphrase them.</Hint>
+        </div>
+        <div>
+          <Label>Banned phrases</Label>
+          <textarea
+            rows={3}
+            className={textareaClass}
+            value={fields.bannedPhrases}
+            onChange={handleChange("bannedPhrases")}
+            placeholder={"passionate about\nresults-driven\nthought leader"}
+          />
+          <Hint>The AI will never use these phrases in any resume it writes.</Hint>
+        </div>
+        <div>
+          <Label>Verified metrics</Label>
+          <textarea
+            rows={3}
+            className={textareaClass}
+            value={fields.verifiedMetrics}
+            onChange={handleChange("verifiedMetrics")}
+            placeholder={"reduced deploy time by 40%\ngrew ARR from $2M to $8M"}
+          />
+          <Hint>Use these figures exactly — no rounding, rewording, or omitting.</Hint>
+        </div>
+        <div>
+          <Label>Never claim</Label>
+          <textarea
+            rows={3}
+            className={textareaClass}
+            value={fields.neverClaim}
+            onChange={handleChange("neverClaim")}
+            placeholder={"Kubernetes production experience\nteam management"}
+          />
+          <Hint>Never imply or claim experience with these — even if adjacent skills exist.</Hint>
+        </div>
+        {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+        <SaveButton isPending={isPending} saved={saved} />
+      </form>
+    </section>
+  );
+}
+
 // ─── Root component ───────────────────────────────────────────────────────────
 
 export function SettingsClient({ profile, allProfiles }: Props) {
@@ -581,6 +689,8 @@ export function SettingsClient({ profile, allProfiles }: Props) {
       <SearchCriteriaSection profile={profile} />
       <Divider />
       <ResumeSection profile={profile} />
+      <Divider />
+      <ResumeWritingRulesSection profile={profile} />
       <Divider />
       <section>
         <SectionHeading>Account</SectionHeading>

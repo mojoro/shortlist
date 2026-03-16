@@ -54,6 +54,10 @@ export async function POST(req: Request) {
             requiredSkills: true,
             niceToHaveSkills: true,
             remotePreference: true,
+            protectedPhrases: true,
+            bannedPhrases: true,
+            verifiedMetrics: true,
+            neverClaim: true,
           },
         },
       },
@@ -180,7 +184,30 @@ Step 6 — Format and output
 
 Step 7 — Final Review
 Think about what you have made and what could be improved. If the current version is an 8/10,
-identify what would make it a 9.5/10 and implement that adjustment, but never use an "—" em-dash.`;
+identify what would make it a 9.5/10 and implement that adjustment, but never use an "—" em-dash.${
+  profile.protectedPhrases.length > 0 ||
+  profile.bannedPhrases.length > 0 ||
+  profile.verifiedMetrics.length > 0 ||
+  profile.neverClaim.length > 0
+    ? `\n\n## CANDIDATE'S WRITING RULES (non-negotiable)\n${
+        profile.protectedPhrases.length > 0
+          ? `\nProtected phrases — use verbatim, never paraphrase:\n${profile.protectedPhrases.map((p) => `- ${p}`).join("\n")}`
+          : ""
+      }${
+        profile.bannedPhrases.length > 0
+          ? `\n\nBanned phrases — never use these under any circumstances:\n${profile.bannedPhrases.map((p) => `- ${p}`).join("\n")}`
+          : ""
+      }${
+        profile.verifiedMetrics.length > 0
+          ? `\n\nVerified metrics — use exactly as written, do not round or rephrase:\n${profile.verifiedMetrics.map((p) => `- ${p}`).join("\n")}`
+          : ""
+      }${
+        profile.neverClaim.length > 0
+          ? `\n\nNever claim — do not imply or suggest experience with these:\n${profile.neverClaim.map((p) => `- ${p}`).join("\n")}`
+          : ""
+      }`
+    : ""
+}`;
 
     const userContent = [
       `## Job Description\n\n${job.jobPool.description}`,

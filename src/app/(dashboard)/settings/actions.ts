@@ -10,6 +10,7 @@ import {
   updateProfileInfoSchema,
   updateSearchCriteriaSchema,
   updateResumeSchema,
+  updateResumeWritingRulesSchema,
   createProfileSchema,
   switchProfileSchema,
   deleteProfileSchema,
@@ -105,6 +106,29 @@ export async function updateResume(data: unknown): Promise<void> {
   if (process.env.NODE_ENV === "development") {
     console.log("[settings/actions] updateResume success — profileId:", profileId);
   }
+
+  revalidatePath("/settings");
+}
+
+// ─── Resume writing rules ─────────────────────────────────────────────────────
+
+export async function updateResumeWritingRules(data: unknown): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const parsed = updateResumeWritingRulesSchema.safeParse(data);
+  if (!parsed.success) throw new Error("Invalid data");
+
+  const profile = await prisma.profile.findFirst({
+    where: { id: parsed.data.profileId, userId },
+  });
+  if (!profile) throw new Error("Profile not found");
+
+  const { profileId, ...fields } = parsed.data;
+  await prisma.profile.update({
+    where: { id: profileId },
+    data:  fields,
+  });
 
   revalidatePath("/settings");
 }

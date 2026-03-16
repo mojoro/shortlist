@@ -79,6 +79,12 @@ model Profile {
   githubUrl        String?   // GitHub profile URL
   skills           String[]  // All skills the candidate has (not search criteria — the full list)
 
+  // Resume writing rules (used by tailor feature)
+  protectedPhrases String[]  // Use these verbatim — never paraphrase
+  bannedPhrases    String[]  // Never use these phrases
+  verifiedMetrics  String[]  // Use exactly these figures/achievements
+  neverClaim       String[]  // Never imply experience with these
+
   // Scraping config
   scraperEnabled   Boolean   @default(true)
   scraperSources   ScraperSource[]
