@@ -12,7 +12,7 @@ import { BrandMark } from "@/components/ui/BrandMark";
 
 function IconFeed() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect x="3" y="3" width="7" height="7" rx="1" />
       <rect x="14" y="3" width="7" height="7" rx="1" />
       <rect x="3" y="14" width="7" height="7" rx="1" />
@@ -23,7 +23,7 @@ function IconFeed() {
 
 function IconPipeline() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M22 3H2l8 9.46V19l4 2V12.46L22 3z" />
     </svg>
   );
@@ -160,7 +160,8 @@ export function AppNav({ followUpCount = 0 }: AppNavProps) {
                 href={href}
                 aria-current={isCurrent ? "page" : undefined}
                 className={[
-                  "flex h-10 w-full items-center gap-3 rounded-lg px-2.5 transition-colors",
+                  "flex h-10 w-10 mx-auto items-center justify-center gap-3 rounded-lg transition-all duration-200 ease-out",
+                  "group-hover:w-full group-hover:mx-0 group-hover:px-2.5 group-hover:justify-start",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]",
                   isCurrent
                     ? "bg-[var(--accent-muted)] text-[var(--accent)]"
@@ -188,7 +189,7 @@ export function AppNav({ followUpCount = 0 }: AppNavProps) {
             onClick={() => setTheme(isDark ? "light" : "dark")}
             aria-label={mounted ? `Switch to ${isDark ? "light" : "dark"} mode` : "Toggle theme"}
             suppressHydrationWarning
-            className="flex h-10 w-full items-center gap-3 rounded-lg px-2.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]"
+            className="flex h-10 w-10 mx-auto items-center justify-center gap-3 rounded-lg text-[var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--bg-subtle)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)] group-hover:w-full group-hover:mx-0 group-hover:px-2.5 group-hover:justify-start"
           >
             <span className="shrink-0" suppressHydrationWarning>
               {mounted ? (isDark ? <IconSun /> : <IconMoon />) : <IconMoon />}
@@ -205,7 +206,7 @@ export function AppNav({ followUpCount = 0 }: AppNavProps) {
               aria-haspopup="true"
               aria-expanded={menuOpen}
               aria-label="Account menu"
-              className="flex h-10 w-full items-center gap-3 rounded-lg px-2.5 transition-colors hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]"
+              className="flex h-10 w-10 mx-auto items-center justify-center gap-3 rounded-lg transition-all duration-200 ease-out hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)] group-hover:w-full group-hover:mx-0 group-hover:px-2.5 group-hover:justify-start"
             >
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--accent-muted)] text-[var(--accent)] text-xs font-semibold">
                 {initial}
