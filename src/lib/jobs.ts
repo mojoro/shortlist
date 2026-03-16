@@ -48,8 +48,11 @@ export function buildWhereClause(
     case "saved":
       return { ...base, feedStatus: "SAVED" as FeedStatus };
     case "applied":
+      // Applied jobs may have feedStatus ARCHIVED (set when transitioning to APPLIED),
+      // so only exclude HIDDEN here — not ARCHIVED.
       return {
-        ...base,
+        profileId,
+        feedStatus: { not: "HIDDEN" as FeedStatus },
         application: {
           status: { not: "INTERESTED" as ApplicationStatus },
         },
