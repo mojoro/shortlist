@@ -107,9 +107,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-end gap-2">
-          <ImportJobButton profileId={profile.id} />
+        <div className="flex items-center justify-between gap-2">
           <ProfileSwitcher profiles={allProfiles} activeProfileId={profile.id} />
+          <ImportJobButton profileId={profile.id} />
         </div>
 
         <FeedToolbar
