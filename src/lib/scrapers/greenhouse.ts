@@ -40,6 +40,11 @@ async function fetchCompany(company: (typeof GREENHOUSE_COMPANIES)[number]): Pro
 }
 
 export async function scrapeGreenhouse(_profileId: string): Promise<GreenhouseRawJob[]> {
-  const batches = await Promise.allSettled(GREENHOUSE_COMPANIES.map(fetchCompany));
-  return batches.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+  const results: GreenhouseRawJob[] = [];
+  const BATCH = 10;
+  for (let i = 0; i < GREENHOUSE_COMPANIES.length; i += BATCH) {
+    const batch = await Promise.allSettled(GREENHOUSE_COMPANIES.slice(i, i + BATCH).map(fetchCompany));
+    results.push(...batch.flatMap((r) => (r.status === "fulfilled" ? r.value : [])));
+  }
+  return results;
 }

@@ -42,6 +42,11 @@ async function fetchCompany(company: (typeof ASHBY_COMPANIES)[number]): Promise<
 }
 
 export async function scrapeAshby(_profileId: string): Promise<AshbyRawJob[]> {
-  const batches = await Promise.allSettled(ASHBY_COMPANIES.map(fetchCompany));
-  return batches.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+  const results: AshbyRawJob[] = [];
+  const BATCH = 10;
+  for (let i = 0; i < ASHBY_COMPANIES.length; i += BATCH) {
+    const batch = await Promise.allSettled(ASHBY_COMPANIES.slice(i, i + BATCH).map(fetchCompany));
+    results.push(...batch.flatMap((r) => (r.status === "fulfilled" ? r.value : [])));
+  }
+  return results;
 }
