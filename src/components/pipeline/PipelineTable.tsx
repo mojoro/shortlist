@@ -374,6 +374,7 @@ export function PipelineTable({
                           value={app.status}
                           onChange={(s) => handleStatusChange(app.id, s)}
                           disabled={isPending}
+                          jobId={app.id}
                         />
                       </td>
 
