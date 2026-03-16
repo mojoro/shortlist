@@ -87,12 +87,16 @@ export async function POST(req: Request) {
         rawCount       = rawJobs.length;
         const poolData = normalize(rawJobs);
 
-        const { count } = await prisma.jobPool.createMany({
-          data:           poolData,
-          skipDuplicates: true,
-        });
-        poolNew      = count;
-        totalPoolNew += count;
+        // Insert in chunks of 200 to keep individual query sizes manageable
+        const CHUNK = 200;
+        for (let i = 0; i < poolData.length; i += CHUNK) {
+          const { count } = await prisma.jobPool.createMany({
+            data:           poolData.slice(i, i + CHUNK),
+            skipDuplicates: true,
+          });
+          poolNew      += count;
+          totalPoolNew += count;
+        }
 
         if (process.env.NODE_ENV === "development") {
           console.log(`[/api/scrape] ${source} — rawCount: ${rawCount}, poolNew: ${poolNew}`);

@@ -17,6 +17,9 @@ export function normalizeGreenhouseForPool(
   slug: string,
   companyName: string,
 ): Prisma.JobPoolUncheckedCreateInput {
+  // Exclude HTML content from rawData — it's already stored as markdown in description
+  // and the full HTML can be 50–100KB per job, making bulk inserts impractical.
+  const { content: _content, ...rawMeta } = raw;
   return {
     externalId:  `greenhouse-${slug}-${raw.id}`,
     source:      "GREENHOUSE",
@@ -26,7 +29,7 @@ export function normalizeGreenhouseForPool(
     location:    raw.location?.name ?? null,
     description: raw.content ? htmlToMarkdown(raw.content) : "",
     postedAt:    raw.updated_at ? new Date(raw.updated_at) : null,
-    rawData:     raw as unknown as Prisma.InputJsonValue,
+    rawData:     rawMeta as unknown as Prisma.InputJsonValue,
   };
 }
 
@@ -108,6 +111,9 @@ export function normalizeAshbyForPool(
     ? htmlToMarkdown(raw.descriptionHtml)
     : (raw.descriptionPlain ?? "");
 
+  // Exclude large HTML/text description fields from rawData
+  const { descriptionHtml: _html, descriptionPlain: _plain, ...rawMeta } = raw;
+
   return {
     externalId:   `ashby-${slug}-${raw.id}`,
     source:       "ASHBY",
@@ -119,6 +125,6 @@ export function normalizeAshbyForPool(
     description,
     jobType:      ASHBY_JOB_TYPE[empType] ?? null,
     postedAt:     raw.publishedAt ? new Date(raw.publishedAt) : null,
-    rawData:      raw as unknown as Prisma.InputJsonValue,
+    rawData:      rawMeta as unknown as Prisma.InputJsonValue,
   };
 }
