@@ -168,7 +168,7 @@ export function TailorPanel({
       </div>
 
       {/* ── Mobile (<md) ────────────────────────────────────────────────── */}
-      <div className="fixed inset-x-0 bottom-0 top-16 z-10 flex flex-col overflow-hidden bg-[var(--bg)] md:hidden">
+      <div className="fixed inset-x-0 bottom-0 top-0 z-10 flex flex-col overflow-hidden bg-[var(--bg)] md:hidden">
         <MobileTabBar
           activeTab={mobileTab}
           hasResume={!!markdown}
