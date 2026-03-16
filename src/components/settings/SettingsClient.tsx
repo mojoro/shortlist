@@ -572,19 +572,20 @@ function ResumeSection({ profile }: { profile: Profile }) {
 
 // ─── Resume writing rules section ─────────────────────────────────────────────
 
-function ResumeWritingRulesSection({ profile }: { profile: Profile }) {
-  function toText(arr: string[]): string {
-    return arr.join("\n");
-  }
-  function fromText(val: string): string[] {
-    return val.split("\n").map((s) => s.trim()).filter(Boolean);
-  }
+function toLines(arr: string[] | null): string {
+  return (arr ?? []).join("\n");
+}
 
+function fromLines(val: string): string[] {
+  return val.split("\n").map((s) => s.trim()).filter(Boolean);
+}
+
+function ResumeWritingRulesSection({ profile }: { profile: Profile }) {
   const [fields, setFields] = useState({
-    protectedPhrases: toText(profile.protectedPhrases),
-    bannedPhrases:    toText(profile.bannedPhrases),
-    verifiedMetrics:  toText(profile.verifiedMetrics),
-    neverClaim:       toText(profile.neverClaim),
+    protectedPhrases: toLines(profile.protectedPhrases),
+    bannedPhrases:    toLines(profile.bannedPhrases),
+    verifiedMetrics:  toLines(profile.verifiedMetrics),
+    neverClaim:       toLines(profile.neverClaim),
   });
   const [isPending, startTransition] = useTransition();
   const [saved,     setSaved]        = useState(false);
@@ -604,10 +605,10 @@ function ResumeWritingRulesSection({ profile }: { profile: Profile }) {
       try {
         await updateResumeWritingRules({
           profileId:        profile.id,
-          protectedPhrases: fromText(fields.protectedPhrases),
-          bannedPhrases:    fromText(fields.bannedPhrases),
-          verifiedMetrics:  fromText(fields.verifiedMetrics),
-          neverClaim:       fromText(fields.neverClaim),
+          protectedPhrases: fromLines(fields.protectedPhrases),
+          bannedPhrases:    fromLines(fields.bannedPhrases),
+          verifiedMetrics:  fromLines(fields.verifiedMetrics),
+          neverClaim:       fromLines(fields.neverClaim),
         });
         setSaved(true);
       } catch {
