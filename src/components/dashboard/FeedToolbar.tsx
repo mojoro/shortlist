@@ -3,12 +3,14 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 
-interface FilterChipsProps {
+interface FeedToolbarProps {
   allCount: number;
   newCount: number;
   savedCount: number;
   appliedCount: number;
   ignoredCount: number;
+  avgScore: number | null;
+  lastUpdatedText: string | null;
 }
 
 const CHIPS = [
@@ -28,13 +30,14 @@ const SORT_OPTIONS = [
 type FilterKey = (typeof CHIPS)[number]["key"];
 type SortKey = (typeof SORT_OPTIONS)[number]["key"];
 
-export function FilterChips({
+
+export function FeedToolbar({
   allCount,
   newCount,
   savedCount,
   appliedCount,
   ignoredCount,
-}: FilterChipsProps) {
+}: FeedToolbarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -71,58 +74,66 @@ export function FilterChips({
 
   function handleSortChange(sort: SortKey) {
     if (sort === currentSort) {
-      // Toggle direction
       navigate({ dir: currentDir === "desc" ? "asc" : null });
     } else {
-      // Switch to new sort (reset dir to default desc)
       navigate({ sort: sort === "match" ? null : sort, dir: null });
     }
   }
 
   const showDirToggle = currentSort !== "match";
 
+
   return (
-    <div className="flex items-center justify-between gap-2">
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter jobs">
-        {CHIPS.map(({ key, label }) => {
+    <div className="flex flex-wrap items-center justify-center gap-y-3 sm:justify-between">
+      {/* Filter tabs — second on mobile, first on sm+ */}
+      <div className="order-2 flex items-center sm:order-1" role="group" aria-label="Filter jobs">
+        {CHIPS.map(({ key, label }, index) => {
           const isActive = currentFilter === key;
-          const isIgnored = key === "ignored";
           return (
-            <button
-              key={key}
-              onClick={() => handleFilterChange(key)}
-              disabled={isPending}
-              aria-pressed={isActive}
-              className={[
-                "cursor-pointer inline-flex min-h-[36px] items-center rounded-full px-3 py-1 text-sm font-medium transition-colors",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2",
-                isActive
-                  ? isIgnored
-                    ? "bg-[var(--text-muted)] text-[var(--bg-card)] shadow-sm"
-                    : "bg-[var(--accent)] text-[var(--accent-fg)] shadow-sm"
-                  : "bg-[var(--bg-card)] text-[var(--text-muted)] ring-1 ring-inset ring-[var(--border)] hover:text-[var(--text)] hover:ring-[var(--border-strong)]",
-                isPending ? "opacity-60 !cursor-wait" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              {label}
-              {key !== "all" && (
+            <div key={key} className="flex items-center">
+              {index > 0 && (
+                <span
+                  className="mx-1.5 h-3.5 w-px bg-[var(--border)]"
+                  aria-hidden="true"
+                />
+              )}
+              <button
+                onClick={() => handleFilterChange(key)}
+                disabled={isPending}
+                aria-pressed={isActive}
+                className={[
+                  "relative cursor-pointer px-1 pb-0.5 pt-1 text-sm font-medium transition-colors duration-150",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2",
+                  isActive
+                    ? "text-[var(--text)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text)]",
+                  isPending ? "opacity-60 !cursor-wait" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                {label}
+                {key !== "all" && (
+                  <span className={["ml-1 text-xs tabular-nums", isActive ? "opacity-70" : "opacity-50"].join(" ")}>
+                    {counts[key]}
+                  </span>
+                )}
+                {/* Animated underline indicator */}
                 <span
                   className={[
-                    "ml-1.5 text-xs tabular-nums",
-                    isActive ? "opacity-75" : "opacity-60",
+                    "absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-[var(--accent)] transition-all duration-200",
+                    isActive ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0",
                   ].join(" ")}
-                >
-                  {counts[key]}
-                </span>
-              )}
-            </button>
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
           );
         })}
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
+      {/* Sort + inline stats — first on mobile, second on sm+ */}
+      <div className="order-1 flex shrink-0 items-center gap-0.5 sm:order-2">
         {SORT_OPTIONS.map(({ key, label }) => {
           const isActive = currentSort === key;
           return (
@@ -131,11 +142,11 @@ export function FilterChips({
               onClick={() => handleSortChange(key)}
               disabled={isPending}
               className={[
-                "cursor-pointer inline-flex min-h-[36px] items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                "cursor-pointer inline-flex min-h-[32px] items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2",
                 isActive
-                  ? "ring-1 ring-inset ring-[var(--border)] text-[var(--text)] bg-[var(--bg-card)]"
-                  : "text-[var(--text-muted)] hover:text-[var(--text)]",
+                  ? "text-[var(--text)] bg-[var(--bg-subtle)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-subtle)]",
                 isPending ? "opacity-60 !cursor-wait" : "",
               ].filter(Boolean).join(" ")}
             >
@@ -146,7 +157,9 @@ export function FilterChips({
             </button>
           );
         })}
+
       </div>
+
     </div>
   );
 }

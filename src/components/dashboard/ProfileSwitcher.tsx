@@ -45,8 +45,6 @@ export function ProfileSwitcher({ profiles, activeProfileId }: ProfileSwitcherPr
     });
   }
 
-  if (profiles.length <= 1) return null;
-
   return (
     <div ref={ref} className="relative">
       <button
@@ -104,12 +102,18 @@ export function ProfileSwitcher({ profiles, activeProfileId }: ProfileSwitcherPr
               )}
             </button>
           ))}
-          <div className="mt-1 border-t border-[var(--border)] px-3 py-2">
+          <div className="mt-1 border-t border-[var(--border)] px-3 py-2 flex items-center justify-between gap-2">
             <a
               href="/settings"
               className="text-[10px] text-[var(--text-muted)] hover:text-[var(--accent)]"
             >
               Manage profiles →
+            </a>
+            <a
+              href="/onboarding"
+              className="inline-flex items-center gap-0.5 rounded-md bg-[var(--accent)] px-2 py-0.5 text-[10px] font-medium text-[var(--accent-fg)] hover:opacity-90"
+            >
+              + New
             </a>
           </div>
         </div>

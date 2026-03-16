@@ -183,55 +183,9 @@ export function JobCard({
       }}
     >
       {/* Top row: score · title/subtitle/source · bookmark · ×/✓ */}
-      <div className="flex items-start gap-4">
-        {/* Score badge — top left */}
-        {job.aiScore === null && !isIgnoredView ? (
-          <button
-            onClick={handleRequestScore}
-            disabled={scoreState === "pending" || scoreState === "done"}
-            title={
-              scoreState === "done"    ? "Scoring in progress…" :
-              scoreState === "error"   ? "Failed — click to retry" :
-              "Request a match score"
-            }
-            aria-label="Request match score"
-            className="inline-flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-md bg-[var(--border)] text-[var(--text-muted)] transition-colors hover:bg-[var(--accent-muted)] hover:text-[var(--accent)] disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-          >
-            {scoreState === "pending" ? (
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            ) : scoreState === "done" ? (
-              <span className="animate-pulse text-[9px] font-semibold leading-tight text-center px-0.5">scoring</span>
-            ) : scoreState === "error" ? (
-              <span className="text-xs font-bold text-red-500">!</span>
-            ) : (
-              <span className="text-[9px] font-semibold leading-tight text-center px-0.5">Score?</span>
-            )}
-          </button>
-        ) : (
-          <ScoreBadge score={job.aiScore} />
-        )}
-
-        {/* Title + subtitle + source */}
-        <div className="min-w-0 flex-1">
-          <h2 className="text-base font-bold text-[var(--text)]">
-            {pool.title}{" "}
-            <span className="font-normal text-[var(--text-muted)]">@ {pool.company}</span>
-          </h2>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-            {subtitleParts.length > 0 && (
-              <span className="text-xs text-[var(--text-muted)]">
-                {subtitleParts.join(" · ")}
-              </span>
-            )}
-            <SourceTag source={pool.source} />
-          </div>
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex shrink-0 items-center gap-0.5">
+      <div className="overflow-hidden">
+        {/* Action buttons — floated right so they appear top-right */}
+        <div className="float-right ml-2 flex shrink-0 items-center gap-0.5">
           {/* Bookmark — feed view only */}
           {!isIgnoredView && (
             <button
@@ -274,17 +228,79 @@ export function JobCard({
             </button>
           )}
         </div>
+
+        {/* Score badge — floated left so metadata wraps beneath it */}
+        <div className="float-left mr-4">
+          {job.aiScore === null && !isIgnoredView ? (
+            <button
+              onClick={handleRequestScore}
+              disabled={scoreState === "pending" || scoreState === "done"}
+              title={
+                scoreState === "done"    ? "Scoring in progress…" :
+                scoreState === "error"   ? "Failed — click to retry" :
+                "Request a match score"
+              }
+              aria-label="Request match score"
+              className="inline-flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-md bg-[var(--border)] text-[var(--text-muted)] transition-colors hover:bg-[var(--accent-muted)] hover:text-[var(--accent)] disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+            >
+              {scoreState === "pending" ? (
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : scoreState === "done" ? (
+                <span className="animate-pulse text-[9px] font-semibold leading-tight text-center px-0.5">scoring</span>
+              ) : scoreState === "error" ? (
+                <span className="text-xs font-bold text-red-500">!</span>
+              ) : (
+                <span className="text-[9px] font-semibold leading-tight text-center px-0.5">Score?</span>
+              )}
+            </button>
+          ) : (
+            <ScoreBadge score={job.aiScore} />
+          )}
+        </div>
+
+        {/* Title + subtitle + source — fills remaining space, wraps under score badge */}
+        <div className="min-w-0">
+          <h2 className="text-base font-bold text-[var(--text)]">
+            {pool.title}{" "}
+            <span className="font-normal text-[var(--text-muted)]">@{pool.company}</span>
+          </h2>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+            {subtitleParts.length > 0 && (
+              <span className="text-xs text-[var(--text-muted)]">
+                {subtitleParts.join(" · ")}
+              </span>
+            )}
+            <SourceTag source={pool.source} />
+          </div>
+        </div>
       </div>
 
       {/* AI summary */}
       {job.aiSummary && (
-        <p className="mt-4 line-clamp-1 text-sm text-[var(--text-muted)]">
+        <p className="mt-4 line-clamp-2 text-sm text-[var(--text-muted)]">
           {job.aiSummary}
         </p>
       )}
 
-      {/* Skills + tailor on the same row */}
-      <div className="mt-4 flex items-center justify-between gap-3">
+      {/* Skills + tailor */}
+      <div className="mt-4 overflow-hidden border-t border-[var(--border)] pt-4">
+        {!isIgnoredView && (
+          <Link
+            href={`/tailor/${job.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className={[
+              "cursor-pointer min-h-[32px] items-center rounded-lg bg-[var(--accent)] px-3 py-1 text-xs font-medium text-[var(--accent-fg)] transition-all hover:opacity-90 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
+              displaySkills.length > 0
+                ? "float-right ml-3 inline-flex"
+                : "flex w-full justify-center sm:mx-auto sm:w-1/2",
+            ].join(" ")}
+          >
+            tailor →
+          </Link>
+        )}
         <div className="flex flex-wrap items-center gap-1.5">
           {displaySkills.map((skill: string) => (
             <SkillChip key={skill}>{skill}</SkillChip>
@@ -293,16 +309,6 @@ export function JobCard({
             <span className="text-xs text-[var(--text-muted)]">+{remainingCount} more</span>
           )}
         </div>
-
-        {!isIgnoredView && (
-          <Link
-            href={`/tailor/${job.id}`}
-            onClick={(e) => e.stopPropagation()}
-            className="cursor-pointer shrink-0 inline-flex min-h-[32px] items-center rounded bg-[var(--accent)] px-3 py-1 text-xs font-medium text-[var(--accent-fg)] transition-all hover:opacity-90 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-          >
-            tailor →
-          </Link>
-        )}
       </div>
     </article>
   );

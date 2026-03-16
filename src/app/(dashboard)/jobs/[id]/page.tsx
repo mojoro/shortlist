@@ -151,8 +151,8 @@ export default async function JobDetailPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Right: Match analysis + actions */}
-        <div className="w-full shrink-0 lg:w-72 xl:w-80">
+        {/* Right: Match analysis + actions — first on mobile */}
+        <div className="order-first w-full shrink-0 lg:order-last lg:w-72 xl:w-80">
           {/* Score + analysis panel */}
           <div
             className="mb-4 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5"

@@ -273,7 +273,7 @@ export function PipelineTable({
     <>
       <div
         id="pipeline-table"
-        className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)]"
+        className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] overflow-hidden"
         style={{ boxShadow: "var(--shadow-card)" }}
       >
         {/* Tab bar */}
@@ -374,6 +374,7 @@ export function PipelineTable({
                           value={app.status}
                           onChange={(s) => handleStatusChange(app.id, s)}
                           disabled={isPending}
+                          jobId={app.id}
                         />
                       </td>
 

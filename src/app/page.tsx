@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { APP_CONFIG } from "@/config/app";
 import { prisma } from "@/lib/prisma";
 import { LandingNav } from "@/components/landing/LandingNav";
+import { BrandMark } from "@/components/ui/BrandMark";
 
 export const metadata: Metadata = {
   title: `${APP_CONFIG.name} — ${APP_CONFIG.tagline}`,
@@ -59,34 +60,37 @@ export default async function LandingPage() {
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden border-b border-[var(--border)]">
-        {/* Decorative background letter */}
-        <span
-          className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 select-none text-[22rem] font-black leading-none text-[var(--text)] opacity-[0.03] sm:text-[28rem]"
+        {/* Subtle dot-grid pattern */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage: "radial-gradient(circle, var(--text) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+            opacity: 0.03,
+          }}
           aria-hidden="true"
-        >
-          S
-        </span>
+        />
 
-        {/* Subtle radial gradient for depth */}
+        {/* Radial gradient for depth */}
         <div
           className="pointer-events-none absolute inset-0"
           style={{
             background:
               "radial-gradient(ellipse 80% 60% at 50% -10%, var(--accent) 0%, transparent 70%)",
-            opacity: 0.06,
+            opacity: 0.10,
           }}
           aria-hidden="true"
         />
 
         <div className="relative z-10 mx-auto max-w-4xl px-6 py-28 text-center sm:py-36">
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--bg-card)] px-3.5 py-1.5 text-xs font-medium text-[var(--text-muted)]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" aria-hidden="true" />
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--accent)]" aria-hidden="true" />
             AI-powered job search
           </div>
 
           {isSignedIn ? (
             <>
-              <h1 className="text-5xl font-bold leading-[1.05] tracking-tight text-[var(--text)] sm:text-7xl">
+              <h1 className="text-5xl font-black leading-[1.0] tracking-tight text-[var(--text)] sm:text-7xl">
                 Welcome back{activeProfile?.displayName ? `, ${activeProfile.displayName.split(" ")[0]}` : ""}.
               </h1>
               {activeProfile && (
@@ -108,7 +112,7 @@ export default async function LandingPage() {
             </>
           ) : (
             <>
-              <h1 className="text-5xl font-bold leading-[1.05] tracking-tight text-[var(--text)] sm:text-7xl">
+              <h1 className="text-5xl font-black leading-[1.0] tracking-tight text-[var(--text)] sm:text-7xl">
                 Get on the
                 <br />
                 <span className="text-[var(--accent)]">shortlist.</span>
@@ -145,10 +149,10 @@ export default async function LandingPage() {
           {FEATURES.map(({ number, title, description }) => (
             <article
               key={number}
-              className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-7"
-              style={{ boxShadow: "var(--shadow-card)" }}
+              className="rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] p-7 transition-transform duration-200 hover:-translate-y-1"
+              style={{ boxShadow: "var(--shadow-card)", borderTop: "2px solid var(--accent)" }}
             >
-              <span className="mb-5 block font-mono text-3xl font-black text-[var(--accent)] opacity-70">
+              <span className="mb-5 block font-mono text-3xl font-black text-[var(--accent)]">
                 {number}
               </span>
               <h3 className="mb-2.5 text-base font-semibold text-[var(--text)]">
@@ -186,9 +190,7 @@ export default async function LandingPage() {
       <footer className="mx-auto max-w-5xl px-6 py-8">
         <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
           <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded bg-[var(--accent)] text-[var(--accent-fg)] text-[10px] font-bold">
-              S
-            </span>
+            <BrandMark size="sm" />
             <span className="text-xs font-medium text-[var(--text-muted)]">
               {APP_CONFIG.name}
             </span>

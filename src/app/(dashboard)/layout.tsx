@@ -24,9 +24,13 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-[var(--bg)]">
       <AppNav followUpCount={followUpCount} />
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        {children}
-      </main>
+      {/* sm:ml-16 offsets the 64px fixed sidebar on desktop */}
+      {/* pb-24 adds space for the mobile bottom tab bar */}
+      <div className="sm:ml-16">
+        <main className="mx-auto max-w-5xl px-4 py-8 pb-24 sm:px-6 sm:pb-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
