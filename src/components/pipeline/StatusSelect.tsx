@@ -6,6 +6,7 @@ interface StatusSelectProps {
   value: ApplicationStatus;
   onChange: (newStatus: ApplicationStatus) => void;
   disabled?: boolean;
+  jobId?: string;
 }
 
 const STATUS_OPTIONS: { value: ApplicationStatus; label: string }[] = [
@@ -32,26 +33,55 @@ const STATUS_COLORS: Record<ApplicationStatus, string> = {
   GHOSTED:      "text-[var(--text-muted)]",
 };
 
-export function StatusSelect({ value, onChange, disabled }: StatusSelectProps) {
+export function StatusSelect({ value, onChange, disabled, jobId }: StatusSelectProps) {
+  const currentLabel = STATUS_OPTIONS.find((o) => o.value === value)?.label ?? value;
+
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value as ApplicationStatus)}
-      onClick={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.stopPropagation()}
-      disabled={disabled}
-      className={[
-        "min-h-[36px] cursor-pointer rounded-lg border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-sm font-medium transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
-        "disabled:cursor-not-allowed disabled:opacity-50",
-        STATUS_COLORS[value],
-      ].join(" ")}
-    >
-      {STATUS_OPTIONS.map(({ value: v, label }) => (
-        <option key={v} value={v} className="text-[var(--text)]">
-          {label}
-        </option>
-      ))}
-    </select>
+    <div className="relative inline-flex items-stretch">
+      {/* Hidden sizer — same padding/font as the select, drives the wrapper width */}
+      <span
+        className="invisible whitespace-nowrap pl-2 pr-8.5 py-2 text-sm font-medium"
+        aria-hidden="true"
+      >
+        {currentLabel}
+      </span>
+
+      {/* Select fills the wrapper exactly */}
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value as ApplicationStatus)}
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        disabled={disabled}
+        id={"stat-" + jobId}
+        className={[
+          "absolute inset-0 appearance-none cursor-pointer rounded-lg border border-[var(--border)] bg-[var(--bg)] pl-2 pr-8 py-2 text-sm font-medium transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          STATUS_COLORS[value],
+        ].join(" ")}
+      >
+        {STATUS_OPTIONS.map(({ value: v, label }) => (
+          <option key={v} value={v} className="text-[var(--text)]">
+            {label}
+          </option>
+        ))}
+      </select>
+
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 ${STATUS_COLORS[value]}`}
+        aria-hidden="true"
+      >
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    </div>
   );
 }
