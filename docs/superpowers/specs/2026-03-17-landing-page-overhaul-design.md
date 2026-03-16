@@ -41,7 +41,7 @@ Rationale: Numbered steps signal "I followed a landing page tutorial." The Rayca
 - Signed-in variant: avatar initial chip (white border, white initial on dark bg) + "Dashboard →" white filled button — no ThemeToggle
 - ThemeToggle is **removed from the landing nav entirely**: the page is intentionally always-dark using hardcoded hex values, so a theme toggle would appear broken (clicking it visually does nothing). The toggle remains available once the user enters the app.
 - Avatar chip: `border: 1px solid #333`, `border-radius: 999px`, `padding: 4px 10px`, `font-size: 12px`, `color: #fff`, `background: transparent`. Hover: border lightens to `#555`.
-- "Dashboard →" button hover: `#e5e5e5`. Footer "Built by John Moorman" link resting: `#444`, hover: `#888`.
+- "Dashboard →" button hover: `#e5e5e5`.
 - Height: ~56px, `max-w-5xl` centered
 
 ### 2. Hero — text only, left-aligned
@@ -66,7 +66,7 @@ Always      Setup       Match scoring
 - Subline: ~13px, muted grey, `max-w-[360px]`
 - CTAs: white filled primary + ghost secondary. Primary hover: `#e5e5e5`. Ghost hover: border lightens to `#444`, text lightens to `#888`.
 - Eyebrow pill: small `<span>`, border `1px solid #333`, `border-radius: 999px`, `padding: 3px 12px`, `font-size: 11px`, `color: #666`, `letter-spacing: 0.08em`, `text-transform: uppercase`. No background fill.
-- Stats row: 3 items separated by hairline dividers — "Free / Always", "<2m / Setup", "AI / Match scoring". Note: the `<` in `<2m` must be rendered as `{'<'}` or `&lt;` in JSX to avoid React warnings.
+- Stats row: 3 items separated by hairline vertical dividers — "Free / Always", "<2m / Setup", "AI / Match scoring". Note: the `<` in `<2m` must be rendered as `{'<'}` or `&lt;` in JSX to avoid React warnings. On mobile (stacked), the vertical dividers are hidden (`display: none`).
 - Stats separated from CTAs by generous vertical space (~52px)
 
 ### 3. Feature section — Raycast attribute style
@@ -80,11 +80,11 @@ Seven features, each as a horizontal row:
 Attribute statements (copy):
 1. **Matched.** *Not just recent.* — Job feed panel (score badges, GO/EXAMINE tags)
 2. **Analyzed.** *Every angle.* — Job detail panel (score, match points, gap points, AI summary)
-3. **Import.** *Anything.* — Import panel mockup: URL input field (grey placeholder "https://..."), a "Extract" button, then below it a faint separator + preview card showing an extracted job title ("Senior Product Engineer") and company ("Acme Corp") in white text on `#0d0d0d`. This represents the job import flow — the extraction API exists at `/api/jobs/extract` but a dedicated import UI does not yet exist. This panel is an aspirational mockup showing a planned UI surface.
+3. **Import.** *Anything.* — Import panel mockup: URL input field (grey placeholder "https://..."), an "Extract" button, then below it a faint separator + preview card showing an extracted job title ("Senior Product Engineer") and company ("Acme Corp") in white text on `#0d0d0d`. This is a fully aspirational static mockup — no import UI exists yet. The panel communicates a planned feature direction.
 4. **Tailored.** *In seconds.* — Tailor panel (split JD + resume, Export PDF button)
 5. **Yours.** *Down to the phrasing.* — Writing rules panel (protected phrases, banned phrases, never claim tags). Note: `protectedPhrases`, `bannedPhrases`, `verifiedMetrics`, `neverClaim` are real `Profile` fields added to the schema in the same sprint as this landing page. The mockup shows a list of short pill-style tags ("my results", "never supervised") under section labels.
 6. **Tracked.** *All of it.* — Pipeline panel (kanban columns: Interested → Applied → Interview → Offer)
-7. **Multi-track.** *One account.* — Profiles panel (active/inactive profile rows with Switch buttons)
+7. **Multi-track.** *One account.* — Profiles panel: two profile rows, each with a label and a small "Switch" button. The "Switch" button is static decorative UI representing the `isActive` toggle (the real `Profile.isActive` boolean field); it does not need real interactivity in the mockup.
 
 Each product panel:
 - Background: `#0d0d0d`, border: `1px solid #1a1a1a`, `border-radius: 6px`
@@ -109,7 +109,7 @@ Set up your profile in under two minutes.
 
 ### 5. Footer
 - `max-w-5xl` centered, `flex` row: BrandMark + `APP_CONFIG.name` (from `@/config/app`) on the left, "Built by John Moorman" (linked to johnmoorman.com) on the right
-- All in very muted grey (`#333`) — barely there
+- All text: `#333` (barely there). "Built by John Moorman" link resting: `#444`, hover: `#888`.
 
 ---
 
@@ -117,8 +117,8 @@ Set up your profile in under two minutes.
 
 ### Branch
 Create `refactor/landing-overhaul` from `main`. The only production files changed are:
-- `src/app/page.tsx` — full rewrite. Remains a Server Component. Auth detection via `const { userId } = await auth()` from `@clerk/nextjs/server`. Passes user data (name initial for avatar) as props to `<LandingNav>`.
-- `src/components/landing/LandingNav.tsx` — hardcode dark bg/colors, remove ThemeToggle, update signed-in state to avatar chip + Dashboard button. Accepts `userInitial?: string` prop from the parent page server component. No client-side Clerk hooks needed.
+- `src/app/page.tsx` — full rewrite. Remains a Server Component. Auth detection: `const { userId } = await auth()` from `@clerk/nextjs/server`. If signed in, retrieve the user's first name initial via `const user = await currentUser()` (also from `@clerk/nextjs/server`) — no Prisma query needed for this. `userInitial = user?.firstName?.[0]?.toUpperCase() ?? '?'`. Passes `userId` (boolean presence) and `userInitial` as props to `<LandingNav>`.
+- `src/components/landing/LandingNav.tsx` — drops `"use client"` directive entirely (ThemeToggle, which requires client, is being removed; no other client-only code remains). Hardcodes dark bg/colors. Accepts `userInitial?: string` and `isSignedIn?: boolean` props from the parent server component. Avatar chip falls back to `"?"` if `userInitial` is undefined/null.
 
 ### No new dependencies
 All mockup UI in the feature panels is plain HTML/CSS — no images, no icons library, no animation library. The product panels are CSS-only representations of the real UI.
