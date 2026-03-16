@@ -89,7 +89,7 @@ export function FeedToolbar({
   const statsText = statsParts.join(" · ");
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-y-3">
+    <div className="flex flex-wrap items-center justify-center gap-y-3 sm:justify-between">
       {/* Filter tabs */}
       <div className="flex items-center" role="group" aria-label="Filter jobs">
         {CHIPS.map(({ key, label }, index) => {
