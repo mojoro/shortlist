@@ -6,6 +6,7 @@ import { useUser, SignOutButton } from "@clerk/nextjs";
 import { useState, useRef, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { APP_CONFIG } from "@/config/app";
+import { BrandMark } from "@/components/ui/BrandMark";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -142,9 +143,7 @@ export function AppNav({ followUpCount = 0 }: AppNavProps) {
             href="/dashboard"
             className="flex items-center gap-3 rounded-sm transition-opacity hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)] text-[var(--accent-fg)] text-sm font-bold shadow-sm">
-              S
-            </span>
+            <BrandMark size="lg" />
             <span className={`${LABEL} text-[15px] font-semibold text-[var(--text)]`}>
               {APP_CONFIG.name}
             </span>

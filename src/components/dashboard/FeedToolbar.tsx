@@ -3,12 +3,14 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 
-interface FilterChipsProps {
+interface FeedToolbarProps {
   allCount: number;
   newCount: number;
   savedCount: number;
   appliedCount: number;
   ignoredCount: number;
+  avgScore: number | null;
+  lastUpdatedText: string | null;
 }
 
 const CHIPS = [
@@ -28,13 +30,15 @@ const SORT_OPTIONS = [
 type FilterKey = (typeof CHIPS)[number]["key"];
 type SortKey = (typeof SORT_OPTIONS)[number]["key"];
 
-export function FilterChips({
+export function FeedToolbar({
   allCount,
   newCount,
   savedCount,
   appliedCount,
   ignoredCount,
-}: FilterChipsProps) {
+  avgScore,
+  lastUpdatedText,
+}: FeedToolbarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -71,18 +75,22 @@ export function FilterChips({
 
   function handleSortChange(sort: SortKey) {
     if (sort === currentSort) {
-      // Toggle direction
       navigate({ dir: currentDir === "desc" ? "asc" : null });
     } else {
-      // Switch to new sort (reset dir to default desc)
       navigate({ sort: sort === "match" ? null : sort, dir: null });
     }
   }
 
   const showDirToggle = currentSort !== "match";
 
+  const statsParts: string[] = [];
+  if (avgScore !== null) statsParts.push(`${Math.round(avgScore)}% avg`);
+  if (lastUpdatedText) statsParts.push(lastUpdatedText);
+  const statsText = statsParts.join(" · ");
+
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* Filter chips */}
       <div className="flex flex-wrap gap-2" role="group" aria-label="Filter jobs">
         {CHIPS.map(({ key, label }) => {
           const isActive = currentFilter === key;
@@ -122,6 +130,7 @@ export function FilterChips({
         })}
       </div>
 
+      {/* Sort + inline stats */}
       <div className="flex shrink-0 items-center gap-1">
         {SORT_OPTIONS.map(({ key, label }) => {
           const isActive = currentSort === key;
@@ -146,6 +155,12 @@ export function FilterChips({
             </button>
           );
         })}
+
+        {statsText && (
+          <span className="hidden sm:block ml-2 text-xs text-[var(--text-muted)]">
+            · {statsText}
+          </span>
+        )}
       </div>
     </div>
   );

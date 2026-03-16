@@ -278,13 +278,13 @@ export function JobCard({
 
       {/* AI summary */}
       {job.aiSummary && (
-        <p className="mt-4 line-clamp-1 text-sm text-[var(--text-muted)]">
+        <p className="mt-4 line-clamp-2 text-sm text-[var(--text-muted)]">
           {job.aiSummary}
         </p>
       )}
 
       {/* Skills + tailor on the same row */}
-      <div className="mt-4 flex items-center justify-between gap-3">
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-[var(--border)] pt-4">
         <div className="flex flex-wrap items-center gap-1.5">
           {displaySkills.map((skill: string) => (
             <SkillChip key={skill}>{skill}</SkillChip>
@@ -298,7 +298,7 @@ export function JobCard({
           <Link
             href={`/tailor/${job.id}`}
             onClick={(e) => e.stopPropagation()}
-            className="cursor-pointer shrink-0 inline-flex min-h-[32px] items-center rounded bg-[var(--accent)] px-3 py-1 text-xs font-medium text-[var(--accent-fg)] transition-all hover:opacity-90 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+            className="cursor-pointer shrink-0 inline-flex min-h-[32px] items-center rounded-lg bg-[var(--accent)] px-3 py-1 text-xs font-medium text-[var(--accent-fg)] transition-all hover:opacity-90 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
           >
             tailor →
           </Link>

@@ -4,9 +4,8 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { buildWhereClause, buildOrderBy, type SortDir } from "@/lib/jobs";
 import { formatDistanceToNow } from "date-fns";
-import { FilterChips } from "@/components/ui/FilterChips";
+import { FeedToolbar } from "@/components/dashboard/FeedToolbar";
 import { JobFeed } from "@/components/jobs/JobFeed";
-import { StatsRow } from "@/components/dashboard/StatsRow";
 import { ProfileSwitcher } from "@/components/dashboard/ProfileSwitcher";
 import { ImportJobButton } from "@/components/jobs/ImportJobModal";
 import { APP_CONFIG } from "@/config/app";
@@ -107,34 +106,20 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       : null;
 
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-lg font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-            Job Feed
-          </h1>
-          <div className="flex items-center gap-2">
-            <ImportJobButton profileId={profile.id} />
-            <ProfileSwitcher profiles={allProfiles} activeProfileId={profile.id} />
-          </div>
+      <div className="space-y-4">
+        <div className="flex items-center justify-end gap-2">
+          <ImportJobButton profileId={profile.id} />
+          <ProfileSwitcher profiles={allProfiles} activeProfileId={profile.id} />
         </div>
 
-        <StatsRow
-          newCount={newCount}
-          savedCount={savedCount}
-          appliedCount={appliedCount}
-          avgScore={avgScore}
-        />
-
-        {lastUpdatedText && (
-          <p className="text-right text-xs text-[var(--text-muted)]">{lastUpdatedText}</p>
-        )}
-
-        <FilterChips
+        <FeedToolbar
           allCount={allCount}
           newCount={newCount}
           savedCount={savedCount}
           appliedCount={appliedCount}
           ignoredCount={ignoredCount}
+          avgScore={avgScore}
+          lastUpdatedText={lastUpdatedText}
         />
 
         <JobFeed
