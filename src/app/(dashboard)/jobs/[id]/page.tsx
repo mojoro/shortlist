@@ -232,10 +232,10 @@ export default async function JobDetailPage({ params }: PageProps) {
                 <div className="text-center">
                   <p className="text-sm font-medium text-[var(--text)]">Not yet scored</p>
                   <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    Request a score now or wait for the next scheduled run.
+                    Get an AI-powered match score for this listing.
                   </p>
                 </div>
-                <AnalyzeButton profileId={job.profileId} />
+                <AnalyzeButton jobId={job.id} profileId={job.profileId} />
               </div>
             )}
           </div>

@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { jobMatchesProfile, MAX_CANDIDATES_PER_RUN } from "@/lib/match";
+import { jobMatchesProfile } from "@/lib/match";
 import {
   updateProfileInfoSchema,
   updateSearchCriteriaSchema,
@@ -284,9 +284,7 @@ export async function completeOnboarding(
     take:    2000,
   });
 
-  const matches = pool
-    .filter((p) => jobMatchesProfile(p, profile))
-    .slice(0, MAX_CANDIDATES_PER_RUN);
+  const matches = pool.filter((p) => jobMatchesProfile(p, profile));
 
   let jobsFound = 0;
   if (matches.length > 0) {
@@ -299,18 +297,6 @@ export async function completeOnboarding(
       skipDuplicates: true,
     });
     jobsFound = result.count;
-  }
-
-  // Fire-and-forget analysis for matched jobs
-  if (jobsFound > 0) {
-    fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/analyze`, {
-      method:  "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization:  `Bearer ${process.env.CRON_SECRET}`,
-      },
-      body: JSON.stringify({ profileId: profile.id }),
-    }).catch((err) => console.error("[completeOnboarding] analyze error", err));
   }
 
   if (process.env.NODE_ENV === "development") {
@@ -371,8 +357,7 @@ export async function rematchProfile(
   const existingPoolIds = new Set(existingJobs.map((j) => j.jobPoolId));
 
   const newCandidates = pool
-    .filter((p) => !existingPoolIds.has(p.id) && jobMatchesProfile(p, profile))
-    .slice(0, MAX_CANDIDATES_PER_RUN);
+    .filter((p) => !existingPoolIds.has(p.id) && jobMatchesProfile(p, profile));
 
   let added = 0;
   if (newCandidates.length > 0) {
@@ -385,18 +370,6 @@ export async function rematchProfile(
       skipDuplicates: true,
     });
     added = result.count;
-  }
-
-  // Fire-and-forget analyze for new matches
-  if (added > 0) {
-    fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/analyze`, {
-      method:  "POST",
-      headers: {
-        "Content-Type":  "application/json",
-        Authorization:   `Bearer ${process.env.CRON_SECRET}`,
-      },
-      body: JSON.stringify({ profileId }),
-    }).catch(console.error);
   }
 
   if (process.env.NODE_ENV === "development") {

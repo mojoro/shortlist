@@ -2,99 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { openrouter, MODEL } from "@/lib/openrouter";
 import { env } from "@/env";
 import { analyzeSchema } from "@/lib/validations";
+import { buildAnalysisSystemPrompt, parseAiAnalysisResponse } from "@/lib/ai-analysis";
 
 export const maxDuration = 60;
 
 const BATCH_SIZE = 5;
 const BATCH_DELAY_MS = 500;
-
-interface AiAnalysisResult {
-  score: number;
-  status: "GO" | "NO_GO" | "EXAMINE";
-  summary: string;
-  matchPoints: string[];
-  gapPoints: string[];
-}
-
-function isValidResult(parsed: unknown): boolean {
-  if (typeof parsed !== "object" || parsed === null) return false;
-  const p = parsed as Record<string, unknown>;
-  return (
-    typeof p.score === "number" &&
-    ["GO", "NO_GO", "EXAMINE"].includes(p.status as string) &&
-    typeof p.summary === "string" &&
-    Array.isArray(p.matchPoints) &&
-    Array.isArray(p.gapPoints)
-  );
-}
-
-function parseAiResponse(text: string): AiAnalysisResult | null {
-  try {
-    // Try direct parse first (model followed instructions perfectly)
-    const direct = JSON.parse(text.trim());
-    if (isValidResult(direct)) return direct as AiAnalysisResult;
-  } catch {}
-
-  try {
-    // Extract first {...} block — handles preamble/postamble text and code fences
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return null;
-    const parsed = JSON.parse(match[0]);
-    if (isValidResult(parsed)) return parsed as AiAnalysisResult;
-  } catch {}
-
-  return null;
-}
-
-function buildSystemPrompt(profile: {
-  targetRoles: string[];
-  targetLocations: string[];
-  remotePreference: string;
-  requiredSkills: string[];
-  niceToHaveSkills: string[];
-  excludedKeywords: string[];
-  targetSalaryMin: number | null;
-  targetSalaryMax: number | null;
-  currency: string;
-  masterResume: string | null;
-}): string {
-  const lines: string[] = [
-    "You are a job match analyzer. Score how well the job matches this candidate.",
-    "",
-  ];
-
-  if (profile.targetRoles.length > 0)
-    lines.push(`Target roles: ${profile.targetRoles.join(", ")}`);
-  if (profile.targetLocations.length > 0)
-    lines.push(`Target locations: ${profile.targetLocations.join(", ")}`);
-  if (profile.remotePreference !== "ANY")
-    lines.push(`Remote preference: ${profile.remotePreference}`);
-  if (profile.requiredSkills.length > 0)
-    lines.push(`Required skills: ${profile.requiredSkills.join(", ")}`);
-  if (profile.niceToHaveSkills.length > 0)
-    lines.push(`Nice-to-have skills: ${profile.niceToHaveSkills.join(", ")}`);
-  if (profile.targetSalaryMin || profile.targetSalaryMax) {
-    const range = [profile.targetSalaryMin, profile.targetSalaryMax]
-      .filter(Boolean)
-      .join("–");
-    lines.push(`Salary target: ${range} ${profile.currency}/year`);
-  }
-  if (profile.excludedKeywords.length > 0)
-    lines.push(
-      `Auto-reject if any of these keywords appear in the job: ${profile.excludedKeywords.join(", ")}`,
-    );
-  if (profile.masterResume) {
-    lines.push("", `Candidate summary:\n${profile.masterResume.slice(0, 1500)}`);
-  }
-
-  lines.push(
-    "",
-    "Respond ONLY with valid JSON — no markdown fences, no explanation:",
-    '{"score":0-100,"status":"GO"|"NO_GO"|"EXAMINE","summary":"1-2 sentences","matchPoints":["..."],"gapPoints":["..."]}',
-  );
-
-  return lines.join("\n");
-}
 
 export async function POST(req: Request) {
   const authHeader = req.headers.get("authorization");
@@ -178,7 +91,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const systemPrompt = buildSystemPrompt(profile);
+    const systemPrompt = buildAnalysisSystemPrompt(profile);
     let totalInputTokens  = 0;
     let totalOutputTokens = 0;
     let jobsScored        = 0;
@@ -213,7 +126,7 @@ export async function POST(req: Request) {
             totalOutputTokens += response.usage?.completion_tokens ?? 0;
 
             const text   = response.choices[0]?.message?.content ?? "";
-            const result = parseAiResponse(text);
+            const result = parseAiAnalysisResponse(text);
 
             if (!result) {
               console.error(`[/api/analyze] Could not parse response for job ${job.id}`);

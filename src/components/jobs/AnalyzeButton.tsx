@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { requestAnalysis } from "@/app/(dashboard)/dashboard/actions";
+import { analyzeJob } from "@/app/(dashboard)/dashboard/actions";
 
-export function AnalyzeButton({ profileId }: { profileId: string }) {
+export function AnalyzeButton({ jobId, profileId }: { jobId: string; profileId: string }) {
   const router = useRouter();
   const [state, setState] = useState<"idle" | "pending" | "requested" | "credits" | "error">("idle");
   const [isPending, startTransition] = useTransition();
@@ -12,7 +12,7 @@ export function AnalyzeButton({ profileId }: { profileId: string }) {
   function handleClick() {
     setState("pending");
     startTransition(async () => {
-      const result = await requestAnalysis(profileId);
+      const result = await analyzeJob(jobId, profileId);
       if (result.error === "CREDITS") {
         setState("credits");
         return;
@@ -22,8 +22,7 @@ export function AnalyzeButton({ profileId }: { profileId: string }) {
         return;
       }
       setState("requested");
-      // Refresh after ~10s to pick up completed analysis
-      setTimeout(() => router.refresh(), 10_000);
+      router.refresh();
     });
   }
 
@@ -52,8 +51,8 @@ export function AnalyzeButton({ profileId }: { profileId: string }) {
   const isLoading = isPending || state === "pending" || state === "requested";
 
   const label =
-    state === "requested" ? "Analyzing your listing…" :
-    isLoading             ? "Sending your request…"   :
+    state === "requested" ? "Done — refreshing…" :
+    isLoading             ? "Analyzing…"          :
                             "Get match score";
 
   return (

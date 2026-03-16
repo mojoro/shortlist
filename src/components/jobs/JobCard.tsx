@@ -5,7 +5,7 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useTransition } from "react";
 import { ScoreBadge } from "@/components/jobs/ScoreBadge";
-import { toggleSaveJob, requestAnalysis } from "@/app/(dashboard)/dashboard/actions";
+import { toggleSaveJob, analyzeJob } from "@/app/(dashboard)/dashboard/actions";
 import type { JobWithApplication } from "@/types";
 
 // ─── Source tag styles (light + dark variants) ───────────────────────────────
@@ -113,13 +113,13 @@ export function JobCard({
     if (scoreState === "pending" || scoreState === "done") return;
     setScoreState("pending");
     startScoreTransition(async () => {
-      const result = await requestAnalysis(job.profileId);
+      const result = await analyzeJob(job.id, job.profileId);
       if (result.error) {
         setScoreState("error");
         return;
       }
       setScoreState("done");
-      setTimeout(() => router.refresh(), 10_000);
+      router.refresh();
     });
   }
 

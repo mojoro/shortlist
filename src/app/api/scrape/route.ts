@@ -8,7 +8,7 @@ import {
   normalizeLeverForPool,
   normalizeAshbyForPool,
 } from "@/lib/normalize";
-import { jobMatchesProfile, MAX_CANDIDATES_PER_RUN } from "@/lib/match";
+import { jobMatchesProfile } from "@/lib/match";
 import type { ScraperSource } from "@prisma/client";
 
 export const maxDuration = 60;
@@ -152,8 +152,7 @@ export async function POST(req: Request) {
       const existingIds = new Set(existing.map((j) => j.jobPoolId));
 
       const candidates = pool
-        .filter((p) => !existingIds.has(p.id) && jobMatchesProfile(p, profile))
-        .slice(0, MAX_CANDIDATES_PER_RUN);
+        .filter((p) => !existingIds.has(p.id) && jobMatchesProfile(p, profile));
 
       if (process.env.NODE_ENV === "development") {
         console.log(`[/api/scrape] Match result — profileId: ${profile.id}, candidates: ${candidates.length}`);
@@ -192,19 +191,6 @@ export async function POST(req: Request) {
         durationMs:   Date.now() - profileStart,
       },
     });
-
-    if (jobsNew > 0) {
-      fetch(`${env.NEXT_PUBLIC_APP_URL}/api/analyze`, {
-        method:  "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization:  `Bearer ${env.CRON_SECRET}`,
-        },
-        body: JSON.stringify({ profileId: profile.id }),
-      }).catch((err) =>
-        console.error(`[/api/scrape] Failed to trigger analyze for ${profile.id}:`, err),
-      );
-    }
 
     results.push({ profileId: profile.id, jobsNew, status: profileStatus });
   }

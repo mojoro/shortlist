@@ -1,10 +1,11 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { openrouter, MODEL } from "@/lib/openrouter";
 import { buildWhereClause, buildOrderBy } from "@/lib/jobs";
+import { buildAnalysisSystemPrompt, parseAiAnalysisResponse } from "@/lib/ai-analysis";
 import type { SortOption } from "@/lib/jobs";
 import type { JobWithApplication } from "@/types";
 
@@ -154,7 +155,8 @@ export async function batchSaveJobs(
   revalidatePath("/dashboard");
 }
 
-export async function requestAnalysis(
+export async function analyzeJob(
+  jobId: string,
   profileId: string,
 ): Promise<{ error?: "CREDITS" | "UNKNOWN" }> {
   const { userId } = await auth();
@@ -162,31 +164,84 @@ export async function requestAnalysis(
 
   const profile = await prisma.profile.findFirst({
     where: { id: profileId, userId },
+    include: { user: { include: { usage: true } } },
   });
   if (!profile) throw new Error("Profile not found");
 
+  const usage = profile.user.usage;
+  if (usage && usage.currentMonthInputTokens >= usage.monthlyLimitInputTokens) {
+    return { error: "CREDITS" };
+  }
+
+  const job = await prisma.job.findFirst({
+    where: { id: jobId, profileId },
+    include: { jobPool: true },
+  });
+  if (!job) throw new Error("Job not found");
+
+  const systemPrompt = buildAnalysisSystemPrompt(profile);
+
   try {
-    // Derive the base URL from the current request host so this works correctly
-    // in local dev, preview deployments, and production without relying on
-    // NEXT_PUBLIC_APP_URL (which may point to a different deployment).
-    const h = await headers();
-    const host = h.get("host") ?? "";
-    const proto = host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https";
-    const res = await fetch(`${proto}://${host}/api/analyze`, {
-      method:  "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization:  `Bearer ${process.env.CRON_SECRET}`,
-      },
-      body: JSON.stringify({ profileId }),
+    const response = await openrouter.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: `## ${job.jobPool.title} at ${job.jobPool.company}\n\n${job.jobPool.description.slice(0, 8000)}`,
+        },
+      ],
+      max_tokens: 1500,
     });
-    if (res.status === 429) return { error: "CREDITS" };
-    if (!res.ok)            return { error: "UNKNOWN" };
+
+    const text   = response.choices[0]?.message?.content ?? "";
+    const result = parseAiAnalysisResponse(text);
+    if (!result) return { error: "UNKNOWN" };
+
+    await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        aiScore:       Math.round(result.score),
+        aiStatus:      result.status,
+        aiSummary:     result.summary,
+        aiMatchPoints: result.matchPoints,
+        aiGapPoints:   result.gapPoints,
+        aiAnalyzedAt:  new Date(),
+        aiModel:       MODEL,
+        ...(result.status === "NO_GO" && job.jobPool.source !== "CUSTOM"
+          ? { feedStatus: "HIDDEN" }
+          : {}),
+      },
+    });
+
+    const inputTokens  = response.usage?.prompt_tokens    ?? 0;
+    const outputTokens = response.usage?.completion_tokens ?? 0;
+    if (inputTokens > 0) {
+      await prisma.usage.upsert({
+        where:  { userId },
+        create: {
+          userId,
+          totalInputTokens:         inputTokens,
+          totalOutputTokens:        outputTokens,
+          currentMonthInputTokens:  inputTokens,
+          currentMonthOutputTokens: outputTokens,
+          analysisCallCount:        1,
+        },
+        update: {
+          totalInputTokens:         { increment: inputTokens },
+          totalOutputTokens:        { increment: outputTokens },
+          currentMonthInputTokens:  { increment: inputTokens },
+          currentMonthOutputTokens: { increment: outputTokens },
+          analysisCallCount:        { increment: 1 },
+        },
+      });
+    }
   } catch (err) {
-    console.error("[requestAnalysis]", err);
+    console.error("[analyzeJob]", err);
     return { error: "UNKNOWN" };
   }
 
+  revalidatePath("/dashboard");
   return {};
 }
 

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { discardAnalysis, requestAnalysis } from "@/app/(dashboard)/dashboard/actions";
+import { discardAnalysis, analyzeJob } from "@/app/(dashboard)/dashboard/actions";
 
 interface ReanalyzeButtonProps {
   jobId:     string;
@@ -14,8 +14,8 @@ type State = "idle" | "clearing" | "pending" | "requested" | "error";
 const LABELS: Record<State, string> = {
   idle:      "Re-analyze based on current profile",
   clearing:  "Clearing previous results…",
-  pending:   "Sending your request…",
-  requested: "Analyzing your listing…",
+  pending:   "Analyzing…",
+  requested: "Done — refreshing…",
   error:     "Something went wrong.",
 };
 
@@ -45,7 +45,7 @@ export function ReanalyzeButton({ jobId, profileId }: ReanalyzeButtonProps) {
       }
 
       setState("pending");
-      const result = await requestAnalysis(profileId);
+      const result = await analyzeJob(jobId, profileId);
 
       if (result.error) {
         setState("error");
@@ -53,7 +53,7 @@ export function ReanalyzeButton({ jobId, profileId }: ReanalyzeButtonProps) {
       }
 
       setState("requested");
-      setTimeout(() => router.refresh(), 10_000);
+      router.refresh();
     });
   }
 
