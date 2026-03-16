@@ -32,6 +32,14 @@ export function ApplicationDrawer({
   }, [application.id]);
 
   useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
     return () => {
       if (savingTimerRef.current) clearTimeout(savingTimerRef.current);
     };
