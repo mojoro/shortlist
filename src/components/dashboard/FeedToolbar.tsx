@@ -30,14 +30,13 @@ const SORT_OPTIONS = [
 type FilterKey = (typeof CHIPS)[number]["key"];
 type SortKey = (typeof SORT_OPTIONS)[number]["key"];
 
+
 export function FeedToolbar({
   allCount,
   newCount,
   savedCount,
   appliedCount,
   ignoredCount,
-  avgScore,
-  lastUpdatedText,
 }: FeedToolbarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -83,10 +82,6 @@ export function FeedToolbar({
 
   const showDirToggle = currentSort !== "match";
 
-  const statsParts: string[] = [];
-  if (avgScore !== null) statsParts.push(`${Math.round(avgScore)}% avg`);
-  if (lastUpdatedText) statsParts.push(lastUpdatedText);
-  const statsText = statsParts.join(" · ");
 
   return (
     <div className="flex flex-wrap items-center justify-center gap-y-3 sm:justify-between">
@@ -163,12 +158,8 @@ export function FeedToolbar({
           );
         })}
 
-        {statsText && (
-          <span className="hidden sm:block ml-2 text-xs text-[var(--text-muted)]">
-            · {statsText}
-          </span>
-        )}
       </div>
+
     </div>
   );
 }

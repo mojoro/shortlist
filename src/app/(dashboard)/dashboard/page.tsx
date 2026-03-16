@@ -108,7 +108,36 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-2">
-          <ProfileSwitcher profiles={allProfiles} activeProfileId={profile.id} />
+          <div className="flex flex-col gap-0.5 relative">
+            <ProfileSwitcher profiles={allProfiles} activeProfileId={profile.id} />
+            {lastUpdatedText && (
+              <span className="sm:hidden flex items-center gap-1 px-0.5 text-[10px] text-[var(--text-muted)] absolute top-[110%] left-[5%]">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                  <path d="M21 3v5h-5" />
+                  <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                  <path d="M3 21v-5h5" />
+                </svg>
+                {lastUpdatedText.replace(/^Updated /, "")}
+              </span>
+            )}
+          </div>
+          {avgScore !== null && (
+            <span className={[
+              "inline-flex flex-col items-center rounded-2xl border px-2.5 py-2",
+              avgScore >= 90 ? "border-green-300/60 bg-green-50 dark:border-green-700/50 dark:bg-green-900/20" :
+              avgScore >= 75 ? "border-amber-300/60 bg-amber-50 dark:border-amber-700/50 dark:bg-amber-900/20" :
+                               "border-red-300/60 bg-red-50 dark:border-red-700/50 dark:bg-red-900/20",
+            ].join(" ")}>
+              <span className={[
+                "text-base font-bold tabular-nums leading-tight",
+                avgScore >= 90 ? "text-green-600 dark:text-green-400" :
+                avgScore >= 75 ? "text-amber-600 dark:text-amber-400" :
+                                 "text-red-600 dark:text-red-400",
+              ].join(" ")}>{Math.round(avgScore)}%</span>
+              <span className="text-[10px] leading-tight text-[var(--text-muted)]">Match</span>
+            </span>
+          )}
           <ImportJobButton profileId={profile.id} />
         </div>
 
@@ -129,6 +158,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           profileId={profile.id}
           filter={safeFilter}
           sort={safeSort}
+          lastUpdatedText={lastUpdatedText}
         />
       </div>
     );

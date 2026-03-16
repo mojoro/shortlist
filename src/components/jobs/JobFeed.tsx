@@ -159,6 +159,7 @@ interface JobFeedProps {
   profileId: string;
   filter: string;
   sort: string;
+  lastUpdatedText?: string | null;
 }
 
 export function JobFeed({
@@ -167,6 +168,7 @@ export function JobFeed({
   profileId,
   filter,
   sort,
+  lastUpdatedText,
 }: JobFeedProps) {
   const [jobs, setJobs] = useState<JobWithApplication[]>(initialJobs);
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
@@ -354,12 +356,25 @@ export function JobFeed({
 
       {/* Hint when no selection but in regular feed */}
       {selectedIds.size === 0 && !isIgnoredView && jobs.length > 1 && (
-        <p className="mb-3 hidden text-xs text-[var(--text-muted)] sm:block">
-          <kbd className="rounded border border-[var(--border)] px-1 py-0.5 font-mono text-[10px]">Ctrl</kbd>
-          {" / "}
-          <kbd className="rounded border border-[var(--border)] px-1 py-0.5 font-mono text-[10px]">⌘</kbd>
-          {" click to select jobs for batch actions"}
-        </p>
+        <div className="mb-3 hidden sm:flex items-center justify-between">
+          <p className="text-xs text-[var(--text-muted)]">
+            <kbd className="rounded border border-[var(--border)] px-1 py-0.5 font-mono text-[10px]">Ctrl</kbd>
+            {" / "}
+            <kbd className="rounded border border-[var(--border)] px-1 py-0.5 font-mono text-[10px]">⌘</kbd>
+            {" click to select jobs for batch actions"}
+          </p>
+          {lastUpdatedText && (
+            <span className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                <path d="M21 3v5h-5" />
+                <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                <path d="M3 21v-5h5" />
+              </svg>
+              {lastUpdatedText.replace(/^Updated /, "")}
+            </span>
+          )}
+        </div>
       )}
 
       {/* Job list */}
