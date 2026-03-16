@@ -18,7 +18,7 @@ project by John Moorman, will become multi-user SaaS.
 | Database | Neon (PostgreSQL) |
 | ORM | Prisma |
 | Auth | Clerk |
-| AI | OpenRouter API (`qwen/qwen3.5-flash-02-23`) |
+| AI | OpenRouter API (`anthropic/claude-sonnet-4-6`) |
 | Scraping | Apify (LinkedIn); direct HTTP for Greenhouse/Lever/Ashby |
 | Scheduling | Vercel Cron |
 | Theme | next-themes |
@@ -150,7 +150,7 @@ anywhere else in the codebase.
 ## AI — OpenRouter
 
 All AI calls go through OpenRouter (`src/lib/openrouter.ts`) using the `openai` npm
-package pointed at `https://openrouter.ai/api/v1`. Model: `qwen/qwen3.5-flash-02-23`.
+package pointed at `https://openrouter.ai/api/v1`. Model: `anthropic/claude-sonnet-4-6`.
 
 Before every AI call: check `Usage.currentMonthInputTokens < Usage.monthlyLimitInputTokens`.
 After every call: increment token counts. Use `max_tokens: 1500` for scoring, `2000` for

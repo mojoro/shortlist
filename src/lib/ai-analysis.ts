@@ -47,7 +47,7 @@ export function buildAnalysisSystemPrompt(profile: {
   masterResume: string | null;
 }): string {
   const lines: string[] = [
-    "You are a job match analyzer. Score how well the job matches this candidate.",
+    "You are a hiring manager giving feedback on how well this candidate matches with the role. Score how well the job matches this candidate, and what the candidate should do to stand out as the best choice for the job.",
     "",
   ];
 

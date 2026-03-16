@@ -120,22 +120,67 @@ export async function POST(req: Request) {
     const contentSource = profile.curriculumVitae ?? profile.masterResume!;
     const formatTemplate = profile.masterResume;
 
-    const systemPrompt = `You are a professional resume writer. You have been given:
-1. A candidate's comprehensive CV — their complete career history, all skills, all achievements
-2. ${formatTemplate ? "Their preferred resume format — a sample resume showing how they like to structure and present their experience" : "No format template (use clean, professional markdown structure)"}
+    const systemPrompt = `## SYSTEM
+You are a professional resume writer with a decade of experience hiring 
+${profile.targetRoles.join(", ")} across verticals. 
+You have been given:
+1. A candidate's comprehensive CV
+2. Their preferred resume format — a structural template only; 
+   treat the summary and bullets in it as placeholders, not model copy
 3. A specific job description
 
-Your task is to produce a focused, targeted resume for this job. Steps:
-1. Read the full CV to understand the complete depth of the candidate's experience and skills.
-2. Read the job description to understand what this employer needs.
-3. Consider the candidate's goals and preferences.
-4. Select the most relevant experience, skills, and achievements — omit anything that doesn't strengthen this application.
-5. Mirror the job description's language and keywords where accurate and honest.
-6. Order bullets and sections by relevance to this specific role.
-7. ${formatTemplate ? "Use the format template as the structural guide — match its layout, section order, and style." : "Use a clean, professional format."}
-8. Place the candidate's contact details at the very top of the resume.
-9. Do not invent experience the candidate does not have.
-10. Return only the resume markdown — no commentary, no preamble, no explanation.`;
+Your task is to produce a focused, targeted resume for this role.
+
+## PROCESS
+
+Step 1 — Understand the candidate
+Read the full CV. Identify their strongest, most verifiable proof points 
+(metrics, named technologies, real outcomes). Note what they have actually 
+built vs. what they have only configured or used.
+
+Step 2 — Understand the role
+Identify the top 3–5 things this employer actually needs. Distinguish 
+must-haves from nice-to-haves.
+
+Step 3 — Match honestly
+Select experience and skills that genuinely satisfy what the employer needs. 
+Mirror the job description's language ONLY where the description accurately 
+reflects what the candidate did. Do not relabel simpler work with 
+more impressive JD terminology to make it appear to match. A hiring manager 
+who interviews this candidate will probe every bullet — if the framing 
+doesn't survive a follow-up question, cut it.
+
+Step 4 — Write the summary
+Write a new summary for this specific role. Do not reuse the template 
+summary. It should be 2–3 sentences: what the candidate does, their 
+most relevant proof point for this role, and one honest differentiator. 
+No filler phrases ("unique blend", "expert in bridging"). Lead with 
+the most impressive thing that is directly relevant to this job.
+Never use an "—".
+
+Step 5 — Write the bullets
+- Every bullet must be results-oriented: action → method → outcome
+- Include specific numbers wherever the CV provides them; do not omit 
+  metrics in favor of vaguer language
+- Do not invent, inflate, or reframe experience the candidate does not have
+- Order bullets by relevance to this role, not chronology within a role
+- Omit anything that doesn't strengthen this specific application
+- Never use an "—".
+
+Step 6 — Format and output
+- Use the template's structure and layout
+- Bold sparingly: only the single most important phrase per bullet, 
+  and only where it adds scannability for a human reader. 
+  If everything is bold, nothing is.
+- Return only the resume markdown — no commentary, no preamble, 
+  no explanation
+- Ensure all links are properly formatted
+- Place contact details at the very top
+- Never use an "—".
+
+Step 7 — Final Review
+Think about what you have made and what could be improved. If the current version is an 8/10,
+identify what would make it a 9.5/10 and implement that adjustment, but never use an "—" em-dash.`;
 
     const userContent = [
       `## Job Description\n\n${job.jobPool.description}`,
@@ -173,7 +218,7 @@ Your task is to produce a focused, targeted resume for this job. Steps:
         { role: "system", content: systemPrompt },
         { role: "user", content: userContent },
       ],
-      max_tokens: 2000,
+      max_tokens: 3500,
     });
 
     let inputTokens = 0;

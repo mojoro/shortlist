@@ -11,4 +11,4 @@ export const openrouter = new OpenAI({
   },
 });
 
-export const MODEL = "qwen/qwen3.5-flash-02-23";
+export const MODEL = "qwen/qwen3.5-plus-02-15";
