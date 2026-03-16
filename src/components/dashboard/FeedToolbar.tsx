@@ -89,7 +89,7 @@ export function FeedToolbar({
   const statsText = statsParts.join(" · ");
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-y-1">
+    <div className="flex flex-wrap items-center justify-between gap-y-3">
       {/* Filter tabs */}
       <div className="flex items-center" role="group" aria-label="Filter jobs">
         {CHIPS.map(({ key, label }, index) => {
@@ -107,7 +107,7 @@ export function FeedToolbar({
                 disabled={isPending}
                 aria-pressed={isActive}
                 className={[
-                  "relative cursor-pointer px-1 pb-2 pt-1 text-sm font-medium transition-colors duration-150",
+                  "relative cursor-pointer px-1 pb-0.5 pt-1 text-sm font-medium transition-colors duration-150",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2",
                   isActive
                     ? "text-[var(--text)]"
