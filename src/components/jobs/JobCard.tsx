@@ -265,7 +265,7 @@ export function JobCard({
         <div className="min-w-0">
           <h2 className="text-base font-bold text-[var(--text)]">
             {pool.title}{" "}
-            <span className="font-normal text-[var(--text-muted)]">@ {pool.company}</span>
+            <span className="font-normal text-[var(--text-muted)]">@{pool.company}</span>
           </h2>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
             {subtitleParts.length > 0 && (
