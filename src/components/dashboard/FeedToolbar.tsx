@@ -90,8 +90,8 @@ export function FeedToolbar({
 
   return (
     <div className="flex flex-wrap items-center justify-center gap-y-3 sm:justify-between">
-      {/* Filter tabs */}
-      <div className="flex items-center" role="group" aria-label="Filter jobs">
+      {/* Filter tabs — second on mobile, first on sm+ */}
+      <div className="order-2 flex items-center sm:order-1" role="group" aria-label="Filter jobs">
         {CHIPS.map(({ key, label }, index) => {
           const isActive = currentFilter === key;
           return (
@@ -137,8 +137,8 @@ export function FeedToolbar({
         })}
       </div>
 
-      {/* Sort + inline stats */}
-      <div className="flex shrink-0 items-center gap-0.5">
+      {/* Sort + inline stats — first on mobile, second on sm+ */}
+      <div className="order-1 flex shrink-0 items-center gap-0.5 sm:order-2">
         {SORT_OPTIONS.map(({ key, label }) => {
           const isActive = currentSort === key;
           return (
