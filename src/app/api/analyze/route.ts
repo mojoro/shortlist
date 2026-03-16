@@ -149,6 +149,8 @@ export async function POST(req: Request) {
     const toScore: typeof unscoredJobs = [];
 
     for (const job of unscoredJobs) {
+      // Custom imports are never auto-hidden — the user added them intentionally
+      if (job.jobPool.source === "CUSTOM") { toScore.push(job); continue; }
       const haystack = `${job.jobPool.title} ${job.jobPool.description}`.toLowerCase();
       const matched = excludedLower.some((kw) => haystack.includes(kw));
       if (matched) {
@@ -235,7 +237,7 @@ export async function POST(req: Request) {
                 aiGapPoints:   result.gapPoints,
                 aiAnalyzedAt:  new Date(),
                 aiModel:       MODEL,
-                ...(result.status === "NO_GO" ? { feedStatus: "HIDDEN" } : {}),
+                ...(result.status === "NO_GO" && job.jobPool.source !== "CUSTOM" ? { feedStatus: "HIDDEN" } : {}),
               },
             });
 
