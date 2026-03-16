@@ -72,7 +72,7 @@ export function buildAnalysisSystemPrompt(profile: {
       `Auto-reject if any of these keywords appear in the job: ${profile.excludedKeywords.join(", ")}`,
     );
   if (profile.masterResume) {
-    lines.push("", `Candidate summary:\n${profile.masterResume.slice(0, 1500)}`);
+    lines.push("", `Candidate summary:\n${profile.masterResume}`);
   }
 
   lines.push(

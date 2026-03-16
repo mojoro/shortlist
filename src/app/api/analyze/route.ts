@@ -1,3 +1,4 @@
+import { appendFileSync } from "fs";
 import { prisma } from "@/lib/prisma";
 import { openrouter, MODEL } from "@/lib/openrouter";
 import { env } from "@/env";
@@ -14,6 +15,9 @@ export async function POST(req: Request) {
   if (authHeader !== `Bearer ${env.CRON_SECRET}`) {
     return new Response("Unauthorized", { status: 401 });
   }
+
+  const host = req.headers.get("host") ?? "";
+  const isLocalhost = host.startsWith("localhost") || host.startsWith("127.");
 
   try {
     const body = await req.json().catch(() => null);
@@ -108,6 +112,14 @@ export async function POST(req: Request) {
           if (process.env.NODE_ENV === "development") {
             console.log(`[/api/analyze] Scoring job — id: ${job.id}, title: "${job.jobPool.title}"`);
           }
+          if (isLocalhost) {
+            const userMsg = `## ${job.jobPool.title} at ${job.jobPool.company}\n\n${job.jobPool.description.slice(0, 8000)}`;
+            const sep = "=".repeat(80);
+            appendFileSync(
+              "ai-context.log",
+              `\n${sep}\n[${new Date().toISOString()}] ANALYZE — jobId: ${job.id}, title: "${job.jobPool.title}"\n\n## SYSTEM\n${systemPrompt}\n\n## USER\n${userMsg}\n`,
+            );
+          }
 
           try {
             const response = await openrouter.chat.completions.create({
@@ -119,7 +131,7 @@ export async function POST(req: Request) {
                   content: `## ${job.jobPool.title} at ${job.jobPool.company}\n\n${job.jobPool.description.slice(0, 8000)}`,
                 },
               ],
-              max_tokens: 1500,
+              max_completion_tokens: 1500,
             });
 
             totalInputTokens  += response.usage?.prompt_tokens    ?? 0;

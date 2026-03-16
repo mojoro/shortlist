@@ -9,14 +9,13 @@ interface ReanalyzeButtonProps {
   profileId: string;
 }
 
-type State = "idle" | "clearing" | "pending" | "requested" | "error";
+type State = "idle" | "clearing" | "pending" | "error";
 
 const LABELS: Record<State, string> = {
-  idle:      "Re-analyze based on current profile",
-  clearing:  "Clearing previous results…",
-  pending:   "Analyzing…",
-  requested: "Done — refreshing…",
-  error:     "Something went wrong.",
+  idle:     "Re-analyze based on current profile",
+  clearing: "Clearing previous results…",
+  pending:  "Analyzing…",
+  error:    "Something went wrong.",
 };
 
 function Spinner() {
@@ -52,12 +51,12 @@ export function ReanalyzeButton({ jobId, profileId }: ReanalyzeButtonProps) {
         return;
       }
 
-      setState("requested");
+      setState("idle");
       router.refresh();
     });
   }
 
-  const isLoading = state === "clearing" || state === "pending" || state === "requested";
+  const isLoading = state === "clearing" || state === "pending";
 
   if (state === "idle") {
     return (

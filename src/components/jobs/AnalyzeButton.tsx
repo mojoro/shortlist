@@ -6,7 +6,7 @@ import { analyzeJob } from "@/app/(dashboard)/dashboard/actions";
 
 export function AnalyzeButton({ jobId, profileId }: { jobId: string; profileId: string }) {
   const router = useRouter();
-  const [state, setState] = useState<"idle" | "pending" | "requested" | "credits" | "error">("idle");
+  const [state, setState] = useState<"idle" | "pending" | "credits" | "error">("idle");
   const [isPending, startTransition] = useTransition();
 
   function handleClick() {
@@ -21,7 +21,6 @@ export function AnalyzeButton({ jobId, profileId }: { jobId: string; profileId: 
         setState("error");
         return;
       }
-      setState("requested");
       router.refresh();
     });
   }
@@ -48,12 +47,8 @@ export function AnalyzeButton({ jobId, profileId }: { jobId: string; profileId: 
     );
   }
 
-  const isLoading = isPending || state === "pending" || state === "requested";
-
-  const label =
-    state === "requested" ? "Done — refreshing…" :
-    isLoading             ? "Analyzing…"          :
-                            "Get match score";
+  const isLoading = isPending || state === "pending";
+  const label = isLoading ? "Analyzing…" : "Get match score";
 
   return (
     <button

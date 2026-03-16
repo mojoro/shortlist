@@ -1,6 +1,8 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
+import { headers } from "next/headers";
+import { appendFileSync } from "fs";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { openrouter, MODEL } from "@/lib/openrouter";
@@ -180,16 +182,24 @@ export async function analyzeJob(
   if (!job) throw new Error("Job not found");
 
   const systemPrompt = buildAnalysisSystemPrompt(profile);
+  const userMsg = `## ${job.jobPool.title} at ${job.jobPool.company}\n\n${job.jobPool.description.slice(0, 8000)}`;
+
+  const h = await headers();
+  const host = h.get("host") ?? "";
+  if (host.startsWith("localhost") || host.startsWith("127.")) {
+    const sep = "=".repeat(80);
+    appendFileSync(
+      "ai-context.log",
+      `\n${sep}\n[${new Date().toISOString()}] ANALYZE (action) — jobId: ${jobId}, title: "${job.jobPool.title}"\n\n## SYSTEM\n${systemPrompt}\n\n## USER\n${userMsg}\n`,
+    );
+  }
 
   try {
     const response = await openrouter.chat.completions.create({
       model: MODEL,
       messages: [
         { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: `## ${job.jobPool.title} at ${job.jobPool.company}\n\n${job.jobPool.description.slice(0, 8000)}`,
-        },
+        { role: "user", content: userMsg },
       ],
       max_tokens: 1500,
     });

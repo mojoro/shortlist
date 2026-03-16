@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { appendFileSync } from "fs";
 import { prisma } from "@/lib/prisma";
 import { openrouter, MODEL } from "@/lib/openrouter";
 import { tailorSchema } from "@/lib/validations";
@@ -6,6 +7,9 @@ import { tailorSchema } from "@/lib/validations";
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
+  const host = req.headers.get("host") ?? "";
+  const isLocalhost = host.startsWith("localhost") || host.startsWith("127.");
+
   try {
     const { userId } = await auth();
     if (!userId) return new Response("Unauthorized", { status: 401 });
@@ -152,6 +156,13 @@ Your task is to produce a focused, targeted resume for this job. Steps:
 
     if (process.env.NODE_ENV === "development") {
       console.log(`[/api/tailor] Stream start — jobId: ${jobId}, hasCV: ${!!job.profile.curriculumVitae}, hasMasterResume: ${!!job.profile.masterResume}`);
+    }
+    if (isLocalhost) {
+      const sep = "=".repeat(80);
+      appendFileSync(
+        "ai-context.log",
+        `\n${sep}\n[${new Date().toISOString()}] TAILOR — jobId: ${jobId}\n\n## SYSTEM\n${systemPrompt}\n\n## USER\n${userContent}\n`,
+      );
     }
 
     const stream = await openrouter.chat.completions.create({
