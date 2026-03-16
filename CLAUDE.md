@@ -257,6 +257,14 @@ currency symbols.
 
 ---
 
+## Git — Branch Naming
+
+`type/kebab-description` — e.g., `feature/clerk-webhooks`, `fix/feed-filter`, `refactor/ui-overhaul`
+
+Common types: `feature`, `fix`, `refactor`, `chore`
+
+---
+
 ## Git — Commit Style
 
 Single line only. Under 75 characters. Capital letter, no trailing period, no prefix
@@ -273,7 +281,8 @@ fixed bug                          ← too vague
 Add streaming, fix badge, seed     ← multiple concerns
 ```
 
-Commit after each meaningful working unit. Never commit broken code.
+Atomic commits at the end of a feature are fine — no need to pause mid-implementation.
+Never commit broken code. No `Co-Authored-By` footer.
 
 ---
 
