@@ -122,22 +122,29 @@ export default async function DashboardPage({ searchParams }: PageProps) {
               </span>
             )}
           </div>
-          {avgScore !== null && (
-            <span className={[
-              "inline-flex flex-col items-center rounded-2xl border px-2.5 py-2",
-              avgScore >= 90 ? "border-green-300/60 bg-green-50 dark:border-green-700/50 dark:bg-green-900/20" :
-              avgScore >= 75 ? "border-amber-300/60 bg-amber-50 dark:border-amber-700/50 dark:bg-amber-900/20" :
-                               "border-red-300/60 bg-red-50 dark:border-red-700/50 dark:bg-red-900/20",
-            ].join(" ")}>
-              <span className={[
-                "text-base font-bold tabular-nums leading-tight",
-                avgScore >= 90 ? "text-green-600 dark:text-green-400" :
-                avgScore >= 75 ? "text-amber-600 dark:text-amber-400" :
-                                 "text-red-600 dark:text-red-400",
-              ].join(" ")}>{Math.round(avgScore)}%</span>
-              <span className="text-[10px] leading-tight text-[var(--text-muted)]">Match</span>
-            </span>
-          )}
+          {avgScore !== null && (() => {
+            const scoreText = avgScore >= 90 ? "text-green-600 dark:text-green-400" : avgScore >= 75 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400";
+            const scoreBorder = avgScore >= 90 ? "border-green-300/60 bg-green-50 dark:border-green-700/50 dark:bg-green-900/20" : avgScore >= 75 ? "border-amber-300/60 bg-amber-50 dark:border-amber-700/50 dark:bg-amber-900/20" : "border-red-300/60 bg-red-50 dark:border-red-700/50 dark:bg-red-900/20";
+            return (
+              <>
+                {/* Mobile: compact stacked pill */}
+                <span className={`sm:hidden inline-flex flex-col items-center rounded-2xl border px-2.5 py-2 ${scoreBorder}`}>
+                  <span className={`text-base font-bold tabular-nums leading-tight ${scoreText}`}>{Math.round(avgScore)}%</span>
+                  <span className="text-[10px] leading-tight text-[var(--text-muted)]">Match</span>
+                </span>
+                {/* Desktop: prominent horizontal badge with rising bars icon */}
+                <div className={`hidden sm:inline-flex items-center gap-2.5 rounded-full border px-4 py-2.5 ${scoreBorder}`}>
+                  <svg width="14" height="14" viewBox="0 0 12 12" fill="currentColor" className={`shrink-0 ${scoreText}`} aria-hidden="true">
+                    <rect x="0" y="6" width="3" height="6" rx="0.5" />
+                    <rect x="4.5" y="3" width="3" height="9" rx="0.5" />
+                    <rect x="9" y="0" width="3" height="12" rx="0.5" />
+                  </svg>
+                  <span className={`text-base font-bold tabular-nums leading-none ${scoreText}`}>{Math.round(avgScore)}%</span>
+                  <span className="text-sm text-[var(--text-muted)]">Match Score</span>
+                </div>
+              </>
+            );
+          })()}
           <ImportJobButton profileId={profile.id} />
         </div>
 
