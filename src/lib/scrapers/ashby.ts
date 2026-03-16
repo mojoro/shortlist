@@ -3,23 +3,22 @@ import { ASHBY_COMPANIES } from "@/config/companies";
 export interface AshbyJob {
   id: string;
   title: string;
-  teamName?: string;
-  locationName?: string;
-  locationNames?: string[];
+  department?: string;
+  team?: string;
+  location?: string; // plain string e.g. "Remote", "Berlin, Germany"
+  secondaryLocations?: string[];
   isRemote?: boolean;
+  workplaceType?: string; // "Remote" | "Hybrid" | "OnSite"
   employmentType?: string; // "FullTime" | "PartTime" | "Contract" | "Internship"
   publishedAt?: string; // ISO string
   jobUrl?: string; // canonical URL on ashbyhq.com
-  externalLink?: string; // company's own careers page link (may not exist)
+  applyUrl?: string;
   descriptionPlain?: string;
   descriptionHtml?: string;
   compensation?: {
-    summaryShort?: string;
-    minValue?: number;
-    maxValue?: number;
-    currency?: string;
+    compensationTierSummary?: string | null;
+    scrapeableCompensationSalarySummary?: string | null;
   };
-  department?: { name?: string };
 }
 
 export interface AshbyRawJob {

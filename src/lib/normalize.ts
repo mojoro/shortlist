@@ -89,13 +89,20 @@ const ASHBY_JOB_TYPE: Record<string, JobType> = {
   internship: "INTERNSHIP",
 };
 
+const ASHBY_LOCATION_TYPE: Record<string, LocationType> = {
+  remote:  "REMOTE",
+  hybrid:  "HYBRID",
+  onsite:  "ONSITE",
+};
+
 export function normalizeAshbyForPool(
   raw: AshbyJob,
   slug: string,
   companyName: string,
 ): Prisma.JobPoolUncheckedCreateInput {
-  const empType = raw.employmentType?.toLowerCase().replace(/[-_\s]/g, "") ?? "";
-  const url = raw.jobUrl ?? raw.externalLink ?? `https://jobs.ashbyhq.com/${slug}/${raw.id}`;
+  const empType      = raw.employmentType?.toLowerCase().replace(/[-_\s]/g, "") ?? "";
+  const workplaceKey = raw.workplaceType?.toLowerCase().replace(/[-_\s]/g, "") ?? "";
+  const url          = raw.jobUrl ?? `https://jobs.ashbyhq.com/${slug}/${raw.id}`;
 
   const description = raw.descriptionHtml
     ? htmlToMarkdown(raw.descriptionHtml)
@@ -107,14 +114,11 @@ export function normalizeAshbyForPool(
     url,
     title:        raw.title,
     company:      companyName,
-    location:     raw.locationName ?? null,
-    locationType: raw.isRemote ? "REMOTE" : null,
+    location:     raw.location ?? null,
+    locationType: ASHBY_LOCATION_TYPE[workplaceKey] ?? null,
     description,
     jobType:      ASHBY_JOB_TYPE[empType] ?? null,
     postedAt:     raw.publishedAt ? new Date(raw.publishedAt) : null,
-    salaryMin:    raw.compensation?.minValue ?? null,
-    salaryMax:    raw.compensation?.maxValue ?? null,
-    currency:     raw.compensation?.currency ?? null,
     rawData:      raw as unknown as Prisma.InputJsonValue,
   };
 }

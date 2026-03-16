@@ -32,7 +32,7 @@ export async function scrapeLever(_profileId: string): Promise<LeverRawJob[]> {
   for (const company of LEVER_COMPANIES) {
     try {
       const res = await fetch(
-        `https://api.lever.co/v0/postings/${company.slug}?mode=json&limit=250`,
+        `https://api.lever.co/v1/postings/${company.slug}?mode=json&limit=250`,
         { cache: "no-store" },
       );
       if (!res.ok) continue;

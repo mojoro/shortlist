@@ -31,19 +31,11 @@ export const GREENHOUSE_COMPANIES: CompanyConfig[] = [
 ];
 
 // ── Lever ─────────────────────────────────────────────────────────────────────
-// Edit: api.lever.co/v0/postings/{slug}?mode=json
+// Edit: api.lever.co/v1/postings/{slug}?mode=json
+// Find slug at jobs.lever.co/{slug}
 
 export const LEVER_COMPANIES: CompanyConfig[] = [
-  { slug: "remote",        name: "Remote" },
-  { slug: "netlify",       name: "Netlify" },
-  { slug: "deliveroo",     name: "Deliveroo" },
-  { slug: "factorial",     name: "Factorial" },
-  { slug: "zara",          name: "Zara" },
-  { slug: "flixbus",       name: "FlixBus" },
-  { slug: "ecosia",        name: "Ecosia" },
-  { slug: "klarna",        name: "Klarna" },
-  { slug: "wolt",          name: "Wolt" },
-  { slug: "gorillas",      name: "Gorillas" },
+  // Add companies here — find slugs at jobs.lever.co/{slug}
 ];
 
 // ── Ashby ─────────────────────────────────────────────────────────────────────
@@ -53,9 +45,7 @@ export const ASHBY_COMPANIES: CompanyConfig[] = [
   { slug: "linear",        name: "Linear" },
   { slug: "vercel",        name: "Vercel" },
   { slug: "supabase",      name: "Supabase" },
-  { slug: "luma",          name: "Luma" },
   { slug: "raycast",       name: "Raycast" },
   { slug: "infisical",     name: "Infisical" },
   { slug: "posthog",       name: "PostHog" },
-  { slug: "turso",         name: "Turso" },
 ];
