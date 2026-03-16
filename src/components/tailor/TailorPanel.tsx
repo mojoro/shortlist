@@ -115,7 +115,7 @@ export function TailorPanel({
   return (
     <>
       {/* ── Desktop (md+) ───────────────────────────────────────────────── */}
-      <div className="fixed inset-x-0 bottom-0 top-16 z-10 hidden bg-[var(--bg)] md:flex overflow-hidden">
+      <div className="fixed left-16 right-0 bottom-0 top-16 z-10 hidden bg-[var(--bg)] md:flex overflow-hidden">
         <JobDescriptionPane
           jobId={jobId}
           title={jobTitle}
