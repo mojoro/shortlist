@@ -25,27 +25,21 @@ export interface GreenhouseRawJob {
  * _profileId is unused now; reserved for when the company list moves
  * to the Profile model and is managed via settings.
  */
-export async function scrapeGreenhouse(
-  _profileId: string,
-): Promise<GreenhouseRawJob[]> {
-  const results: GreenhouseRawJob[] = [];
-
-  for (const company of GREENHOUSE_COMPANIES) {
-    try {
-      const res = await fetch(
-        `https://boards-api.greenhouse.io/v1/boards/${company.slug}/jobs?content=true`,
-        { cache: "no-store" },
-      );
-      if (!res.ok) continue;
-
-      const data = (await res.json()) as { jobs?: GreenhouseJob[] };
-      for (const job of data.jobs ?? []) {
-        results.push({ raw: job, slug: company.slug, companyName: company.name });
-      }
-    } catch {
-      // Skip this company — network error, invalid JSON, etc.
-    }
+async function fetchCompany(company: (typeof GREENHOUSE_COMPANIES)[number]): Promise<GreenhouseRawJob[]> {
+  try {
+    const res = await fetch(
+      `https://boards-api.greenhouse.io/v1/boards/${company.slug}/jobs?content=true`,
+      { cache: "no-store" },
+    );
+    if (!res.ok) return [];
+    const data = (await res.json()) as { jobs?: GreenhouseJob[] };
+    return (data.jobs ?? []).map((raw) => ({ raw, slug: company.slug, companyName: company.name }));
+  } catch {
+    return [];
   }
+}
 
-  return results;
+export async function scrapeGreenhouse(_profileId: string): Promise<GreenhouseRawJob[]> {
+  const batches = await Promise.allSettled(GREENHOUSE_COMPANIES.map(fetchCompany));
+  return batches.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
 }

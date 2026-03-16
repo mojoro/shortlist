@@ -27,25 +27,21 @@ export interface AshbyRawJob {
   companyName: string;
 }
 
-export async function scrapeAshby(_profileId: string): Promise<AshbyRawJob[]> {
-  const results: AshbyRawJob[] = [];
-
-  for (const company of ASHBY_COMPANIES) {
-    try {
-      const res = await fetch(
-        `https://api.ashbyhq.com/posting-api/job-board/${company.slug}?includeCompensation=true`,
-        { cache: "no-store" },
-      );
-      if (!res.ok) continue;
-
-      const data = (await res.json()) as { jobs?: AshbyJob[] };
-      for (const job of data.jobs ?? []) {
-        results.push({ raw: job, slug: company.slug, companyName: company.name });
-      }
-    } catch {
-      // Skip this company
-    }
+async function fetchCompany(company: (typeof ASHBY_COMPANIES)[number]): Promise<AshbyRawJob[]> {
+  try {
+    const res = await fetch(
+      `https://api.ashbyhq.com/posting-api/job-board/${company.slug}?includeCompensation=true`,
+      { cache: "no-store" },
+    );
+    if (!res.ok) return [];
+    const data = (await res.json()) as { jobs?: AshbyJob[] };
+    return (data.jobs ?? []).map((raw) => ({ raw, slug: company.slug, companyName: company.name }));
+  } catch {
+    return [];
   }
+}
 
-  return results;
+export async function scrapeAshby(_profileId: string): Promise<AshbyRawJob[]> {
+  const batches = await Promise.allSettled(ASHBY_COMPANIES.map(fetchCompany));
+  return batches.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
 }

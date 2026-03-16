@@ -26,27 +26,22 @@ export interface LeverRawJob {
   companyName: string;
 }
 
-export async function scrapeLever(_profileId: string): Promise<LeverRawJob[]> {
-  const results: LeverRawJob[] = [];
-
-  for (const company of LEVER_COMPANIES) {
-    try {
-      const res = await fetch(
-        `https://api.lever.co/v1/postings/${company.slug}?mode=json&limit=250`,
-        { cache: "no-store" },
-      );
-      if (!res.ok) continue;
-
-      const data = (await res.json()) as LeverPosting[];
-      if (!Array.isArray(data)) continue;
-
-      for (const job of data) {
-        results.push({ raw: job, slug: company.slug, companyName: company.name });
-      }
-    } catch {
-      // Skip this company
-    }
+async function fetchCompany(company: (typeof LEVER_COMPANIES)[number]): Promise<LeverRawJob[]> {
+  try {
+    const res = await fetch(
+      `https://api.lever.co/v1/postings/${company.slug}?mode=json&limit=250`,
+      { cache: "no-store" },
+    );
+    if (!res.ok) return [];
+    const data = (await res.json()) as LeverPosting[];
+    if (!Array.isArray(data)) return [];
+    return data.map((raw) => ({ raw, slug: company.slug, companyName: company.name }));
+  } catch {
+    return [];
   }
+}
 
-  return results;
+export async function scrapeLever(_profileId: string): Promise<LeverRawJob[]> {
+  const batches = await Promise.allSettled(LEVER_COMPANIES.map(fetchCompany));
+  return batches.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
 }
