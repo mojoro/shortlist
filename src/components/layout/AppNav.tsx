@@ -151,7 +151,7 @@ export function AppNav({ followUpCount = 0 }: AppNavProps) {
         </div>
 
         {/* Primary nav */}
-        <nav className="flex flex-1 flex-col gap-0.5 px-2 py-4">
+        <nav className="flex flex-1 flex-col gap-0.5 px-3 py-4">
           {NAV_ITEMS.map(({ label, href, matches, icon }) => {
             const isCurrent = matches.some((m) => pathname.startsWith(m));
             return (
@@ -160,15 +160,14 @@ export function AppNav({ followUpCount = 0 }: AppNavProps) {
                 href={href}
                 aria-current={isCurrent ? "page" : undefined}
                 className={[
-                  "flex h-10 w-10 mx-auto items-center justify-center gap-3 rounded-lg transition-all duration-200 ease-out",
-                  "group-hover:w-full group-hover:mx-0 group-hover:px-2.5 group-hover:justify-start",
+                  "flex h-10 w-full items-center rounded-lg transition-colors",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]",
                   isCurrent
                     ? "bg-[var(--accent-muted)] text-[var(--accent)]"
                     : "text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text)]",
                 ].join(" ")}
               >
-                <span className="shrink-0">{icon}</span>
+                <span className="flex w-10 shrink-0 justify-center">{icon}</span>
                 <span className={`${LABEL} flex items-center gap-2 text-sm font-medium`}>
                   {label}
                   {label === "Pipeline" && followUpCount > 0 && (
@@ -183,15 +182,15 @@ export function AppNav({ followUpCount = 0 }: AppNavProps) {
         </nav>
 
         {/* Bottom: theme + account */}
-        <div className="shrink-0 space-y-0.5 border-t border-[var(--border)] px-2 py-3">
+        <div className="shrink-0 space-y-0.5 border-t border-[var(--border)] px-3 py-3">
           {/* Theme toggle */}
           <button
             onClick={() => setTheme(isDark ? "light" : "dark")}
             aria-label={mounted ? `Switch to ${isDark ? "light" : "dark"} mode` : "Toggle theme"}
             suppressHydrationWarning
-            className="flex h-10 w-10 mx-auto items-center justify-center gap-3 rounded-lg text-[var(--text-muted)] transition-all duration-200 ease-out hover:bg-[var(--bg-subtle)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)] group-hover:w-full group-hover:mx-0 group-hover:px-2.5 group-hover:justify-start"
+            className="flex h-10 w-full items-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]"
           >
-            <span className="shrink-0" suppressHydrationWarning>
+            <span className="flex w-10 shrink-0 justify-center" suppressHydrationWarning>
               {mounted ? (isDark ? <IconSun /> : <IconMoon />) : <IconMoon />}
             </span>
             <span className={`${LABEL} text-sm font-medium`} suppressHydrationWarning>
@@ -206,10 +205,12 @@ export function AppNav({ followUpCount = 0 }: AppNavProps) {
               aria-haspopup="true"
               aria-expanded={menuOpen}
               aria-label="Account menu"
-              className="flex h-10 w-10 mx-auto items-center justify-center gap-3 rounded-lg transition-all duration-200 ease-out hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)] group-hover:w-full group-hover:mx-0 group-hover:px-2.5 group-hover:justify-start"
+              className="flex h-10 w-full items-center rounded-lg transition-colors hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]"
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--accent-muted)] text-[var(--accent)] text-xs font-semibold">
-                {initial}
+              <span className="flex w-10 shrink-0 justify-center">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--accent-muted)] text-[var(--accent)] text-xs font-semibold">
+                  {initial}
+                </span>
               </span>
               <span className={`${LABEL} text-left text-sm font-medium text-[var(--text-muted)]`}>
                 {user?.firstName ?? "Account"}
