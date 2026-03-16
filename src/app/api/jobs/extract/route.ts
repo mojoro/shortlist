@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { openrouter, MODEL } from "@/lib/openrouter";
+import { openrouter, EXTRACT_MODEL } from "@/lib/openrouter";
 import { extractJobSchema } from "@/lib/validations";
 import TurndownService from "turndown";
 
@@ -119,7 +119,7 @@ export async function POST(req: Request) {
   // AI extraction
   try {
     const response = await openrouter.chat.completions.create({
-      model: MODEL,
+      model: EXTRACT_MODEL,
       max_tokens: 250,
       messages: [
         { role: "system", content: EXTRACTION_SYSTEM_PROMPT },

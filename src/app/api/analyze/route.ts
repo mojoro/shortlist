@@ -1,6 +1,6 @@
 import { appendFileSync } from "fs";
 import { prisma } from "@/lib/prisma";
-import { openrouter, MODEL } from "@/lib/openrouter";
+import { openrouter, ANALYZE_MODEL } from "@/lib/openrouter";
 import { env } from "@/env";
 import { analyzeSchema } from "@/lib/validations";
 import { buildAnalysisSystemPrompt, parseAiAnalysisResponse } from "@/lib/ai-analysis";
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
           aiScore:       0,
           aiSummary:     "Auto-rejected: matched an excluded keyword.",
           aiAnalyzedAt:  new Date(),
-          aiModel:       MODEL,
+          aiModel:       ANALYZE_MODEL,
         },
       });
     }
@@ -123,7 +123,7 @@ export async function POST(req: Request) {
 
           try {
             const response = await openrouter.chat.completions.create({
-              model: MODEL,
+              model: ANALYZE_MODEL,
               messages: [
                 { role: "system", content: systemPrompt },
                 {
@@ -161,7 +161,7 @@ export async function POST(req: Request) {
                 aiMatchPoints: result.matchPoints,
                 aiGapPoints:   result.gapPoints,
                 aiAnalyzedAt:  new Date(),
-                aiModel:       MODEL,
+                aiModel:       ANALYZE_MODEL,
                 ...(result.status === "NO_GO" && job.jobPool.source !== "CUSTOM" ? { feedStatus: "HIDDEN" } : {}),
               },
             });

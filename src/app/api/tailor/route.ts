@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { appendFileSync } from "fs";
 import { prisma } from "@/lib/prisma";
-import { openrouter, MODEL } from "@/lib/openrouter";
+import { openrouter, TAILOR_MODEL } from "@/lib/openrouter";
 import { tailorSchema } from "@/lib/validations";
 
 export const maxDuration = 60;
@@ -238,7 +238,7 @@ identify what would make it a 9.5/10 and implement that adjustment, but never us
     }
 
     const stream = await openrouter.chat.completions.create({
-      model: MODEL,
+      model: TAILOR_MODEL,
       stream: true,
       stream_options: { include_usage: true },
       messages: [

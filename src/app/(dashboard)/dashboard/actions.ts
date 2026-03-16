@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import { appendFileSync } from "fs";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { openrouter, MODEL } from "@/lib/openrouter";
+import { openrouter, ANALYZE_MODEL } from "@/lib/openrouter";
 import { buildWhereClause, buildOrderBy } from "@/lib/jobs";
 import { buildAnalysisSystemPrompt, parseAiAnalysisResponse } from "@/lib/ai-analysis";
 import type { SortOption } from "@/lib/jobs";
@@ -196,7 +196,7 @@ export async function analyzeJob(
 
   try {
     const response = await openrouter.chat.completions.create({
-      model: MODEL,
+      model: ANALYZE_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userMsg },
@@ -217,7 +217,7 @@ export async function analyzeJob(
         aiMatchPoints: result.matchPoints,
         aiGapPoints:   result.gapPoints,
         aiAnalyzedAt:  new Date(),
-        aiModel:       MODEL,
+        aiModel:       ANALYZE_MODEL,
         ...(result.status === "NO_GO" && job.jobPool.source !== "CUSTOM"
           ? { feedStatus: "HIDDEN" }
           : {}),
