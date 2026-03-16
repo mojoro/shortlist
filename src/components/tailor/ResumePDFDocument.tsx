@@ -27,6 +27,7 @@ const styles = StyleSheet.create({
   bulletDot: { width: 12, fontSize: 10 },
   bulletText: { flex: 1, fontSize: 10 },
   paragraph: { marginBottom: 4, fontSize: 10 },
+  h3: { marginBottom: 1, fontSize: 10 },
   bold: { fontFamily: "Helvetica-Bold" },
   link: { color: "#2563eb", textDecoration: "underline" },
 });
@@ -115,7 +116,7 @@ export function ResumePDFDocument({ markdown }: { markdown: string }) {
           if (line.type === "h2")
             return <Text key={i} style={styles.sectionHeader}>{line.text}</Text>;
           if (line.type === "h3")
-            return <InlineText key={i} text={line.text} baseStyle={{ ...styles.paragraph, ...styles.bold }} />;
+            return <InlineText key={i} text={line.text} baseStyle={{ ...styles.h3, ...styles.bold }} />;
           if (line.type === "h4")
             return <InlineText key={i} text={line.text} baseStyle={{ ...styles.paragraph, ...styles.bold }} />;
           if (line.type === "bullet")
