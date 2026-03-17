@@ -15,7 +15,7 @@ export const openrouter = new OpenAI({
 export const TAILOR_MODEL = "qwen/qwen3.5-397b-a17b";
 
 // Job match scoring — fast, cheap model good at structured JSON output
-export const ANALYZE_MODEL = "anthropic/claude-haiku-4-5-20251001";
+export const ANALYZE_MODEL = "anthropic/claude-haiku-4.5";
 
 // Job listing extraction — simple structured extraction from pasted text
-export const EXTRACT_MODEL = "anthropic/claude-haiku-4-5-20251001";
+export const EXTRACT_MODEL = "anthropic/claude-haiku-4.5";
