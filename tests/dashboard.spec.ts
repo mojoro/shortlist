@@ -77,4 +77,24 @@ test.describe("Dashboard (authenticated)", () => {
       page.getByRole("button", { name: /import job/i })
     ).toBeVisible({ timeout: 15_000 });
   });
+
+  test("no infinite render loop from Zustand selectors", async ({ page }) => {
+    // Regression test: Zustand selectors returning new object/array references on every
+    // render caused "Maximum update depth exceeded" and "getSnapshot should be cached"
+    // errors. This test ensures neither error appears when the dashboard loads.
+    const consoleErrors: string[] = [];
+    page.on("console", (msg) => {
+      if (msg.type() === "error") consoleErrors.push(msg.text());
+    });
+
+    await page.goto("/dashboard");
+    await page.waitForSelector("[aria-label='Filter jobs']", { timeout: 15_000 });
+
+    const loopErrors = consoleErrors.filter(
+      (e) =>
+        e.includes("Maximum update depth exceeded") ||
+        e.includes("getSnapshot should be cached"),
+    );
+    expect(loopErrors).toHaveLength(0);
+  });
 });
