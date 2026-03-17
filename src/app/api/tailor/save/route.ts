@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { tailorSaveSchema } from "@/lib/validations";
-import { MODEL } from "@/lib/openrouter";
+import { TAILOR_MODEL } from "@/lib/openrouter";
 
 export async function POST(req: Request) {
   try {
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
         data: {
           applicationId: application.id,
           markdown,
-          generatedBy: MODEL,
+          generatedBy: TAILOR_MODEL,
           wasExported: wasExported ?? false,
           ...(wasExported ? { exportedAt: new Date() } : {}),
         },
