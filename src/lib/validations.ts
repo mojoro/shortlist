@@ -132,6 +132,23 @@ export const importJobSchema = z.object({
   skills:        z.array(z.string()).optional(),
 });
 
+// ── Custom job field update ────────────────────────────────────────────────
+export const updateCustomJobSchema = z.object({
+  jobId:        z.string().cuid(),
+  profileId:    z.string().cuid(),
+  title:        z.string().min(1).max(300),
+  company:      z.string().min(1).max(300),
+  description:  z.string().min(1),
+  location:     z.string().max(300).nullish(),
+  locationType: z.enum(["REMOTE", "HYBRID", "ONSITE"]).nullish(),
+  url:          z.union([z.string().url(), z.literal(""), z.null()]).optional(),
+  jobType:      z.enum(["FULL_TIME", "PART_TIME", "CONTRACT", "FREELANCE", "INTERNSHIP"]).nullish(),
+  salaryMin:    z.number().int().positive().nullish(),
+  salaryMax:    z.number().int().positive().nullish(),
+  currency:     z.string().max(10).nullish(),
+  skills:       z.array(z.string()).optional(),
+});
+
 // ── Application detail update (notes, dates, recruiter) ───────────────────
 export const updateApplicationDetailSchema = z.object({
   applicationId:  z.string().cuid(),

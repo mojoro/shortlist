@@ -10,6 +10,7 @@ import { openrouter, ANALYZE_MODEL } from "@/lib/openrouter";
 import { buildWhereClause, buildOrderBy } from "@/lib/jobs";
 import { buildAnalysisSystemPrompt, parseAiAnalysisResponse } from "@/lib/ai-analysis";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { updateCustomJobSchema } from "@/lib/validations";
 import type { SortOption } from "@/lib/jobs";
 import type { JobWithApplication } from "@/types";
 
@@ -314,6 +315,53 @@ export async function discardAnalysis(
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath("/dashboard");
   revalidateTag("dashboard-stats");
+}
+
+export async function updateCustomJob(
+  data: unknown
+): Promise<{ error?: string }> {
+  const { userId } = await auth();
+  if (!userId) return { error: "Unauthorized" };
+
+  const parsed = updateCustomJobSchema.safeParse(data);
+  if (!parsed.success) return { error: "Invalid request" };
+
+  const { jobId, profileId, title, company, description, location,
+    locationType, url, jobType, salaryMin, salaryMax, currency, skills } = parsed.data;
+
+  // Verify the job belongs to the authenticated user's profile
+  const job = await prisma.job.findFirst({
+    where: { id: jobId, profileId },
+    include: {
+      profile: { select: { userId: true } },
+      jobPool: { select: { source: true, id: true } },
+    },
+  });
+  if (!job || job.profile.userId !== userId) return { error: "Not found" };
+
+  // Only CUSTOM-sourced jobs can be edited
+  if (job.jobPool.source !== "CUSTOM") return { error: "Only imported jobs can be edited" };
+
+  await prisma.jobPool.update({
+    where: { id: job.jobPool.id },
+    data: {
+      title,
+      company,
+      description,
+      location: location ?? null,
+      locationType: locationType ?? null,
+      url: url || "",
+      jobType: jobType ?? null,
+      salaryMin: salaryMin ?? null,
+      salaryMax: salaryMax ?? null,
+      currency: currency ?? null,
+      skills: skills ?? [],
+    },
+  });
+
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath("/dashboard");
+  return {};
 }
 
 export async function updateJobNotes(

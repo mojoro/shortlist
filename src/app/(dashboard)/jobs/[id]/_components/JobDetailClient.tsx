@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { useDashboardStore } from "@/lib/store";
 import { JobDetailActions } from "@/components/jobs/JobDetailActions";
@@ -8,6 +9,7 @@ import { JobNotesInput } from "@/components/jobs/JobNotesInput";
 import { JobDescription } from "@/components/jobs/JobDescription";
 import { AnalyzeButton } from "@/components/jobs/AnalyzeButton";
 import { ReanalyzeButton } from "@/components/jobs/ReanalyzeButton";
+import { updateCustomJob } from "@/app/(dashboard)/dashboard/actions";
 
 const SCORE_CONFIGS = [
   { min: 90, label: "Strong match", color: "#16a34a" },
@@ -66,6 +68,12 @@ export function JobDetailClient({ jobId }: JobDetailClientProps) {
   }
 
   const pool = job.jobPool;
+  const isCustom = pool.source === "CUSTOM";
+
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const sync = useDashboardStore((s) => s.sync);
 
   const postedDate = pool.postedAt
     ? formatDistanceToNow(new Date(pool.postedAt), { addSuffix: true })
@@ -110,12 +118,24 @@ export function JobDetailClient({ jobId }: JobDetailClientProps) {
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-[var(--text)] sm:text-3xl">
-          {pool.title}
-        </h1>
-        <p className="mt-1 text-lg font-medium text-[var(--text-muted)]">
-          {pool.company}
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-[var(--text)] sm:text-3xl">
+              {pool.title}
+            </h1>
+            <p className="mt-1 text-lg font-medium text-[var(--text-muted)]">
+              {pool.company}
+            </p>
+          </div>
+          {isCustom && (
+            <button
+              onClick={() => { setEditing((e) => !e); setSaveError(null); }}
+              className="mt-1 shrink-0 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text)]"
+            >
+              {editing ? "Cancel" : "Edit details"}
+            </button>
+          )}
+        </div>
         {(metaParts.length > 0 || postedDate) && (
           <p className="mt-1.5 text-sm text-[var(--text-muted)]">
             {metaParts.join(" · ")}
@@ -127,7 +147,7 @@ export function JobDetailClient({ jobId }: JobDetailClientProps) {
             )}
           </p>
         )}
-        {pool.skills.length > 0 && (
+        {pool.skills.length > 0 && !editing && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {pool.skills.map((skill: string) => (
               <span
@@ -140,6 +160,27 @@ export function JobDetailClient({ jobId }: JobDetailClientProps) {
           </div>
         )}
       </div>
+
+      {/* Inline edit form — custom jobs only */}
+      {editing && isCustom && (
+        <CustomJobEditForm
+          job={job}
+          onSave={async (data) => {
+            setSaving(true);
+            setSaveError(null);
+            const result = await updateCustomJob(data);
+            if (result.error) {
+              setSaveError(result.error);
+            } else {
+              await sync();
+              setEditing(false);
+            }
+            setSaving(false);
+          }}
+          saving={saving}
+          saveError={saveError}
+        />
+      )}
 
       {/* Two-column layout */}
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
@@ -276,6 +317,148 @@ export function JobDetailClient({ jobId }: JobDetailClientProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+/* ─── Inline edit form for CUSTOM jobs ─── */
+
+type JobForEdit = NonNullable<ReturnType<typeof useDashboardStore.getState>["jobs"][number]>;
+
+function CustomJobEditForm({
+  job,
+  onSave,
+  saving,
+  saveError,
+}: {
+  job: JobForEdit;
+  onSave: (data: unknown) => void;
+  saving: boolean;
+  saveError: string | null;
+}) {
+  const pool = job.jobPool;
+  const [title, setTitle] = useState(pool.title);
+  const [company, setCompany] = useState(pool.company);
+  const [location, setLocation] = useState(pool.location ?? "");
+  const [locationType, setLocationType] = useState(pool.locationType ?? "");
+  const [url, setUrl] = useState(pool.url ?? "");
+  const [jobType, setJobType] = useState(pool.jobType ?? "");
+  const [salaryMin, setSalaryMin] = useState(pool.salaryMin?.toString() ?? "");
+  const [salaryMax, setSalaryMax] = useState(pool.salaryMax?.toString() ?? "");
+  const [currency, setCurrency] = useState(pool.currency ?? "");
+  const [skills, setSkills] = useState(pool.skills.join(", "));
+  const [description, setDescription] = useState(pool.description);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    onSave({
+      jobId: job.id,
+      profileId: job.profileId,
+      title: title.trim(),
+      company: company.trim(),
+      description: description.trim(),
+      location: location.trim() || null,
+      locationType: locationType || null,
+      url: url.trim() || null,
+      jobType: jobType || null,
+      salaryMin: salaryMin ? parseInt(salaryMin, 10) : null,
+      salaryMax: salaryMax ? parseInt(salaryMax, 10) : null,
+      currency: currency.trim() || null,
+      skills: skills.split(",").map((s) => s.trim()).filter(Boolean),
+    });
+  }
+
+  const inputCls = "w-full rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]";
+  const labelCls = "mb-1.5 block text-xs font-medium text-[var(--text-muted)]";
+  const selectCls = `${inputCls} cursor-pointer`;
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6 space-y-5"
+      style={{ boxShadow: "var(--shadow-card)" }}
+    >
+      <h2 className="text-sm font-semibold text-[var(--text)]">Edit job details</h2>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label className={labelCls}>Title *</label>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} required className={inputCls} placeholder="Job title" />
+        </div>
+        <div>
+          <label className={labelCls}>Company *</label>
+          <input value={company} onChange={(e) => setCompany(e.target.value)} required className={inputCls} placeholder="Company name" />
+        </div>
+        <div>
+          <label className={labelCls}>Location</label>
+          <input value={location} onChange={(e) => setLocation(e.target.value)} className={inputCls} placeholder="e.g. Berlin, Germany" />
+        </div>
+        <div>
+          <label className={labelCls}>Work type</label>
+          <select value={locationType} onChange={(e) => setLocationType(e.target.value)} className={selectCls}>
+            <option value="">—</option>
+            <option value="REMOTE">Remote</option>
+            <option value="HYBRID">Hybrid</option>
+            <option value="ONSITE">On-site</option>
+          </select>
+        </div>
+        <div>
+          <label className={labelCls}>Job type</label>
+          <select value={jobType} onChange={(e) => setJobType(e.target.value)} className={selectCls}>
+            <option value="">—</option>
+            <option value="FULL_TIME">Full-time</option>
+            <option value="PART_TIME">Part-time</option>
+            <option value="CONTRACT">Contract</option>
+            <option value="FREELANCE">Freelance</option>
+            <option value="INTERNSHIP">Internship</option>
+          </select>
+        </div>
+        <div>
+          <label className={labelCls}>URL</label>
+          <input value={url} onChange={(e) => setUrl(e.target.value)} className={inputCls} placeholder="https://..." type="url" />
+        </div>
+        <div>
+          <label className={labelCls}>Salary min</label>
+          <input value={salaryMin} onChange={(e) => setSalaryMin(e.target.value)} className={inputCls} placeholder="60000" type="number" min="1" />
+        </div>
+        <div>
+          <label className={labelCls}>Salary max</label>
+          <input value={salaryMax} onChange={(e) => setSalaryMax(e.target.value)} className={inputCls} placeholder="90000" type="number" min="1" />
+        </div>
+        <div>
+          <label className={labelCls}>Currency</label>
+          <input value={currency} onChange={(e) => setCurrency(e.target.value)} className={inputCls} placeholder="EUR" maxLength={10} />
+        </div>
+        <div>
+          <label className={labelCls}>Skills (comma-separated)</label>
+          <input value={skills} onChange={(e) => setSkills(e.target.value)} className={inputCls} placeholder="React, TypeScript, Node.js" />
+        </div>
+      </div>
+
+      <div>
+        <label className={labelCls}>Description *</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          required
+          rows={10}
+          className={`${inputCls} resize-y font-mono text-xs leading-relaxed`}
+        />
+      </div>
+
+      {saveError && (
+        <p className="text-sm text-red-500 dark:text-red-400">{saveError}</p>
+      )}
+
+      <div className="flex justify-end">
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-lg bg-[var(--accent)] px-5 py-2 text-sm font-semibold text-[var(--accent-fg)] transition-opacity hover:opacity-90 disabled:opacity-50"
+        >
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+      </div>
+    </form>
   );
 }
 
