@@ -12,7 +12,7 @@ import { HeroDemoPreview } from "@/components/landing/HeroDemoPreview";
 export const metadata: Metadata = {
   title: `${APP_CONFIG.name} — AI job search`,
   description:
-    "Get access to a feed of job listings scored against your background. Tailor you resume to every job posting in seconds. Track your entire job search in one place.",
+    "Get access to a feed of job listings scored against your background. Tailor your resume to every job posting in seconds. Track your entire job search in one place.",
 };
 
 /* ─── Panel shell ──────────────────────────────────────────── */
@@ -379,7 +379,7 @@ function StatsRow() {
             <p className="text-[14px] font-extrabold leading-[1.2] text-white">
               {stat === "<2m" ? <>{"<"}2m</> : stat}
             </p>
-            <p className="mt-0.5 text-[11px] text-[#444]">{label}</p>
+            <p className="mt-0.5 text-[12px] text-[#999]">{label}</p>
           </div>
         </div>
       ))}
@@ -393,7 +393,7 @@ function SignedOutHero() {
       {/* ── Left: copy ── */}
       <div>
         {/* Eyebrow */}
-        <span className="mb-6 inline-flex items-center gap-[7px] rounded-full border border-[rgba(34,211,238,0.2)] px-3 py-[3px] text-[11px] uppercase tracking-[0.08em] text-[#666]">
+        <span className="mb-6 inline-flex items-center gap-[7px] rounded-full border border-[rgba(34,211,238,0.2)] px-3 py-[3px] text-[11px] uppercase tracking-[0.08em] text-[#999]">
           <span className="h-[5px] w-[5px] shrink-0 animate-pulse rounded-full bg-[#22d3ee]" />
           AI-powered job search
         </span>
@@ -406,9 +406,8 @@ function SignedOutHero() {
         </h1>
 
         {/* Subline */}
-        <p className="mb-9 max-w-[360px] text-[13px] leading-[1.75] text-[#666]">
-          Score every listing against your background. Tailor every application in seconds.
-          Track your entire search in one place.
+        <p className="mb-9 max-w-[360px] text-[13px] leading-[1.75] text-[#999]">
+        Get access to a feed of job listings scored against your background. Tailor your resume to every job posting in seconds. Track your entire job search in one place.
         </p>
 
         {/* CTAs */}
@@ -421,7 +420,7 @@ function SignedOutHero() {
           </Link>
           <Link
             href="/sign-in"
-            className="inline-flex h-11 items-center rounded-lg border border-[#222] px-7 text-sm font-medium text-[#555] transition-colors hover:border-[#444] hover:text-[#888]"
+            className="inline-flex h-11 items-center rounded-lg border border-[#222] px-7 text-sm font-medium text-[#999] transition-colors hover:border-[#444] hover:text-white"
           >
             Sign in
           </Link>
@@ -474,7 +473,7 @@ export default async function LandingPage() {
 
       {/* ── Features ──────────────────────────────── */}
       <section className="mx-auto max-w-5xl px-6 pb-24">
-        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#333]">
+        <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.2em] text-[#666]">
           What it does
         </p>
         <div>
@@ -498,9 +497,9 @@ export default async function LandingPage() {
               <h2 className="text-[clamp(22px,4vw,30px)] font-black leading-[1.1] tracking-[-0.03em]">
                 Keep going.
                 <br />
-                <span className="text-[#333]">Your matches are waiting.</span>
+                <span className="text-[#555]">Your matches are waiting.</span>
               </h2>
-              <p className="mt-3 text-[13px] text-[#444]">
+              <p className="mt-3 text-[13px] text-[#888]">
                 Pick up where you left off.
               </p>
               <Link
@@ -515,9 +514,9 @@ export default async function LandingPage() {
               <h2 className="text-[clamp(22px,4vw,30px)] font-black leading-[1.1] tracking-[-0.03em]">
                 Start your search.
                 <br />
-                <span className="text-[#333]">It&apos;s free.</span>
+                <span className="text-[#555]">It&apos;s free.</span>
               </h2>
-              <p className="mt-3 text-[13px] text-[#444]">
+              <p className="mt-3 text-[13px] text-[#888]">
                 Set up your profile in under two minutes.
               </p>
               <Link
@@ -546,17 +545,17 @@ export default async function LandingPage() {
                 fill="none"
               />
             </svg>
-            <span className="text-xs font-medium text-[#333]">
+            <span className="text-xs font-medium text-[#666]">
               {APP_CONFIG.name}
             </span>
           </div>
-          <p className="text-xs text-[#333]">
+          <p className="text-xs text-[#666]">
             Built by{" "}
             <a
               href="https://johnmoorman.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#444] transition-colors hover:text-[#888]"
+              className="text-[#888] transition-colors hover:text-white"
             >
               John Moorman
             </a>

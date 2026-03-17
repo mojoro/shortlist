@@ -28,9 +28,9 @@ export function FeatureRow({ bold, italic, description, panel }: FeatureRowProps
       >
         <p className="mb-3 text-[17px] font-extrabold leading-[1.3] tracking-[-0.02em]">
           <strong className="font-extrabold text-white">{bold}</strong>{" "}
-          <em className="font-normal not-italic text-[#3a3a3a]">{italic}</em>
+          <em className="font-normal not-italic text-[#777]">{italic}</em>
         </p>
-        <p className="text-[12px] leading-[1.75] text-[#555]">{description}</p>
+        <p className="text-[13px] leading-[1.75] text-[#999]">{description}</p>
       </motion.div>
       <motion.div
         className="min-w-0 flex-1"
