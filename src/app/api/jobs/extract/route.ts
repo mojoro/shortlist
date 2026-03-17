@@ -69,7 +69,7 @@ export async function POST(req: Request) {
   const parsed = extractJobSchema.safeParse(body);
   if (!parsed.success) {
     return Response.json(
-      { error: "Invalid request", details: parsed.error.flatten() },
+      { error: "Invalid request" },
       { status: 400 },
     );
   }

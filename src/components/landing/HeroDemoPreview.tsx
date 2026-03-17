@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 
 /* ─── Types & constants ─────────────────────────────── */
 
@@ -51,26 +50,16 @@ const PIPELINE_COLS = [
 const RESUME_TEXT =
   "Rebuilt the core data pipeline in TypeScript, reducing P99 latency by 40% and eliminating three legacy service dependencies.";
 
-/* ─── Scene transition variants ─────────────────────── */
-
-const sceneVariants = {
-  initial: { opacity: 0, y: 6 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.25 } },
-  exit: { opacity: 0, y: -6, transition: { duration: 0.2 } },
-};
-
 /* ─── Feed scene ─────────────────────────────────────── */
 
 function FeedScene() {
   return (
     <div className="flex flex-col gap-2">
       {JOBS.map(({ score, title, company, tag }, index) => (
-        <motion.div
+        <div
           key={title}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.35, duration: 0.3, ease: "easeOut" }}
-          className="flex items-center gap-2.5"
+          className="flex items-center gap-2.5 opacity-0 animate-[fade-in-up_0.3s_ease-out_forwards]"
+          style={{ animationDelay: `${index * 0.35}s` }}
         >
           <div
             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded text-[10px] font-black ${
@@ -94,7 +83,7 @@ function FeedScene() {
               {tag}
             </span>
           )}
-        </motion.div>
+        </div>
       ))}
     </div>
   );
@@ -104,7 +93,6 @@ function FeedScene() {
 
 function TailorScene() {
   const [phase, setPhase] = useState<"moving" | "clicking" | "streaming">("moving");
-  const [streamedText, setStreamedText] = useState("");
 
   // Cursor finishes moving at 700ms, then clicks
   useEffect(() => {
@@ -117,21 +105,6 @@ function TailorScene() {
     if (phase !== "clicking") return;
     const t = setTimeout(() => setPhase("streaming"), 200);
     return () => clearTimeout(t);
-  }, [phase]);
-
-  // Stream text at 25ms/char — cleanup clears interval on scene exit
-  useEffect(() => {
-    if (phase !== "streaming") return;
-    let i = 0;
-    const interval = setInterval(() => {
-      i++;
-      if (i <= RESUME_TEXT.length) {
-        setStreamedText(RESUME_TEXT.slice(0, i));
-      } else {
-        clearInterval(interval);
-      }
-    }, 25);
-    return () => clearInterval(interval);
   }, [phase]);
 
   return (
@@ -158,8 +131,8 @@ function TailorScene() {
           </p>
           <div className="min-h-[60px] text-[9px] leading-[1.65]">
             {phase === "streaming" ? (
-              <p className="text-[#aaa]">
-                {streamedText}
+              <p className="overflow-hidden whitespace-nowrap text-[#aaa] animate-[text-reveal_3s_linear_forwards]">
+                {RESUME_TEXT}
                 <span className="opacity-50">|</span>
               </p>
             ) : (
@@ -184,24 +157,14 @@ function TailorScene() {
       </div>
 
       {/* Simulated cursor */}
-      <motion.div
-        className="pointer-events-none absolute bottom-0 left-0 z-10 h-[18px] w-[14px]"
-        // x: 76 targets the "Tailor →" button approximately.
-        // These are pixel offsets from the relative parent; they look correct at
-        // typical desktop widths. At very narrow widths the cursor may land slightly
-        // off — this is a known cosmetic limitation at mobile sizes.
-        initial={{ x: 200, y: 0, opacity: 0 }}
-        animate={
+      <div
+        className={`pointer-events-none absolute bottom-0 left-0 z-10 h-[18px] w-[14px] transition-all ease-in-out ${
           phase === "moving"
-            ? { x: 76, y: 6, opacity: 1 }
+            ? "translate-x-[76px] translate-y-[6px] opacity-100 duration-[600ms]"
             : phase === "clicking"
-              ? { x: 76, y: 6, scale: 0.8, opacity: 1 }
-              : { x: 76, y: 6, opacity: 0 }
-        }
-        transition={{
-          duration: phase === "moving" ? 0.6 : 0.1,
-          ease: "easeInOut",
-        }}
+              ? "translate-x-[76px] translate-y-[6px] scale-[0.8] opacity-100 duration-100"
+              : "translate-x-[76px] translate-y-[6px] opacity-0 duration-100"
+        }`}
       >
         <svg viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path
@@ -211,7 +174,7 @@ function TailorScene() {
             strokeWidth="0.6"
           />
         </svg>
-      </motion.div>
+      </div>
     </div>
   );
 }
@@ -228,20 +191,14 @@ function PipelineScene() {
           </p>
           <div className="flex flex-col gap-1">
             {cards.map(({ title, company }, cardIndex) => (
-              <motion.div
+              <div
                 key={title}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  delay: colIndex * 0.15 + cardIndex * 0.1,
-                  duration: 0.25,
-                  ease: "easeOut",
-                }}
-                className="rounded-[3px] border border-[#1e1e1e] bg-[#161616] px-2 py-1.5"
+                className="rounded-[3px] border border-[#1e1e1e] bg-[#161616] px-2 py-1.5 opacity-0 animate-[fade-in-up_0.25s_ease-out_forwards]"
+                style={{ animationDelay: `${colIndex * 0.15 + cardIndex * 0.1}s` }}
               >
                 <p className="mb-px truncate text-[8px] font-semibold text-[#ccc]">{title}</p>
                 <p className="text-[7px] text-[#444]">{company}</p>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
@@ -257,9 +214,6 @@ export function HeroDemoPreview() {
   const scene = SCENE_ORDER[sceneIndex];
 
   // Advance to the next scene after each duration.
-  // AnimatePresence mode="wait" guarantees the exit animation (200ms) always
-  // completes before the entering scene mounts, so the bare setTimeout is safe —
-  // the state change queues the transition; it does not immediately show the new scene.
   useEffect(() => {
     const timer = setTimeout(() => {
       setSceneIndex((i) => (i + 1) % SCENE_ORDER.length);
@@ -279,35 +233,21 @@ export function HeroDemoPreview() {
             />
           ))}
         </div>
-        <AnimatePresence mode="wait">
-          <motion.span
-            key={scene}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#333]"
-          >
-            {SCENE_LABELS[scene]}
-          </motion.span>
-        </AnimatePresence>
+        <span
+          key={scene}
+          className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#333] animate-[fade-in-up_0.2s_ease-out_forwards]"
+        >
+          {SCENE_LABELS[scene]}
+        </span>
       </div>
 
-      {/* Scene content */}
+      {/* Scene content — key forces remount which triggers animations */}
       <div className="min-h-[148px] px-3.5 pb-3 pt-3.5">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={scene}
-            variants={sceneVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-          >
-            {scene === "feed" && <FeedScene />}
-            {scene === "tailor" && <TailorScene />}
-            {scene === "pipeline" && <PipelineScene />}
-          </motion.div>
-        </AnimatePresence>
+        <div key={scene} className="animate-[fade-in-up_0.25s_ease-out_forwards]">
+          {scene === "feed" && <FeedScene />}
+          {scene === "tailor" && <TailorScene />}
+          {scene === "pipeline" && <PipelineScene />}
+        </div>
       </div>
     </div>
   );

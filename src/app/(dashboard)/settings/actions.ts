@@ -221,9 +221,9 @@ export async function deleteProfile(data: unknown): Promise<void> {
   });
   if (!profile) throw new Error("Profile not found");
 
-  const allProfiles = await prisma.profile.findMany({ where: { userId } });
+  const profileCount = await prisma.profile.count({ where: { userId } });
 
-  if (allProfiles.length === 1) {
+  if (profileCount === 1) {
     // Last profile — delete and send user through onboarding again
     await prisma.profile.delete({ where: { id: parsed.data.profileId } });
     const cookieStore = await cookies();
@@ -233,11 +233,15 @@ export async function deleteProfile(data: unknown): Promise<void> {
 
   // If active, promote another profile before deleting
   if (profile.isActive) {
-    const next = allProfiles.find((p) => p.id !== parsed.data.profileId)!;
-    await prisma.profile.update({
-      where: { id: next.id },
-      data:  { isActive: true },
+    const next = await prisma.profile.findFirst({
+      where: { userId, id: { not: parsed.data.profileId } },
     });
+    if (next) {
+      await prisma.profile.update({
+        where: { id: next.id },
+        data:  { isActive: true },
+      });
+    }
   }
 
   await prisma.profile.delete({ where: { id: parsed.data.profileId } });

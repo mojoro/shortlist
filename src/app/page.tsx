@@ -1,13 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { auth } from "@clerk/nextjs/server";
 import { APP_CONFIG } from "@/config/app";
-import { prisma } from "@/lib/prisma";
 import { LandingNav } from "@/components/landing/LandingNav";
-import { SignedInHero } from "@/components/landing/SignedInHero";
 import { FeatureRow } from "@/components/landing/FeatureRow";
 import { HeroDemoPreview } from "@/components/landing/HeroDemoPreview";
+import { HeroCTA, BottomCTA } from "@/components/landing/AuthAwareCTA";
 
 export const metadata: Metadata = {
   title: `${APP_CONFIG.name} — AI job search`,
@@ -363,7 +361,7 @@ const FEATURES: Feature[] = [
 
 function StatsRow() {
   return (
-    <div className="flex flex-row flex-wrap items-start gap-0">
+    <div className="flex flex-row flex-nowrap items-start gap-0">
       {(
         [
           { stat: "<2m", label: "Setup" },
@@ -373,13 +371,13 @@ function StatsRow() {
       ).map(({ stat, label }, i) => (
         <div key={stat} className="flex items-start">
           {i > 0 && (
-            <div className="mx-5 h-9 w-px shrink-0 bg-[#1e1e1e]" />
+            <div className="mx-2.5 h-9 w-px shrink-0 bg-[#1e1e1e] sm:mx-5" />
           )}
           <div>
-            <p className="text-[14px] font-extrabold leading-[1.2] text-white">
+            <p className="text-[11px] font-extrabold leading-[1.2] text-white sm:text-[14px]">
               {stat === "<2m" ? <>{"<"}2m</> : stat}
             </p>
-            <p className="mt-0.5 text-[12px] text-[#999]">{label}</p>
+            <p className="mt-0.5 text-[9px] text-[#999] sm:text-[12px]">{label}</p>
           </div>
         </div>
       ))}
@@ -387,44 +385,31 @@ function StatsRow() {
   );
 }
 
-function SignedOutHero() {
+function Hero() {
   return (
     <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
-      {/* ── Left: copy ── */}
+      {/* Left: copy */}
       <div>
+        {/* Headline */}
+        <h1 className="mb-5 text-[clamp(48px,8vw,72px)] font-black leading-[0.93] tracking-[-0.05em] text-white">
+          Get on the
+          <br />
+          shortlist.
+        </h1>
+
         {/* Eyebrow */}
         <span className="mb-6 inline-flex items-center gap-[7px] rounded-full border border-[rgba(34,211,238,0.2)] px-3 py-[3px] text-[11px] uppercase tracking-[0.08em] text-[#999]">
           <span className="h-[5px] w-[5px] shrink-0 animate-pulse rounded-full bg-[#22d3ee]" />
           AI-powered job search
         </span>
 
-        {/* Headline */}
-        <h1 className="mb-7 text-[clamp(48px,8vw,72px)] font-black leading-[0.93] tracking-[-0.05em] text-white">
-          Get on the
-          <br />
-          shortlist.
-        </h1>
-
         {/* Subline */}
         <p className="mb-9 max-w-[360px] text-[13px] leading-[1.75] text-[#999]">
         Get access to a feed of job listings scored against your background. Tailor your resume to every job posting in seconds. Track your entire job search in one place.
         </p>
 
-        {/* CTAs */}
-        <div className="flex flex-wrap items-center gap-3">
-          <Link
-            href="/sign-up"
-            className="inline-flex h-11 items-center rounded-lg bg-[#22d3ee] px-7 text-sm font-semibold text-[#080808] transition-all hover:opacity-90"
-          >
-            Get started free
-          </Link>
-          <Link
-            href="/sign-in"
-            className="inline-flex h-11 items-center rounded-lg border border-[#222] px-7 text-sm font-medium text-[#999] transition-colors hover:border-[#444] hover:text-white"
-          >
-            Sign in
-          </Link>
-        </div>
+        {/* CTAs — client component handles auth detection */}
+        <HeroCTA />
 
         {/* Stats — desktop position (below CTAs, hidden on mobile) */}
         <div className="mt-10 hidden lg:block">
@@ -432,7 +417,7 @@ function SignedOutHero() {
         </div>
       </div>
 
-      {/* ── Right: preview ── */}
+      {/* Right: preview */}
       <div>
         <HeroDemoPreview />
 
@@ -447,31 +432,17 @@ function SignedOutHero() {
 
 /* ─── Page ─────────────────────────────────────────────────── */
 
-export default async function LandingPage() {
-  const { userId } = await auth();
-  const isSignedIn = !!userId;
-
-  let dashboardHref = "/dashboard";
-
-  if (isSignedIn && userId) {
-    const hasProfile = await prisma.profile.findFirst({ where: { userId }, select: { id: true } });
-    if (!hasProfile) dashboardHref = "/onboarding";
-  }
-
+export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#080808] text-white">
-      <LandingNav isSignedIn={isSignedIn} />
+      <LandingNav />
 
-      {/* ── Hero ──────────────────────────────────── */}
+      {/* Hero */}
       <section className="mx-auto max-w-5xl px-6 py-24 sm:py-32">
-        {isSignedIn ? (
-          <SignedInHero dashboardHref={dashboardHref} />
-        ) : (
-          <SignedOutHero />
-        )}
+        <Hero />
       </section>
 
-      {/* ── Features ──────────────────────────────── */}
+      {/* Features */}
       <section className="mx-auto max-w-5xl px-6 pb-24">
         <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.2em] text-[#666]">
           What it does
@@ -489,48 +460,14 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA strip ─────────────────────────────── */}
+      {/* CTA strip */}
       <section className="border-t border-t-[#111] bg-[#0d0d0d]">
         <div className="mx-auto max-w-5xl px-6 py-20 text-center">
-          {isSignedIn ? (
-            <>
-              <h2 className="text-[clamp(22px,4vw,30px)] font-black leading-[1.1] tracking-[-0.03em]">
-                Keep going.
-                <br />
-                <span className="text-[#555]">Your matches are waiting.</span>
-              </h2>
-              <p className="mt-3 text-[13px] text-[#888]">
-                Pick up where you left off.
-              </p>
-              <Link
-                href={dashboardHref}
-                className="mt-8 inline-flex h-11 items-center rounded-lg bg-[#22d3ee] px-8 text-sm font-semibold text-[#080808] transition-all hover:opacity-90"
-              >
-                Go to dashboard →
-              </Link>
-            </>
-          ) : (
-            <>
-              <h2 className="text-[clamp(22px,4vw,30px)] font-black leading-[1.1] tracking-[-0.03em]">
-                Start your search.
-                <br />
-                <span className="text-[#555]">It&apos;s free.</span>
-              </h2>
-              <p className="mt-3 text-[13px] text-[#888]">
-                Set up your profile in under two minutes.
-              </p>
-              <Link
-                href="/sign-up"
-                className="mt-8 inline-flex h-11 items-center rounded-lg bg-[#22d3ee] px-8 text-sm font-semibold text-[#080808] transition-all hover:opacity-90"
-              >
-                Get started free
-              </Link>
-            </>
-          )}
+          <BottomCTA />
         </div>
       </section>
 
-      {/* ── Footer ────────────────────────────────── */}
+      {/* Footer */}
       <footer className="mx-auto max-w-5xl px-6 py-8">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { JobCard } from "@/components/jobs/JobCard";
 import {
   getMoreJobs,
@@ -31,14 +32,7 @@ function UndoToast({
 }) {
   // key prop on outer div triggers re-animation when a new job is ignored
   return (
-    <div
-      className="pointer-events-auto relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-2xl"
-      style={{
-        animation: "toast-slide-in 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.24), 0 2px 8px rgba(0,0,0,0.16)",
-        minWidth: "280px",
-      }}
-    >
+    <div className="pointer-events-auto relative min-w-[280px] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[0_8px_32px_rgba(0,0,0,0.24),0_2px_8px_rgba(0,0,0,0.16)] animate-[toast-slide-in_0.25s_cubic-bezier(0.34,1.56,0.64,1)_forwards]">
       {/* Content row */}
       <div className="flex items-center justify-between gap-4 px-4 py-3">
         <span className="text-sm font-medium text-[var(--text)]">Job hidden</span>
@@ -61,11 +55,10 @@ function UndoToast({
         </div>
       </div>
 
-      {/* Timer bar — drains left to right over 2s */}
+      {/* Timer bar — drains left to right over 5s */}
       <div
         key={toast.jobId}
-        className="absolute bottom-0 left-0 h-[3px] w-full origin-left bg-[var(--accent)]"
-        style={{ animation: "toast-drain 5s linear forwards" }}
+        className="absolute bottom-0 left-0 h-[3px] w-full origin-left bg-[var(--accent)] animate-[toast-drain_5s_linear_forwards]"
       />
     </div>
   );
@@ -81,14 +74,7 @@ function NoticeToast({
   onDismiss: () => void;
 }) {
   return (
-    <div
-      className="pointer-events-auto relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-2xl"
-      style={{
-        animation: "toast-slide-in 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.24), 0 2px 8px rgba(0,0,0,0.16)",
-        minWidth: "280px",
-      }}
-    >
+    <div className="pointer-events-auto relative min-w-[280px] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-[0_8px_32px_rgba(0,0,0,0.24),0_2px_8px_rgba(0,0,0,0.16)] animate-[toast-slide-in_0.25s_cubic-bezier(0.34,1.56,0.64,1)_forwards]">
       <div className="flex items-center justify-between gap-4 px-4 py-3">
         <span className="text-sm font-medium text-[var(--text)]">{message}</span>
         <button
@@ -101,10 +87,7 @@ function NoticeToast({
           </svg>
         </button>
       </div>
-      <div
-        className="absolute bottom-0 left-0 h-[3px] w-full origin-left bg-[var(--text-muted)]"
-        style={{ animation: "toast-drain 5s linear forwards" }}
-      />
+      <div className="absolute bottom-0 left-0 h-[3px] w-full origin-left bg-[var(--text-muted)] animate-[toast-drain_5s_linear_forwards]" />
     </div>
   );
 }
@@ -191,6 +174,10 @@ function DateDivider({ label }: { label: string }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
+
+type VirtualItem =
+  | { type: "divider"; label: string }
+  | { type: "job"; job: JobWithApplication; jobIndex: number };
 
 interface JobFeedProps {
   initialJobs: JobWithApplication[];
@@ -414,21 +401,124 @@ export function JobFeed({
     );
   }
 
+  // ── Build flat virtual items array ─────────────────────────────────────
+  const virtualItems: VirtualItem[] = [];
+  if (sort === "newest") {
+    for (const { bucket, jobs: bucketJobs } of groupJobsByDate(jobs)) {
+      virtualItems.push({ type: "divider", label: bucket });
+      for (const job of bucketJobs) {
+        virtualItems.push({ type: "job", job, jobIndex: jobs.indexOf(job) });
+      }
+    }
+  } else {
+    for (let i = 0; i < jobs.length; i++) {
+      virtualItems.push({ type: "job", job: jobs[i], jobIndex: i });
+    }
+  }
+
+  return (
+    <VirtualizedJobList
+      virtualItems={virtualItems}
+      jobs={jobs}
+      nextCursor={nextCursor}
+      isPending={isPending}
+      batchPending={batchPending}
+      error={error}
+      isIgnoredView={isIgnoredView}
+      selectedIds={selectedIds}
+      lastUpdatedText={lastUpdatedText}
+      toast={toast}
+      notice={notice}
+      onLoadMore={handleLoadMore}
+      onIgnore={handleIgnore}
+      onUnignore={handleUnignore}
+      onSelect={handleSelect}
+      onScored={handleScored}
+      onBatchSave={handleBatchSave}
+      onBatchIgnore={handleBatchIgnore}
+      onClearSelection={clearSelection}
+      onUndo={handleUndo}
+      onDismissToast={dismissToast}
+      onDismissNotice={dismissNotice}
+    />
+  );
+}
+
+// ─── Virtualized list ──────────────────────────────────────────────────────
+
+interface VirtualizedJobListProps {
+  virtualItems: VirtualItem[];
+  jobs: JobWithApplication[];
+  nextCursor: string | null;
+  isPending: boolean;
+  batchPending: boolean;
+  error: string | null;
+  isIgnoredView: boolean;
+  selectedIds: Set<string>;
+  lastUpdatedText?: string | null;
+  toast: ToastState | null;
+  notice: string | null;
+  onLoadMore: () => void;
+  onIgnore: (jobId: string) => void;
+  onUnignore: (jobId: string) => void;
+  onSelect: (jobId: string, e: React.MouseEvent, index: number) => void;
+  onScored: (jobId: string, update: JobScoreUpdate) => void;
+  onBatchSave: (save: boolean) => void;
+  onBatchIgnore: () => void;
+  onClearSelection: () => void;
+  onUndo: () => void;
+  onDismissToast: () => void;
+  onDismissNotice: () => void;
+}
+
+function VirtualizedJobList({
+  virtualItems,
+  jobs,
+  nextCursor,
+  isPending,
+  batchPending,
+  error,
+  isIgnoredView,
+  selectedIds,
+  lastUpdatedText,
+  toast,
+  notice,
+  onLoadMore,
+  onIgnore,
+  onUnignore,
+  onSelect,
+  onScored,
+  onBatchSave,
+  onBatchIgnore,
+  onClearSelection,
+  onUndo,
+  onDismissToast,
+  onDismissNotice,
+}: VirtualizedJobListProps) {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: virtualItems.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: (index) => virtualItems[index].type === "divider" ? 40 : 220,
+    overscan: 5,
+  });
+
   return (
     <div className="relative">
-      {/* Batch action bar */}
+      {/* Batch action bar — outside virtual container so it stays fixed */}
       {selectedIds.size > 0 && !isIgnoredView && (
         <BatchBar
           count={selectedIds.size}
           isPending={batchPending}
-          onSave={() => handleBatchSave(true)}
-          onUnsave={() => handleBatchSave(false)}
-          onIgnore={handleBatchIgnore}
-          onClear={clearSelection}
+          onSave={() => onBatchSave(true)}
+          onUnsave={() => onBatchSave(false)}
+          onIgnore={onBatchIgnore}
+          onClear={onClearSelection}
         />
       )}
 
-      {/* Hint when no selection but in regular feed */}
+      {/* Hint when no selection but in regular feed — outside virtual container */}
       {selectedIds.size === 0 && !isIgnoredView && jobs.length > 1 && (
         <div className="mb-3 hidden sm:flex items-center justify-between">
           <p className="text-xs text-[var(--text-muted)]">
@@ -451,83 +541,86 @@ export function JobFeed({
         </div>
       )}
 
-      {/* Job list */}
-      <div className="flex flex-col gap-[18px]">
-        {sort === "newest"
-          ? groupJobsByDate(jobs).map(({ bucket, jobs: bucketJobs }) => (
-              <div key={bucket} className="flex flex-col gap-[18px]">
-                <DateDivider label={bucket} />
-                {bucketJobs.map((job) => {
-                  const index = jobs.indexOf(job);
-                  return (
+      {/* Virtualized scroll container */}
+      <div
+        ref={parentRef}
+        className="h-[calc(100vh-200px)] overflow-y-auto"
+      >
+        <div
+          className="relative w-full"
+          style={{ height: `${virtualizer.getTotalSize()}px` }}
+        >
+          {virtualizer.getVirtualItems().map((virtualRow) => {
+            const item = virtualItems[virtualRow.index];
+            return (
+              <div
+                key={virtualRow.key}
+                className="absolute left-0 top-0 w-full"
+                style={{ transform: `translateY(${virtualRow.start}px)` }}
+                data-index={virtualRow.index}
+                ref={virtualizer.measureElement}
+              >
+                {item.type === "divider" ? (
+                  <DateDivider label={item.label} />
+                ) : (
+                  <div className="pb-[18px]">
                     <JobCard
-                      key={job.id}
-                      job={job}
-                      index={index}
-                      isSelected={selectedIds.has(job.id)}
-                      onIgnore={handleIgnore}
-                      onUnignore={handleUnignore}
-                      onSelect={handleSelect}
-                      onScored={handleScored}
+                      job={item.job}
+                      index={item.jobIndex}
+                      isSelected={selectedIds.has(item.job.id)}
+                      onIgnore={onIgnore}
+                      onUnignore={onUnignore}
+                      onSelect={onSelect}
+                      onScored={onScored}
                     />
-                  );
-                })}
+                  </div>
+                )}
               </div>
-            ))
-          : jobs.map((job, index) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                index={index}
-                isSelected={selectedIds.has(job.id)}
-                onIgnore={handleIgnore}
-                onUnignore={handleUnignore}
-                onSelect={handleSelect}
-                onScored={handleScored}
-              />
-            ))}
+            );
+          })}
+        </div>
+
+        {/* Load more — inside scroll container at the bottom */}
+        {nextCursor && (
+          <div className="flex justify-center py-6">
+            <button
+              onClick={onLoadMore}
+              disabled={isPending}
+              className="inline-flex min-h-[44px] items-center rounded-full bg-[var(--bg)] px-6 py-2 text-sm font-medium text-[var(--text)] ring-1 ring-inset ring-[var(--border)] transition-colors hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
+            >
+              {isPending ? "Loading…" : "Load more"}
+            </button>
+          </div>
+        )}
+
+        {error && (
+          <div className="mx-auto mt-4 max-w-lg rounded-lg bg-red-50 p-4 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+            <p>{error}</p>
+            <button
+              onClick={onLoadMore}
+              className="mt-1 font-medium underline underline-offset-2"
+            >
+              Try again
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Load more */}
-      {nextCursor && (
-        <div className="mt-6 flex justify-center">
-          <button
-            onClick={handleLoadMore}
-            disabled={isPending}
-            className="inline-flex min-h-[44px] items-center rounded-full bg-[var(--bg)] px-6 py-2 text-sm font-medium text-[var(--text)] ring-1 ring-inset ring-[var(--border)] transition-colors hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
-          >
-            {isPending ? "Loading…" : "Load more"}
-          </button>
-        </div>
-      )}
-
-      {error && (
-        <div className="mt-4 rounded-lg bg-red-50 p-4 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-          <p>{error}</p>
-          <button
-            onClick={handleLoadMore}
-            className="mt-1 font-medium underline underline-offset-2"
-          >
-            Try again
-          </button>
-        </div>
-      )}
-
-      {/* Toast portal — fixed bottom-center, stacked */}
+      {/* Toast portal — fixed bottom-center, stacked — outside virtual container */}
       <div className="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 flex flex-col items-center gap-2">
         {notice && (
           <NoticeToast
             key={notice}
             message={notice}
-            onDismiss={dismissNotice}
+            onDismiss={onDismissNotice}
           />
         )}
         {toast && (
           <UndoToast
             key={toast.jobId}
             toast={toast}
-            onUndo={handleUndo}
-            onDismiss={dismissToast}
+            onUndo={onUndo}
+            onDismiss={onDismissToast}
           />
         )}
       </div>

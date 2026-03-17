@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
 import { APP_CONFIG } from "@/config/app";
 import { AppNav } from "@/components/layout/AppNav";
@@ -11,6 +12,12 @@ export const metadata: Metadata = {
   },
 };
 
+const getCachedFollowUpCount = unstable_cache(
+  async (userId: string) => getFollowUpCount(userId),
+  ["follow-up-count"],
+  { revalidate: 300, tags: ["follow-up-count"] }
+);
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -18,7 +25,7 @@ export default async function DashboardLayout({
 }) {
   const { userId } = await auth();
   const followUpCount = userId
-    ? await getFollowUpCount(userId).catch(() => 0)
+    ? await getCachedFollowUpCount(userId).catch(() => 0)
     : 0;
 
   return (

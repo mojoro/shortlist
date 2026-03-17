@@ -14,9 +14,8 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const parsed = importJobSchema.safeParse(body);
   if (!parsed.success) {
-    console.error("[/api/jobs/import] Validation error:", JSON.stringify(parsed.error.flatten()));
     return Response.json(
-      { error: "Invalid request", details: parsed.error.flatten() },
+      { error: "Invalid request" },
       { status: 400 },
     );
   }

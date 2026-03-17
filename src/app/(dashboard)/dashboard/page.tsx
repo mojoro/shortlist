@@ -1,7 +1,10 @@
+import { Suspense } from "react";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { getActiveProfile } from "@/lib/get-active-profile";
 import { buildWhereClause, buildOrderBy, type SortDir } from "@/lib/jobs";
 import { formatDistanceToNow } from "date-fns";
 import { FeedToolbar } from "@/components/dashboard/FeedToolbar";
@@ -12,6 +15,42 @@ import { APP_CONFIG } from "@/config/app";
 import type { JobWithApplication } from "@/types";
 
 export const metadata: Metadata = { title: "Your matches" };
+
+const getCachedStats = unstable_cache(
+  async (profileId: string) => {
+    const [grouped, appliedCount, avgScoreResult] = await Promise.all([
+      prisma.job.groupBy({
+        by: ["feedStatus"],
+        where: { profileId },
+        _count: true,
+      }),
+      prisma.job.count({
+        where: {
+          profileId,
+          application: { status: { not: "INTERESTED" } },
+        },
+      }),
+      prisma.job.aggregate({
+        where: {
+          profileId,
+          aiScore: { not: null },
+          feedStatus: { notIn: ["HIDDEN", "ARCHIVED"] },
+        },
+        _avg: { aiScore: true },
+      }),
+    ]);
+
+    const newCount = grouped.find((g) => g.feedStatus === "NEW")?._count ?? 0;
+    const savedCount = grouped.find((g) => g.feedStatus === "SAVED")?._count ?? 0;
+    const ignoredCount = grouped.find((g) => g.feedStatus === "ARCHIVED")?._count ?? 0;
+    const allCount = newCount + savedCount;
+    const avgScore = avgScoreResult._avg.aiScore;
+
+    return { allCount, newCount, savedCount, appliedCount, ignoredCount, avgScore };
+  },
+  ["dashboard-stats"],
+  { revalidate: 60, tags: ["dashboard-stats"] },
+);
 
 const VALID_FILTERS = ["all", "new", "saved", "applied", "ignored"] as const;
 const VALID_SORTS   = ["match", "newest", "salary"] as const;
@@ -39,10 +78,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   try {
     const [profile, allProfiles] = await Promise.all([
-      prisma.profile.findFirst({
-        where: { userId },
-        orderBy: { isActive: "desc" },
-      }),
+      getActiveProfile(userId),
       prisma.profile.findMany({
         where: { userId },
         select: { id: true, name: true, isActive: true },
@@ -63,44 +99,10 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       );
     }
 
-    const [allCount, newCount, savedCount, appliedCount, ignoredCount, avgScoreResult, jobs] =
-      await Promise.all([
-        prisma.job.count({
-          where: { profileId: profile.id, feedStatus: { notIn: ["HIDDEN", "ARCHIVED"] } },
-        }),
-        prisma.job.count({
-          where: { profileId: profile.id, feedStatus: "NEW" },
-        }),
-        prisma.job.count({
-          where: { profileId: profile.id, feedStatus: "SAVED" },
-        }),
-        prisma.job.count({
-          where: {
-            profileId: profile.id,
-            application: { status: { not: "INTERESTED" } },
-          },
-        }),
-        prisma.job.count({
-          where: { profileId: profile.id, feedStatus: "ARCHIVED" },
-        }),
-        prisma.job.aggregate({
-          where: {
-            profileId: profile.id,
-            aiScore: { not: null },
-            feedStatus: { notIn: ["HIDDEN", "ARCHIVED"] },
-          },
-          _avg: { aiScore: true },
-        }),
-        prisma.job.findMany({
-          where: buildWhereClause(profile.id, safeFilter),
-          include: { jobPool: true, application: { select: { status: true } } },
-          orderBy: buildOrderBy(safeSort, safeDir),
-          take: 25,
-        }),
-      ]);
+    // Stats are cached (fast) — render shell immediately
+    const stats = await getCachedStats(profile.id);
+    const { allCount, newCount, savedCount, appliedCount, ignoredCount, avgScore } = stats;
 
-    const nextCursor = jobs.length === 25 ? jobs[jobs.length - 1].id : null;
-    const avgScore = avgScoreResult._avg.aiScore;
     const lastUpdatedText = profile.lastScrapedAt
       ? `Updated ${formatDistanceToNow(new Date(profile.lastScrapedAt), { addSuffix: true })}`
       : null;
@@ -158,15 +160,16 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           lastUpdatedText={lastUpdatedText}
         />
 
-        <JobFeed
-          key={`${profile.id}-${safeFilter}-${safeSort}-${safeDir}`}
-          initialJobs={jobs as unknown as JobWithApplication[]}
-          initialNextCursor={nextCursor}
-          profileId={profile.id}
-          filter={safeFilter}
-          sort={safeSort}
-          lastUpdatedText={lastUpdatedText}
-        />
+        {/* Job feed streams in — shell above is already visible */}
+        <Suspense fallback={<FeedSkeleton />}>
+          <DeferredJobFeed
+            profileId={profile.id}
+            filter={safeFilter}
+            sort={safeSort}
+            dir={safeDir}
+            lastUpdatedText={lastUpdatedText}
+          />
+        </Suspense>
       </div>
     );
   } catch {
@@ -181,4 +184,70 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       </div>
     );
   }
+}
+
+/* ─── Deferred job feed — streamed via Suspense ──────────── */
+
+async function DeferredJobFeed({
+  profileId,
+  filter,
+  sort,
+  dir,
+  lastUpdatedText,
+}: {
+  profileId: string;
+  filter: string;
+  sort: string;
+  dir: SortDir;
+  lastUpdatedText: string | null;
+}) {
+  const safeSort: SortOption = (VALID_SORTS as readonly string[]).includes(sort)
+    ? (sort as SortOption)
+    : "match";
+
+  const jobs = await prisma.job.findMany({
+    where: buildWhereClause(profileId, filter),
+    include: { jobPool: true, application: { select: { status: true } } },
+    orderBy: buildOrderBy(safeSort, dir),
+    take: 25,
+  });
+
+  const nextCursor = jobs.length === 25 ? jobs[jobs.length - 1].id : null;
+
+  return (
+    <JobFeed
+      key={`${profileId}-${filter}-${sort}-${dir}`}
+      initialJobs={jobs as unknown as JobWithApplication[]}
+      initialNextCursor={nextCursor}
+      profileId={profileId}
+      filter={filter}
+      sort={sort}
+      lastUpdatedText={lastUpdatedText}
+    />
+  );
+}
+
+/* ─── Feed skeleton — shown while job list streams in ───── */
+
+function FeedSkeleton() {
+  return (
+    <div className="flex flex-col gap-[18px]" aria-busy="true">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div
+          key={i}
+          className="animate-pulse rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6"
+        >
+          <div className="flex gap-4">
+            <div className="h-10 w-10 rounded-md bg-[var(--bg-subtle)]" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-3/4 rounded bg-[var(--bg-subtle)]" />
+              <div className="h-3 w-1/2 rounded bg-[var(--bg-subtle)]" />
+            </div>
+          </div>
+          <div className="mt-4 h-3 w-full rounded bg-[var(--bg-subtle)]" />
+          <div className="mt-2 h-3 w-2/3 rounded bg-[var(--bg-subtle)]" />
+        </div>
+      ))}
+    </div>
+  );
 }

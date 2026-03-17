@@ -4,11 +4,12 @@ import { auth } from "@clerk/nextjs/server";
 import type { AiStatus } from "@prisma/client";
 import { headers } from "next/headers";
 import { appendFileSync } from "fs";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { openrouter, ANALYZE_MODEL } from "@/lib/openrouter";
 import { buildWhereClause, buildOrderBy } from "@/lib/jobs";
 import { buildAnalysisSystemPrompt, parseAiAnalysisResponse } from "@/lib/ai-analysis";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { SortOption } from "@/lib/jobs";
 import type { JobWithApplication } from "@/types";
 
@@ -73,6 +74,7 @@ export async function toggleSaveJob(
   }
 
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
 }
 
 export async function ignoreJob(
@@ -92,6 +94,7 @@ export async function ignoreJob(
     data: { feedStatus: "ARCHIVED" },
   });
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
 }
 
 export async function unignoreJob(
@@ -117,6 +120,7 @@ export async function unignoreJob(
     data: { feedStatus },
   });
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
 }
 
 export async function batchIgnoreJobs(
@@ -136,6 +140,7 @@ export async function batchIgnoreJobs(
     data: { feedStatus: "ARCHIVED" },
   });
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
 }
 
 export async function batchSaveJobs(
@@ -156,6 +161,7 @@ export async function batchSaveJobs(
     data: { feedStatus: save ? "SAVED" : "NEW" },
   });
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
 }
 
 export type JobScoreUpdate = {
@@ -179,6 +185,9 @@ export async function analyzeJob(
     include: { user: { include: { usage: true } } },
   });
   if (!profile) throw new Error("Profile not found");
+
+  const { allowed } = checkRateLimit(userId, "analyze", 10);
+  if (!allowed) return { error: "UNKNOWN" as const };
 
   const usage = profile.user.usage;
   if (usage && usage.currentMonthInputTokens >= usage.monthlyLimitInputTokens) {
@@ -304,6 +313,7 @@ export async function discardAnalysis(
 
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath("/dashboard");
+  revalidateTag("dashboard-stats");
 }
 
 export async function updateJobNotes(
