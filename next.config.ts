@@ -9,7 +9,7 @@ const csp = [
   "img-src 'self' data: https://logo.clearbit.com https://img.clerk.com",
   "font-src 'self'",
   "connect-src 'self' https://api.clerk.com https://*.clerk.accounts.dev https://openrouter.ai",
-  "frame-src https://challenges.cloudflare.com https://*.clerk.accounts.dev",
+  "frame-src 'self' blob: https://challenges.cloudflare.com https://*.clerk.accounts.dev",
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",
