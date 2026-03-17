@@ -63,21 +63,21 @@ function FeedScene() {
         >
           <div
             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded text-[10px] font-black ${
-              score === 94 ? "bg-[#22d3ee] text-[#080808]" : "bg-[#1a1a1a] text-white"
+              score === 94 ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "bg-[var(--bg-subtle)] text-[var(--text)]"
             }`}
           >
             {score}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="mb-0.5 truncate text-[11px] font-semibold text-[#e0e0e0]">{title}</p>
-            <p className="text-[9px] text-[#444]">{company}</p>
+            <p className="mb-0.5 truncate text-[11px] font-semibold text-[var(--text)]">{title}</p>
+            <p className="text-[9px] text-[var(--text-muted)]">{company}</p>
           </div>
           {tag && (
             <span
               className={`shrink-0 whitespace-nowrap rounded-[3px] border px-[7px] py-0.5 text-[8px] font-bold tracking-[0.06em] ${
                 tag === "GO"
-                  ? "border-[rgba(34,211,238,0.2)] bg-[rgba(34,211,238,0.08)] text-[#22d3ee]"
-                  : "border-[#1e1e1e] bg-[#141414] text-[#555]"
+                  ? "border-[var(--accent-muted)] bg-[var(--accent-muted)] text-[var(--accent)]"
+                  : "border-[var(--border)] bg-[var(--bg-subtle)] text-[var(--text-muted)]"
               }`}
             >
               {tag}
@@ -113,30 +113,30 @@ function TailorScene() {
       <div className="mb-3 flex gap-3">
         {/* Job Description */}
         <div className="min-w-0 flex-1">
-          <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[#444]">
+          <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
             Job Description
           </p>
-          <div className="text-[9px] leading-[1.65] text-[#555]">
+          <div className="text-[9px] leading-[1.65] text-[var(--text-muted)]">
             <p>Senior Frontend Engineer</p>
             <p className="mt-1 opacity-70">5+ yrs React, TypeScript</p>
             <p className="mt-1 opacity-50">Remote · Series B startup</p>
             <p className="mt-1 opacity-[0.35]">Own the design system</p>
           </div>
         </div>
-        <div className="w-px shrink-0 bg-[#1e1e1e]" />
+        <div className="w-px shrink-0 bg-[var(--border)]" />
         {/* Your Resume */}
         <div className="min-w-0 flex-1">
-          <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[#444]">
+          <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
             Your Resume
           </p>
           <div className="min-h-[60px] text-[9px] leading-[1.65]">
             {phase === "streaming" ? (
-              <p className="overflow-hidden whitespace-nowrap text-[#aaa] animate-[text-reveal_3s_linear_forwards]">
+              <p className="overflow-hidden whitespace-nowrap text-[var(--text)] animate-[text-reveal_3s_linear_forwards]">
                 {RESUME_TEXT}
                 <span className="opacity-50">|</span>
               </p>
             ) : (
-              <div className="text-[#555]">
+              <div className="text-[var(--text-muted)]">
                 <p>Led frontend at early-stage startup</p>
                 <p className="mt-1 opacity-70">React, Node, PostgreSQL</p>
               </div>
@@ -145,12 +145,12 @@ function TailorScene() {
         </div>
       </div>
 
-      {/* Tailor button — lights up cyan after click */}
+      {/* Tailor button — lights up accent after click */}
       <div
-        className={`inline-flex h-[22px] items-center rounded border border-[rgba(34,211,238,0.25)] px-[10px] text-[9px] font-bold transition-all duration-150 ${
+        className={`inline-flex h-[22px] items-center rounded border px-[10px] text-[9px] font-bold transition-all duration-150 ${
           phase === "moving"
-            ? "bg-[rgba(34,211,238,0.08)] text-[#22d3ee]"
-            : "bg-[#22d3ee] text-[#080808]"
+            ? "border-[var(--border)] bg-[var(--accent-muted)] text-[var(--accent)]"
+            : "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]"
         }`}
       >
         Tailor →
@@ -169,8 +169,8 @@ function TailorScene() {
         <svg viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path
             d="M2 2L2 14L5.5 11L8 15.5L9.5 14.8L7 10.3L11 10.3L2 2Z"
-            fill="white"
-            stroke="#080808"
+            fill="var(--text)"
+            stroke="var(--bg)"
             strokeWidth="0.6"
           />
         </svg>
@@ -186,18 +186,18 @@ function PipelineScene() {
     <div className="flex gap-2">
       {PIPELINE_COLS.map(({ label, cards }, colIndex) => (
         <div key={label} className="min-w-0 flex-1">
-          <p className="mb-1.5 truncate text-[8px] font-bold uppercase tracking-[0.06em] text-[#444]">
+          <p className="mb-1.5 truncate text-[8px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
             {label}
           </p>
           <div className="flex flex-col gap-1">
             {cards.map(({ title, company }, cardIndex) => (
               <div
                 key={title}
-                className="rounded-[3px] border border-[#1e1e1e] bg-[#161616] px-2 py-1.5 opacity-0 animate-[fade-in-up_0.25s_ease-out_forwards]"
+                className="rounded-[3px] border border-[var(--border)] bg-[var(--bg-subtle)] px-2 py-1.5 opacity-0 animate-[fade-in-up_0.25s_ease-out_forwards]"
                 style={{ animationDelay: `${colIndex * 0.15 + cardIndex * 0.1}s` }}
               >
-                <p className="mb-px truncate text-[8px] font-semibold text-[#ccc]">{title}</p>
-                <p className="text-[7px] text-[#444]">{company}</p>
+                <p className="mb-px truncate text-[8px] font-semibold text-[var(--text)]">{title}</p>
+                <p className="text-[7px] text-[var(--text-muted)]">{company}</p>
               </div>
             ))}
           </div>
@@ -222,20 +222,20 @@ export function HeroDemoPreview() {
   }, [sceneIndex, scene]);
 
   return (
-    <div className="overflow-hidden rounded-md border border-[#1a1a1a] bg-[#0d0d0d] shadow-[0_0_60px_rgba(34,211,238,0.04)]">
+    <div className="overflow-hidden rounded-md border border-[var(--border)] bg-[var(--bg-card)] shadow-[var(--shadow-card)]">
       {/* Chrome bar */}
-      <div className="flex items-center gap-2 border-b border-b-[#1a1a1a] bg-[#111] px-3 py-[7px]">
+      <div className="flex items-center gap-2 border-b border-b-[var(--border)] bg-[var(--bg-subtle)] px-3 py-[7px]">
         <div className="flex gap-1">
           {[0, 1, 2].map((i) => (
             <span
               key={i}
-              className="inline-block h-1.5 w-1.5 rounded-full bg-[#2a2a2a]"
+              className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--border-strong)]"
             />
           ))}
         </div>
         <span
           key={scene}
-          className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#333] animate-[fade-in-up_0.2s_ease-out_forwards]"
+          className="text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)] animate-[fade-in-up_0.2s_ease-out_forwards]"
         >
           {SCENE_LABELS[scene]}
         </span>
