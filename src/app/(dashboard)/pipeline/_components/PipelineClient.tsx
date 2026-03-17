@@ -38,7 +38,7 @@ export function PipelineClient({ initialSort, initialDir }: PipelineClientProps)
   const [dir, setDir] = useState(initialDir);
 
   if (!hydrated) {
-    return null;
+    return <PipelineSkeleton />;
   }
 
   const sortedActive = sortApplications(activeApps, sort, dir);
@@ -83,6 +83,37 @@ export function PipelineClient({ initialSort, initialDir }: PipelineClientProps)
         activeApplications={sortedActive}
         closedApplications={sortedClosed}
       />
+    </div>
+  );
+}
+
+function PipelineSkeleton() {
+  return (
+    <div className="animate-pulse space-y-6" aria-busy="true" aria-label="Loading your pipeline">
+      {/* Heading */}
+      <div className="space-y-2">
+        <div className="h-3 w-24 rounded bg-[var(--bg-subtle)]" />
+        <div className="h-8 w-56 rounded bg-[var(--bg-subtle)]" />
+      </div>
+
+      {/* Stats row */}
+      <div className="flex gap-3">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-16 flex-1 rounded-xl border border-[var(--border)] bg-[var(--bg-card)]" />
+        ))}
+      </div>
+
+      {/* Table rows */}
+      <div className="overflow-hidden rounded-xl border border-[var(--border)]">
+        <div className="h-10 border-b border-[var(--border)] bg-[var(--bg-subtle)]" />
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 border-b border-[var(--border)] bg-[var(--bg-card)] px-4 py-3 last:border-0">
+            <div className="h-4 flex-1 rounded bg-[var(--bg-subtle)]" />
+            <div className="h-7 w-28 rounded-md bg-[var(--bg-subtle)]" />
+            <div className="h-4 w-20 rounded bg-[var(--bg-subtle)]" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

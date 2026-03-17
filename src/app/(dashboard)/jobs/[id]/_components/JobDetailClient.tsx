@@ -38,7 +38,13 @@ interface JobDetailClientProps {
 }
 
 export function JobDetailClient({ jobId }: JobDetailClientProps) {
+  const hydrated = useDashboardStore((s) => s.hydrated);
   const job = useDashboardStore((s) => s.jobs.find((j) => j.id === jobId) ?? null);
+
+  // Store not yet hydrated — show skeleton while data loads
+  if (!hydrated) {
+    return <JobDetailSkeleton />;
+  }
 
   if (!job) {
     return (
@@ -266,6 +272,48 @@ export function JobDetailClient({ jobId }: JobDetailClientProps) {
               profileId={job.profileId}
               initialNotes={job.userNotes}
             />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function JobDetailSkeleton() {
+  return (
+    <div className="animate-pulse" aria-busy="true" aria-label="Loading job details">
+      <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
+        {/* Main content */}
+        <div className="flex-1 space-y-6">
+          {/* Header */}
+          <div className="space-y-3">
+            <div className="h-7 w-3/4 rounded bg-[var(--bg-subtle)]" />
+            <div className="h-4 w-1/3 rounded bg-[var(--bg-subtle)]" />
+            <div className="flex gap-2">
+              <div className="h-5 w-16 rounded-full bg-[var(--bg-subtle)]" />
+              <div className="h-5 w-20 rounded-full bg-[var(--bg-subtle)]" />
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            {[100, 95, 88, 100, 72, 90, 80].map((w, i) => (
+              <div key={i} className="h-3 rounded bg-[var(--bg-subtle)]" style={{ width: `${w}%` }} />
+            ))}
+          </div>
+        </div>
+
+        {/* Sidebar */}
+        <div className="w-full space-y-4 lg:w-72 lg:shrink-0">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-3">
+            <div className="h-16 w-16 mx-auto rounded-lg bg-[var(--bg-subtle)]" />
+            <div className="h-4 w-2/3 mx-auto rounded bg-[var(--bg-subtle)]" />
+            <div className="h-3 w-1/2 mx-auto rounded bg-[var(--bg-subtle)]" />
+          </div>
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4 space-y-2">
+            {[80, 65, 75].map((w, i) => (
+              <div key={i} className="h-3 rounded bg-[var(--bg-subtle)]" style={{ width: `${w}%` }} />
+            ))}
           </div>
         </div>
       </div>
