@@ -65,7 +65,7 @@ function UndoToast({
       <div
         key={toast.jobId}
         className="absolute bottom-0 left-0 h-[3px] w-full origin-left bg-[var(--accent)]"
-        style={{ animation: "toast-drain 2s linear forwards" }}
+        style={{ animation: "toast-drain 5s linear forwards" }}
       />
     </div>
   );
@@ -103,7 +103,7 @@ function NoticeToast({
       </div>
       <div
         className="absolute bottom-0 left-0 h-[3px] w-full origin-left bg-[var(--text-muted)]"
-        style={{ animation: "toast-drain 3s linear forwards" }}
+        style={{ animation: "toast-drain 5s linear forwards" }}
       />
     </div>
   );
@@ -233,7 +233,7 @@ export function JobFeed({
     noticeTimerRef.current = setTimeout(() => {
       setNotice(null);
       noticeTimerRef.current = null;
-    }, 3000);
+    }, 5000);
   }, []);
 
   const dismissNotice = useCallback(() => {
@@ -247,7 +247,7 @@ export function JobFeed({
     toastTimerRef.current = setTimeout(() => {
       setToast(null);
       toastTimerRef.current = null;
-    }, 2000);
+    }, 5000);
   }
 
   function dismissToast() {

@@ -35,7 +35,7 @@ export function LandingNav({ isSignedIn }: LandingNavProps) {
         {/* Brand */}
         <div className="flex items-center gap-2.5">
           <svg viewBox="0 0 32 32" className="h-6 w-6 shrink-0" aria-hidden="true">
-            <rect width="32" height="32" rx="7" fill="#ffffff" />
+            <rect width="32" height="32" rx="7" fill="#22d3ee" />
             <path
               d="M8 17L13 22L24 10"
               stroke="#080808"
@@ -63,7 +63,8 @@ export function LandingNav({ isSignedIn }: LandingNavProps) {
             <>
               <Link
                 href="/dashboard"
-                className="inline-flex h-8 items-center rounded-lg bg-white px-4 text-sm font-semibold text-[#080808] transition-colors hover:bg-[#e5e5e5]"
+                className="inline-flex h-8 items-center rounded-lg px-4 text-sm font-semibold transition-all hover:opacity-90"
+                style={{ background: "#22d3ee", color: "#080808" }}
               >
                 Dashboard →
               </Link>

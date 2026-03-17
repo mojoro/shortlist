@@ -35,7 +35,8 @@ export function SignedInHero({ dashboardHref }: SignedInHeroProps) {
       </h1>
       <Link
         href={dashboardHref}
-        className="inline-flex h-11 items-center rounded-lg bg-white px-7 text-sm font-semibold text-[#080808] transition-colors hover:bg-[#e5e5e5]"
+        className="inline-flex h-11 items-center rounded-lg px-7 text-sm font-semibold transition-all hover:opacity-90"
+        style={{ background: "#22d3ee", color: "#080808" }}
       >
         Go to dashboard →
       </Link>
