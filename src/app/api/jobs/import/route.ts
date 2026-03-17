@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { env } from "@/env";
 import { importJobSchema } from "@/lib/validations";
 import type { LocationType, JobType } from "@prisma/client";
 
@@ -84,7 +85,7 @@ export async function POST(req: Request) {
       method:  "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization:  `Bearer ${process.env.CRON_SECRET}`,
+        Authorization:  `Bearer ${env.CRON_SECRET}`,
       },
       body: JSON.stringify({ profileId }),
     });

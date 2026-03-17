@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef, useCallback } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { JobCard } from "@/components/jobs/JobCard";
 import {
   getMoreJobs,
@@ -227,19 +227,19 @@ export function JobFeed({
   const [notice, setNotice] = useState<string | null>(null);
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showNotice = useCallback((message: string) => {
+  function showNotice(message: string) {
     if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
     setNotice(message);
     noticeTimerRef.current = setTimeout(() => {
       setNotice(null);
       noticeTimerRef.current = null;
     }, 5000);
-  }, []);
+  }
 
-  const dismissNotice = useCallback(() => {
+  function dismissNotice() {
     if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
     setNotice(null);
-  }, []);
+  }
 
   function showToast(job: JobWithApplication) {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
