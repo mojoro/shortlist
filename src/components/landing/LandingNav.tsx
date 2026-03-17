@@ -3,13 +3,37 @@
 import Link from "next/link";
 import { useRef, useState, useEffect } from "react";
 import { useAuth, useUser, SignOutButton } from "@clerk/nextjs";
+import { useTheme } from "next-themes";
 import { APP_CONFIG } from "@/config/app";
+
+function IconSun() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+    </svg>
+  );
+}
+
+function IconMoon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  );
+}
 
 export function LandingNav() {
   const { isSignedIn, isLoaded } = useAuth();
   const { user } = useUser();
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setMounted(true), []);
+
+  const isDark = resolvedTheme === "dark";
 
   const initial =
     user?.firstName?.[0]?.toUpperCase() ??
@@ -55,6 +79,38 @@ export function LandingNav() {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
+          {/* Theme toggle */}
+          <button
+            onClick={() => setTheme(isDark ? "light" : "dark")}
+            aria-label={mounted ? `Switch to ${isDark ? "light" : "dark"} mode` : "Toggle theme"}
+            suppressHydrationWarning
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "32px",
+              height: "32px",
+              borderRadius: "8px",
+              border: "1px solid #222",
+              background: "transparent",
+              color: "#666",
+              cursor: "pointer",
+              transition: "border-color 0.15s, color 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "#444";
+              e.currentTarget.style.color = "#ccc";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "#222";
+              e.currentTarget.style.color = "#666";
+            }}
+          >
+            <span suppressHydrationWarning>
+              {mounted ? (isDark ? <IconSun /> : <IconMoon />) : <IconMoon />}
+            </span>
+          </button>
+
           {isLoaded && isSignedIn ? (
             <>
               <Link
