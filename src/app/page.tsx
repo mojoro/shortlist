@@ -6,6 +6,8 @@ import { APP_CONFIG } from "@/config/app";
 import { prisma } from "@/lib/prisma";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { SignedInHero } from "@/components/landing/SignedInHero";
+import { FeatureRow } from "@/components/landing/FeatureRow";
+import { HeroDemoPreview } from "@/components/landing/HeroDemoPreview";
 
 export const metadata: Metadata = {
   title: `${APP_CONFIG.name} — AI job search`,
@@ -17,52 +19,22 @@ export const metadata: Metadata = {
 
 function PanelShell({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div
-      style={{
-        background: "#0d0d0d",
-        border: "1px solid #1a1a1a",
-        borderRadius: "6px",
-        overflow: "hidden",
-      }}
-    >
+    <div className="overflow-hidden rounded-md border border-[#1a1a1a] bg-[#0d0d0d]">
       {/* Chrome bar */}
-      <div
-        style={{
-          background: "#111",
-          padding: "7px 12px",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          borderBottom: "1px solid #1a1a1a",
-        }}
-      >
-        <div style={{ display: "flex", gap: "4px" }}>
+      <div className="flex items-center gap-2 border-b border-b-[#1a1a1a] bg-[#111] px-3 py-[7px]">
+        <div className="flex gap-1">
           {[0, 1, 2].map((i) => (
             <span
               key={i}
-              style={{
-                width: "6px",
-                height: "6px",
-                borderRadius: "50%",
-                background: "#2a2a2a",
-                display: "inline-block",
-              }}
+              className="inline-block h-1.5 w-1.5 rounded-full bg-[#2a2a2a]"
             />
           ))}
         </div>
-        <span
-          style={{
-            fontSize: "9px",
-            fontWeight: 700,
-            letterSpacing: "0.12em",
-            color: "#333",
-            textTransform: "uppercase",
-          }}
-        >
+        <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#333]">
           {label}
         </span>
       </div>
-      <div style={{ padding: "14px 14px 12px" }}>{children}</div>
+      <div className="px-3.5 pb-3 pt-3.5">{children}</div>
     </div>
   );
 }
@@ -72,13 +44,8 @@ function PanelShell({ label, children }: { label: string; children: ReactNode })
 function Bar({ w, h = 3, o = 1 }: { w: string; h?: number; o?: number }) {
   return (
     <div
-      style={{
-        height: `${h}px`,
-        background: "#252525",
-        borderRadius: "2px",
-        width: w,
-        opacity: o,
-      }}
+      className="rounded-[2px] bg-[#252525]"
+      style={{ height: `${h}px`, width: w, opacity: o }}
     />
   );
 }
@@ -93,46 +60,31 @@ function JobFeedPanel() {
   ];
   return (
     <PanelShell label="Job Feed">
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+      <div className="flex flex-col gap-2">
         {rows.map(({ score, tag, o }) => (
           <div
             key={score}
-            style={{ display: "flex", alignItems: "center", gap: "10px", opacity: o }}
+            className="flex items-center gap-2.5"
+            style={{ opacity: o }}
           >
             <div
-              style={{
-                width: "32px",
-                height: "32px",
-                background: score === 94 ? "#22d3ee" : "#1a1a1a",
-                borderRadius: "4px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "10px",
-                fontWeight: 900,
-                color: score === 94 ? "#080808" : "#fff",
-                flexShrink: 0,
-              }}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded text-[10px] font-black ${
+                score === 94 ? "bg-[#22d3ee] text-[#080808]" : "bg-[#1a1a1a] text-white"
+              }`}
             >
               {score}
             </div>
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
+            <div className="flex flex-1 flex-col gap-1">
               <Bar w={`${55 + (score % 22)}%`} h={4} />
               <Bar w={`${30 + (score % 15)}%`} h={3} o={0.55} />
             </div>
             {tag && (
               <span
-                style={{
-                  fontSize: "8px",
-                  fontWeight: 700,
-                  letterSpacing: "0.06em",
-                  color: tag === "GO" ? "#22d3ee" : "#555",
-                  background: tag === "GO" ? "rgba(34,211,238,0.08)" : "#141414",
-                  padding: "2px 7px",
-                  borderRadius: "3px",
-                  border: `1px solid ${tag === "GO" ? "rgba(34,211,238,0.2)" : "#1e1e1e"}`,
-                  whiteSpace: "nowrap",
-                }}
+                className={`whitespace-nowrap rounded-[3px] border px-[7px] py-0.5 text-[8px] font-bold tracking-[0.06em] ${
+                  tag === "GO"
+                    ? "border-[rgba(34,211,238,0.2)] bg-[rgba(34,211,238,0.08)] text-[#22d3ee]"
+                    : "border-[#1e1e1e] bg-[#141414] text-[#555]"
+                }`}
               >
                 {tag}
               </span>
@@ -147,95 +99,37 @@ function JobFeedPanel() {
 function JobDetailPanel() {
   return (
     <PanelShell label="Job Detail">
-      <div
-        style={{ display: "flex", gap: "12px", marginBottom: "12px", alignItems: "center" }}
-      >
-        <div
-          style={{
-            width: "44px",
-            height: "44px",
-            background: "#1a1a1a",
-            borderRadius: "6px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "16px",
-            fontWeight: 900,
-            color: "#fff",
-            flexShrink: 0,
-          }}
-        >
+      <div className="mb-3 flex items-center gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-[#1a1a1a] text-base font-black text-white">
           94
         </div>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "5px" }}>
+        <div className="flex flex-1 flex-col gap-[5px]">
           <Bar w="70%" h={4} />
-          <span
-            style={{
-              fontSize: "8px",
-              color: "#555",
-              fontWeight: 600,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-            }}
-          >
+          <span className="text-[8px] font-semibold uppercase tracking-[0.06em] text-[#555]">
             Strong match
           </span>
         </div>
       </div>
 
-      <div style={{ marginBottom: "8px" }}>
-        <p
-          style={{
-            fontSize: "8px",
-            color: "#444",
-            fontWeight: 700,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            marginBottom: "5px",
-          }}
-        >
+      <div className="mb-2">
+        <p className="mb-[5px] text-[8px] font-bold uppercase tracking-[0.1em] text-[#444]">
           Match points
         </p>
         {["72%", "58%", "48%"].map((w, i) => (
-          <div
-            key={i}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              marginBottom: "4px",
-            }}
-          >
-            <span style={{ fontSize: "8px", color: "#444", width: "8px" }}>✓</span>
+          <div key={i} className="mb-1 flex items-center gap-1.5">
+            <span className="w-2 text-[8px] text-[#444]">✓</span>
             <Bar w={w} h={3} />
           </div>
         ))}
       </div>
 
       <div>
-        <p
-          style={{
-            fontSize: "8px",
-            color: "#444",
-            fontWeight: 700,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            marginBottom: "5px",
-          }}
-        >
+        <p className="mb-[5px] text-[8px] font-bold uppercase tracking-[0.1em] text-[#444]">
           Gap points
         </p>
         {["44%", "32%"].map((w, i) => (
-          <div
-            key={i}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              marginBottom: "4px",
-            }}
-          >
-            <span style={{ fontSize: "8px", color: "#2a2a2a", width: "8px" }}>—</span>
+          <div key={i} className="mb-1 flex items-center gap-1.5">
+            <span className="w-2 text-[8px] text-[#2a2a2a]">—</span>
             <Bar w={w} h={3} o={0.45} />
           </div>
         ))}
@@ -247,59 +141,18 @@ function JobDetailPanel() {
 function ImportPanel() {
   return (
     <PanelShell label="Import">
-      <div style={{ display: "flex", gap: "6px", marginBottom: "12px" }}>
-        <div
-          style={{
-            flex: 1,
-            height: "28px",
-            background: "#161616",
-            border: "1px solid #222",
-            borderRadius: "4px",
-            display: "flex",
-            alignItems: "center",
-            padding: "0 10px",
-          }}
-        >
-          <span style={{ fontSize: "9px", color: "#333" }}>https://...</span>
+      <div className="mb-3 flex gap-1.5">
+        <div className="flex h-7 flex-1 items-center rounded border border-[#222] bg-[#161616] px-2.5">
+          <span className="text-[9px] text-[#333]">https://...</span>
         </div>
-        <div
-          style={{
-            height: "28px",
-            padding: "0 10px",
-            background: "#1e1e1e",
-            border: "1px solid #2a2a2a",
-            borderRadius: "4px",
-            display: "flex",
-            alignItems: "center",
-            fontSize: "9px",
-            fontWeight: 700,
-            color: "#666",
-            whiteSpace: "nowrap",
-          }}
-        >
+        <div className="flex h-7 items-center whitespace-nowrap rounded border border-[#2a2a2a] bg-[#1e1e1e] px-2.5 text-[9px] font-bold text-[#666]">
           Extract
         </div>
       </div>
-      <div style={{ borderTop: "1px solid #1a1a1a", paddingTop: "12px" }}>
-        <div
-          style={{
-            background: "#131313",
-            border: "1px solid #1e1e1e",
-            borderRadius: "4px",
-            padding: "10px 12px",
-          }}
-        >
-          <p
-            style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              color: "#fff",
-              marginBottom: "4px",
-            }}
-          >
-            Senior Product Engineer
-          </p>
-          <p style={{ fontSize: "9px", color: "#555" }}>Acme Corp · Full-time</p>
+      <div className="border-t border-t-[#1a1a1a] pt-3">
+        <div className="rounded border border-[#1e1e1e] bg-[#131313] px-3 py-2.5">
+          <p className="mb-1 text-[11px] font-bold text-white">Senior Product Engineer</p>
+          <p className="text-[9px] text-[#555]">Acme Corp · Full-time</p>
         </div>
       </div>
     </PanelShell>
@@ -309,42 +162,24 @@ function ImportPanel() {
 function TailorPanel() {
   return (
     <PanelShell label="Tailor">
-      <div style={{ display: "flex", gap: "12px", marginBottom: "10px" }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p
-            style={{
-              fontSize: "8px",
-              color: "#444",
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              marginBottom: "6px",
-            }}
-          >
+      <div className="mb-2.5 flex gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[#444]">
             Job Description
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <div className="flex flex-col gap-1">
             <Bar w="90%" h={3} />
             <Bar w="75%" h={3} o={0.7} />
             <Bar w="85%" h={3} o={0.6} />
             <Bar w="60%" h={3} o={0.45} />
           </div>
         </div>
-        <div style={{ width: "1px", background: "#1e1e1e", flexShrink: 0 }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p
-            style={{
-              fontSize: "8px",
-              color: "#444",
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              marginBottom: "6px",
-            }}
-          >
+        <div className="w-px shrink-0 bg-[#1e1e1e]" />
+        <div className="min-w-0 flex-1">
+          <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[#444]">
             Your Resume
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <div className="flex flex-col gap-1">
             <Bar w="80%" h={3} />
             <Bar w="95%" h={3} o={0.7} />
             <Bar w="70%" h={3} o={0.6} />
@@ -352,19 +187,7 @@ function TailorPanel() {
           </div>
         </div>
       </div>
-      <div
-        style={{
-          display: "inline-flex",
-          height: "22px",
-          alignItems: "center",
-          padding: "0 10px",
-          background: "#fff",
-          color: "#080808",
-          borderRadius: "4px",
-          fontSize: "9px",
-          fontWeight: 700,
-        }}
-      >
+      <div className="inline-flex h-[22px] items-center rounded bg-white px-2.5 text-[9px] font-bold text-[#080808]">
         Export PDF
       </div>
     </PanelShell>
@@ -378,33 +201,17 @@ function WritingRulesPanel() {
   ];
   return (
     <PanelShell label="Writing Rules">
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div className="flex flex-col gap-3">
         {sections.map(({ label, pills }) => (
           <div key={label}>
-            <p
-              style={{
-                fontSize: "8px",
-                color: "#444",
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                marginBottom: "6px",
-              }}
-            >
+            <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[#444]">
               {label}
             </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+            <div className="flex flex-wrap gap-[5px]">
               {pills.map((pill) => (
                 <span
                   key={pill}
-                  style={{
-                    fontSize: "9px",
-                    color: "#888",
-                    background: "#161616",
-                    border: "1px solid #222",
-                    borderRadius: "3px",
-                    padding: "2px 8px",
-                  }}
+                  className="rounded-[3px] border border-[#222] bg-[#161616] px-2 py-0.5 text-[9px] text-[#888]"
                 >
                   {pill}
                 </span>
@@ -426,34 +233,17 @@ function PipelinePanel() {
   ];
   return (
     <PanelShell label="Pipeline">
-      <div style={{ display: "flex", gap: "8px" }}>
+      <div className="flex gap-2">
         {cols.map(({ label, n }) => (
-          <div key={label} style={{ flex: 1, minWidth: 0 }}>
-            <p
-              style={{
-                fontSize: "8px",
-                color: "#444",
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                marginBottom: "6px",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
+          <div key={label} className="min-w-0 flex-1">
+            <p className="mb-1.5 truncate text-[8px] font-bold uppercase tracking-[0.06em] text-[#444]">
               {label}
             </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <div className="flex flex-col gap-1">
               {Array.from({ length: n }).map((_, i) => (
                 <div
                   key={i}
-                  style={{
-                    height: "20px",
-                    background: "#161616",
-                    border: "1px solid #1e1e1e",
-                    borderRadius: "3px",
-                  }}
+                  className="h-5 rounded-[3px] border border-[#1e1e1e] bg-[#161616]"
                 />
               ))}
             </div>
@@ -471,62 +261,32 @@ function ProfilesPanel() {
   ];
   return (
     <PanelShell label="Profiles">
-      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      <div className="flex flex-col gap-1.5">
         {profiles.map(({ name, active }) => (
           <div
             key={name}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "8px 10px",
-              background: active ? "#131313" : "#0f0f0f",
-              border: `1px solid ${active ? "#222" : "#181818"}`,
-              borderRadius: "4px",
-            }}
+            className={`flex items-center gap-2 rounded border px-2.5 py-2 ${
+              active ? "border-[#222] bg-[#131313]" : "border-[#181818] bg-[#0f0f0f]"
+            }`}
           >
             <span
-              style={{
-                width: "6px",
-                height: "6px",
-                borderRadius: "50%",
-                background: active ? "#22d3ee" : "#2a2a2a",
-                flexShrink: 0,
-              }}
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                active ? "bg-[#22d3ee]" : "bg-[#2a2a2a]"
+              }`}
             />
             <span
-              style={{
-                flex: 1,
-                fontSize: "10px",
-                color: active ? "#fff" : "#555",
-                fontWeight: active ? 600 : 400,
-              }}
+              className={`flex-1 text-[10px] ${
+                active ? "font-semibold text-white" : "font-normal text-[#555]"
+              }`}
             >
               {name}
             </span>
             {active ? (
-              <span
-                style={{
-                  fontSize: "8px",
-                  color: "#444",
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                }}
-              >
+              <span className="text-[8px] uppercase tracking-[0.06em] text-[#444]">
                 Active
               </span>
             ) : (
-              <span
-                style={{
-                  fontSize: "8px",
-                  fontWeight: 700,
-                  color: "#666",
-                  background: "#1a1a1a",
-                  border: "1px solid #252525",
-                  borderRadius: "3px",
-                  padding: "2px 8px",
-                }}
-              >
+              <span className="rounded-[3px] border border-[#252525] bg-[#1a1a1a] px-2 py-0.5 text-[8px] font-bold text-[#666]">
                 Switch
               </span>
             )}
@@ -556,37 +316,37 @@ const FEATURES: Feature[] = [
   },
   {
     bold: "Analyzed.",
-    italic: "Every angle.",
+    italic: "Objective insights.",
     description:
-      "Each role gets a detailed breakdown — match points, gap points, and an AI summary — so you know exactly why a job does or doesn't fit before you apply.",
+      "Each role gets a detailed breakdown — why you fit, why you don't, and a skimmable summary — so you know exactly why a job does or doesn't fit before you apply.",
     panel: <JobDetailPanel />,
   },
   {
     bold: "Import.",
-    italic: "Anything.",
+    italic: "From anywhere.",
     description:
-      "Paste a job URL or raw text and the AI extracts the details automatically. Works with any job board, any format.",
+      "Paste a job URL or raw text and the app extracts the details automatically. Works with nearly any job board, any format.",
     panel: <ImportPanel />,
   },
   {
     bold: "Tailored.",
-    italic: "In seconds.",
+    italic: "Your resume fast.",
     description:
-      "Pick a role, click Tailor. The AI rewrites your resume to mirror the job description — keep what matters, cut what doesn't, export straight to PDF.",
+      "Pick a role, click Tailor. The AI rewrites your resume in your preferred format to mirror the job description. Once you have it, edit it. Keep what matters, cut what doesn't, export straight to PDF.",
     panel: <TailorPanel />,
   },
   {
     bold: "Yours.",
     italic: "Down to the phrasing.",
     description:
-      "Set phrases the AI must always protect, phrases it must never use, and claims it should never make on your behalf. Your voice stays yours.",
+      "Set phrases the AI must always protect, phrases it must never use, and claims it should never make on your behalf. Your voice stays yours and your results improve as the AI learns how to write in your voice.",
     panel: <WritingRulesPanel />,
   },
   {
     bold: "Tracked.",
-    italic: "All of it.",
+    italic: "Every opportunity.",
     description:
-      "A clean pipeline keeps every application in view from first interest through to offer. No spreadsheets, no lost follow-ups.",
+      "A clean pipeline keeps every application in view, paired with your chosen resume version, from first interest through to offer. No scattered files, no lost follow-ups.",
     panel: <PipelinePanel />,
   },
   {
@@ -598,152 +358,89 @@ const FEATURES: Feature[] = [
   },
 ];
 
-/* ─── Feature row ──────────────────────────────────────────── */
 
-function FeatureRow({ bold, italic, description, panel }: Feature) {
+/* ─── Hero — signed-out ────────────────────────────────────── */
+
+function StatsRow() {
   return (
-    <div
-      className="flex flex-col gap-8 py-10 md:flex-row md:items-start"
-      style={{ borderTop: "1px solid #0f0f0f" }}
-    >
-      <div className="w-full shrink-0 md:w-[220px]">
-        <p
-          className="mb-3"
-          style={{
-            fontSize: "17px",
-            fontWeight: 800,
-            letterSpacing: "-0.02em",
-            lineHeight: 1.3,
-          }}
-        >
-          <strong style={{ color: "#fff", fontWeight: 800 }}>{bold}</strong>{" "}
-          <em style={{ fontStyle: "italic", color: "#3a3a3a", fontWeight: 400 }}>{italic}</em>
-        </p>
-        <p style={{ fontSize: "12px", color: "#555", lineHeight: 1.75 }}>{description}</p>
-      </div>
-      <div className="min-w-0 flex-1">{panel}</div>
+    <div className="flex flex-row flex-wrap items-start gap-0">
+      {(
+        [
+          { stat: "<2m", label: "Setup" },
+          { stat: "Free", label: "Up to 100k tokens" },
+          { stat: "Automated", label: "Hiring manager review" },
+        ] as const
+      ).map(({ stat, label }, i) => (
+        <div key={stat} className="flex items-start">
+          {i > 0 && (
+            <div className="mx-5 h-9 w-px shrink-0 bg-[#1e1e1e]" />
+          )}
+          <div>
+            <p className="text-[14px] font-extrabold leading-[1.2] text-white">
+              {stat === "<2m" ? <>{"<"}2m</> : stat}
+            </p>
+            <p className="mt-0.5 text-[11px] text-[#444]">{label}</p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
-/* ─── Hero — signed-out ────────────────────────────────────── */
-
 function SignedOutHero() {
   return (
-    <div className="max-w-2xl">
-      {/* Eyebrow */}
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "7px",
-          border: "1px solid rgba(34,211,238,0.2)",
-          borderRadius: "999px",
-          padding: "3px 12px",
-          fontSize: "11px",
-          color: "#666",
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          marginBottom: "24px",
-        }}
-      >
-        <span
-          style={{
-            width: "5px",
-            height: "5px",
-            borderRadius: "50%",
-            background: "#22d3ee",
-            flexShrink: 0,
-            animation: "pulse 2s cubic-bezier(0.4,0,0.6,1) infinite",
-          }}
-        />
-        AI-powered job search
-      </span>
+    <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
+      {/* ── Left: copy ── */}
+      <div>
+        {/* Eyebrow */}
+        <span className="mb-6 inline-flex items-center gap-[7px] rounded-full border border-[rgba(34,211,238,0.2)] px-3 py-[3px] text-[11px] uppercase tracking-[0.08em] text-[#666]">
+          <span className="h-[5px] w-[5px] shrink-0 animate-pulse rounded-full bg-[#22d3ee]" />
+          AI-powered job search
+        </span>
 
-      {/* Headline */}
-      <h1
-        style={{
-          fontSize: "clamp(48px, 8vw, 72px)",
-          fontWeight: 900,
-          letterSpacing: "-0.05em",
-          lineHeight: 0.93,
-          color: "#fff",
-          marginBottom: "28px",
-        }}
-      >
-        Get on the
-        <br />
-        shortlist.
-      </h1>
+        {/* Headline */}
+        <h1 className="mb-7 text-[clamp(48px,8vw,72px)] font-black leading-[0.93] tracking-[-0.05em] text-white">
+          Get on the
+          <br />
+          shortlist.
+        </h1>
 
-      {/* Subline */}
-      <p
-        style={{
-          fontSize: "13px",
-          color: "#666",
-          lineHeight: 1.75,
-          maxWidth: "360px",
-          marginBottom: "36px",
-        }}
-      >
-        Score every listing against your background. Tailor every application in seconds.
-        Track your entire search in one place.
-      </p>
+        {/* Subline */}
+        <p className="mb-9 max-w-[360px] text-[13px] leading-[1.75] text-[#666]">
+          Score every listing against your background. Tailor every application in seconds.
+          Track your entire search in one place.
+        </p>
 
-      {/* CTAs */}
-      <div className="mb-14 flex flex-wrap items-center gap-3">
-        <Link
-          href="/sign-up"
-          className="inline-flex h-11 items-center rounded-lg px-7 text-sm font-semibold transition-all hover:opacity-90"
-          style={{ background: "#22d3ee", color: "#080808" }}
-        >
-          Get started free
-        </Link>
-        <Link
-          href="/sign-in"
-          className="inline-flex h-11 items-center rounded-lg border border-[#222] px-7 text-sm font-medium text-[#555] transition-colors hover:border-[#444] hover:text-[#888]"
-        >
-          Sign in
-        </Link>
+        {/* CTAs */}
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/sign-up"
+            className="inline-flex h-11 items-center rounded-lg bg-[#22d3ee] px-7 text-sm font-semibold text-[#080808] transition-all hover:opacity-90"
+          >
+            Get started free
+          </Link>
+          <Link
+            href="/sign-in"
+            className="inline-flex h-11 items-center rounded-lg border border-[#222] px-7 text-sm font-medium text-[#555] transition-colors hover:border-[#444] hover:text-[#888]"
+          >
+            Sign in
+          </Link>
+        </div>
+
+        {/* Stats — desktop position (below CTAs, hidden on mobile) */}
+        <div className="mt-10 hidden lg:block">
+          <StatsRow />
+        </div>
       </div>
 
-      {/* Stats row */}
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-0">
-        {(
-          [
-            { stat: "<2m", label: "Setup" },
-            { stat: "Free", label: "Always" },
-            { stat: "AI", label: "Match scoring" },
-          ] as const
-        ).map(({ stat, label }, i) => (
-          <div key={stat} className="flex items-start">
-            {i > 0 && (
-              <div
-                style={{
-                  width: "1px",
-                  background: "#1e1e1e",
-                  height: "36px",
-                  margin: "0 24px",
-                  flexShrink: 0,
-                }}
-                className="hidden sm:block"
-              />
-            )}
-            <div>
-              <p
-                style={{
-                  fontSize: "14px",
-                  fontWeight: 800,
-                  color: "#fff",
-                  lineHeight: 1.2,
-                }}
-              >
-                {stat === "<2m" ? <>{"<"}2m</> : stat}
-              </p>
-              <p style={{ fontSize: "11px", color: "#444", marginTop: "2px" }}>{label}</p>
-            </div>
-          </div>
-        ))}
+      {/* ── Right: preview ── */}
+      <div>
+        <HeroDemoPreview />
+
+        {/* Stats — mobile position (below preview, hidden on lg+) */}
+        <div className="mt-8 lg:hidden">
+          <StatsRow />
+        </div>
       </div>
     </div>
   );
@@ -763,7 +460,7 @@ export default async function LandingPage() {
   }
 
   return (
-    <div style={{ backgroundColor: "#080808", color: "#ffffff" }} className="min-h-screen">
+    <div className="min-h-screen bg-[#080808] text-white">
       <LandingNav isSignedIn={isSignedIn} />
 
       {/* ── Hero ──────────────────────────────────── */}
@@ -777,16 +474,7 @@ export default async function LandingPage() {
 
       {/* ── Features ──────────────────────────────── */}
       <section className="mx-auto max-w-5xl px-6 pb-24">
-        <p
-          style={{
-            fontSize: "10px",
-            fontWeight: 700,
-            letterSpacing: "0.2em",
-            color: "#333",
-            textTransform: "uppercase",
-            marginBottom: "4px",
-          }}
-        >
+        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#333]">
           What it does
         </p>
         <div>
@@ -803,54 +491,38 @@ export default async function LandingPage() {
       </section>
 
       {/* ── CTA strip ─────────────────────────────── */}
-      <section style={{ backgroundColor: "#0d0d0d", borderTop: "1px solid #111" }}>
+      <section className="border-t border-t-[#111] bg-[#0d0d0d]">
         <div className="mx-auto max-w-5xl px-6 py-20 text-center">
           {isSignedIn ? (
             <>
-              <h2
-                style={{
-                  fontSize: "clamp(22px, 4vw, 30px)",
-                  fontWeight: 900,
-                  lineHeight: 1.1,
-                  letterSpacing: "-0.03em",
-                }}
-              >
+              <h2 className="text-[clamp(22px,4vw,30px)] font-black leading-[1.1] tracking-[-0.03em]">
                 Keep going.
                 <br />
-                <span style={{ color: "#333" }}>Your matches are waiting.</span>
+                <span className="text-[#333]">Your matches are waiting.</span>
               </h2>
-              <p style={{ color: "#444", fontSize: "13px", marginTop: "12px" }}>
+              <p className="mt-3 text-[13px] text-[#444]">
                 Pick up where you left off.
               </p>
               <Link
                 href={dashboardHref}
-                className="mt-8 inline-flex h-11 items-center rounded-lg px-8 text-sm font-semibold transition-all hover:opacity-90"
-                style={{ background: "#22d3ee", color: "#080808" }}
+                className="mt-8 inline-flex h-11 items-center rounded-lg bg-[#22d3ee] px-8 text-sm font-semibold text-[#080808] transition-all hover:opacity-90"
               >
                 Go to dashboard →
               </Link>
             </>
           ) : (
             <>
-              <h2
-                style={{
-                  fontSize: "clamp(22px, 4vw, 30px)",
-                  fontWeight: 900,
-                  lineHeight: 1.1,
-                  letterSpacing: "-0.03em",
-                }}
-              >
+              <h2 className="text-[clamp(22px,4vw,30px)] font-black leading-[1.1] tracking-[-0.03em]">
                 Start your search.
                 <br />
-                <span style={{ color: "#333" }}>It&apos;s free.</span>
+                <span className="text-[#333]">It&apos;s free.</span>
               </h2>
-              <p style={{ color: "#444", fontSize: "13px", marginTop: "12px" }}>
+              <p className="mt-3 text-[13px] text-[#444]">
                 Set up your profile in under two minutes.
               </p>
               <Link
                 href="/sign-up"
-                className="mt-8 inline-flex h-11 items-center rounded-lg px-8 text-sm font-semibold transition-all hover:opacity-90"
-                style={{ background: "#22d3ee", color: "#080808" }}
+                className="mt-8 inline-flex h-11 items-center rounded-lg bg-[#22d3ee] px-8 text-sm font-semibold text-[#080808] transition-all hover:opacity-90"
               >
                 Get started free
               </Link>
@@ -864,7 +536,7 @@ export default async function LandingPage() {
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2">
             <svg viewBox="0 0 32 32" className="h-5 w-5 shrink-0" aria-hidden="true">
-              <rect width="32" height="32" rx="7" style={{ fill: "#333" }} />
+              <rect width="32" height="32" rx="7" fill="#333" />
               <path
                 d="M8 17L13 22L24 10"
                 stroke="#080808"
@@ -874,18 +546,17 @@ export default async function LandingPage() {
                 fill="none"
               />
             </svg>
-            <span style={{ color: "#333", fontSize: "12px", fontWeight: 500 }}>
+            <span className="text-xs font-medium text-[#333]">
               {APP_CONFIG.name}
             </span>
           </div>
-          <p style={{ color: "#333", fontSize: "12px" }}>
+          <p className="text-xs text-[#333]">
             Built by{" "}
             <a
               href="https://johnmoorman.com"
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: "#444" }}
-              className="transition-colors hover:text-[#888]"
+              className="text-[#444] transition-colors hover:text-[#888]"
             >
               John Moorman
             </a>
