@@ -372,13 +372,13 @@ function StatsRow() {
       ).map(({ stat, label }, i) => (
         <div key={stat} className="flex items-start">
           {i > 0 && (
-            <div className="mx-2.5 h-9 w-px shrink-0 bg-[#1e1e1e] sm:mx-5" />
+            <div className="mx-2.5 h-9 w-px shrink-0 bg-[var(--border)] sm:mx-5" />
           )}
           <div>
-            <p className="text-[11px] font-extrabold leading-[1.2] text-white sm:text-[14px]">
+            <p className="text-[11px] font-extrabold leading-[1.2] text-[var(--text)] sm:text-[14px]">
               {stat === "<2m" ? <>{"<"}2m</> : stat}
             </p>
-            <p className="mt-0.5 text-[9px] text-[#999] sm:text-[12px]">{label}</p>
+            <p className="mt-0.5 text-[9px] text-[var(--text-muted)] sm:text-[12px]">{label}</p>
           </div>
         </div>
       ))}
@@ -392,20 +392,20 @@ function Hero() {
       {/* Left: copy */}
       <div>
         {/* Headline */}
-        <h1 className="mb-5 text-[clamp(48px,8vw,72px)] font-black leading-[0.93] tracking-[-0.05em] text-white">
+        <h1 className="mb-5 text-[clamp(48px,8vw,72px)] font-black leading-[0.93] tracking-[-0.05em] text-[var(--text)]">
           Get on the
           <br />
           shortlist.
         </h1>
 
         {/* Eyebrow */}
-        <span className="mb-6 inline-flex items-center gap-[7px] rounded-full border border-[rgba(34,211,238,0.2)] px-3 py-[3px] text-[11px] uppercase tracking-[0.08em] text-[#999]">
-          <span className="h-[5px] w-[5px] shrink-0 animate-pulse rounded-full bg-[#22d3ee]" />
+        <span className="mb-6 inline-flex items-center gap-[7px] rounded-full border border-[var(--border)] px-3 py-[3px] text-[11px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+          <span className="h-[5px] w-[5px] shrink-0 animate-pulse rounded-full bg-[var(--accent)]" />
           AI-powered job search
         </span>
 
         {/* Subline */}
-        <p className="mb-9 max-w-[360px] text-[13px] leading-[1.75] text-[#999]">
+        <p className="mb-9 max-w-[360px] text-[13px] leading-[1.75] text-[var(--text-muted)]">
         Get access to a feed of job listings scored against your background. Tailor your resume to every job posting in seconds. Track your entire job search in one place.
         </p>
 
@@ -435,7 +435,7 @@ function Hero() {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#080808] text-white">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
       {/* Prefetch dashboard data as soon as Clerk confirms sign-in */}
       <DashboardPrefetcher />
       <LandingNav />
@@ -447,7 +447,7 @@ export default function LandingPage() {
 
       {/* Features */}
       <section className="mx-auto max-w-5xl px-6 pb-24">
-        <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.2em] text-[#666]">
+        <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">
           What it does
         </p>
         <div>
@@ -464,7 +464,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA strip */}
-      <section className="border-t border-t-[#111] bg-[#0d0d0d]">
+      <section className="border-t border-t-[var(--border)] bg-[var(--bg-subtle)]">
         <div className="mx-auto max-w-5xl px-6 py-20 text-center">
           <BottomCTA />
         </div>
@@ -475,27 +475,27 @@ export default function LandingPage() {
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2">
             <svg viewBox="0 0 32 32" className="h-5 w-5 shrink-0" aria-hidden="true">
-              <rect width="32" height="32" rx="7" fill="#333" />
+              <rect width="32" height="32" rx="7" fill="var(--bg-subtle)" />
               <path
                 d="M8 17L13 22L24 10"
-                stroke="#080808"
+                stroke="var(--bg)"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"
               />
             </svg>
-            <span className="text-xs font-medium text-[#666]">
+            <span className="text-xs font-medium text-[var(--text-muted)]">
               {APP_CONFIG.name}
             </span>
           </div>
-          <p className="text-xs text-[#666]">
+          <p className="text-xs text-[var(--text-muted)]">
             Built by{" "}
             <a
               href="https://johnmoorman.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#888] transition-colors hover:text-white"
+              className="text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
             >
               John Moorman
             </a>

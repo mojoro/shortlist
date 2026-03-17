@@ -45,7 +45,7 @@ export function FeatureRow({ bold, italic, description, panel }: FeatureRowProps
   return (
     <div
       ref={ref}
-      className="flex flex-col gap-8 border-t border-t-[#0f0f0f] py-10 md:flex-row md:items-start"
+      className="flex flex-col gap-8 border-t border-t-[var(--border)] py-10 md:flex-row md:items-start"
     >
       <div
         className={`w-full shrink-0 transition-all duration-[400ms] ease-out md:w-[220px] ${
@@ -53,10 +53,10 @@ export function FeatureRow({ bold, italic, description, panel }: FeatureRowProps
         }`}
       >
         <p className="mb-3 text-[17px] font-extrabold leading-[1.3] tracking-[-0.02em]">
-          <strong className="font-extrabold text-white">{bold}</strong>{" "}
-          <em className="font-normal not-italic text-[#777]">{italic}</em>
+          <strong className="font-extrabold text-[var(--text)]">{bold}</strong>{" "}
+          <em className="font-normal not-italic text-[var(--text-muted)]">{italic}</em>
         </p>
-        <p className="text-[13px] leading-[1.75] text-[#999]">{description}</p>
+        <p className="text-[13px] leading-[1.75] text-[var(--text-muted)]">{description}</p>
       </div>
       <div
         className={`min-w-0 flex-1 transition-all delay-100 duration-[400ms] ease-out ${

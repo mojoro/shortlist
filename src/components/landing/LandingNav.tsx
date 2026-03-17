@@ -24,7 +24,7 @@ function IconMoon() {
 }
 
 export function LandingNav() {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -51,60 +51,34 @@ export function LandingNav() {
   }, [menuOpen]);
 
   return (
-    <header style={{ backgroundColor: "#080808" }}>
+    <header className="bg-[var(--bg)] border-b border-[var(--border)]">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
         {/* Brand */}
-        <div className="flex items-center gap-2.5">
+        <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
           <svg viewBox="0 0 32 32" className="h-6 w-6 shrink-0" aria-hidden="true">
-            <rect width="32" height="32" rx="7" style={{ fill: "#22d3ee" }} />
+            <rect width="32" height="32" rx="7" fill="var(--accent)" />
             <path
               d="M8 17L13 22L24 10"
-              style={{ stroke: "#080808", fill: "none" }}
+              stroke="var(--accent-fg)"
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
+              fill="none"
             />
           </svg>
-          <span
-            style={{
-              color: "#ffffff",
-              fontSize: "14px",
-              fontWeight: 600,
-              letterSpacing: "-0.01em",
-            }}
-          >
+          <span className="text-sm font-semibold tracking-tight text-[var(--text)]">
             {APP_CONFIG.name}
           </span>
-        </div>
+        </Link>
 
         {/* Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {/* Theme toggle */}
           <button
             onClick={() => setTheme(isDark ? "light" : "dark")}
             aria-label={mounted ? `Switch to ${isDark ? "light" : "dark"} mode` : "Toggle theme"}
             suppressHydrationWarning
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "32px",
-              height: "32px",
-              borderRadius: "8px",
-              border: "1px solid #222",
-              background: "transparent",
-              color: "#666",
-              cursor: "pointer",
-              transition: "border-color 0.15s, color 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#444";
-              e.currentTarget.style.color = "#ccc";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "#222";
-              e.currentTarget.style.color = "#666";
-            }}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text)]"
           >
             <span suppressHydrationWarning>
               {mounted ? (isDark ? <IconSun /> : <IconMoon />) : <IconMoon />}
@@ -115,29 +89,16 @@ export function LandingNav() {
             <>
               <Link
                 href="/dashboard"
-                className="inline-flex h-8 items-center rounded-lg px-4 text-sm font-semibold transition-all hover:opacity-90"
-                style={{ background: "#22d3ee", color: "#080808" }}
+                className="inline-flex h-8 items-center rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-fg)] transition-all hover:opacity-90"
               >
                 Dashboard →
               </Link>
 
               {/* Avatar chip + dropdown */}
-              <div ref={menuRef} style={{ position: "relative" }}>
+              <div ref={menuRef} className="relative">
                 <button
                   onClick={() => setMenuOpen((o) => !o)}
-                  style={{
-                    border: "1px solid #333",
-                    borderRadius: "999px",
-                    padding: "3px 10px",
-                    fontSize: "12px",
-                    color: "#fff",
-                    background: "transparent",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "border-color 0.15s",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#555")}
-                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#333")}
+                  className="rounded-full border border-[var(--border)] px-3 py-0.5 text-xs font-semibold text-[var(--text)] transition-colors hover:border-[var(--border-strong)]"
                   aria-label="Account menu"
                   aria-expanded={menuOpen}
                 >
@@ -145,67 +106,16 @@ export function LandingNav() {
                 </button>
 
                 {menuOpen && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "calc(100% + 8px)",
-                      right: 0,
-                      background: "#111",
-                      border: "1px solid #222",
-                      borderRadius: "8px",
-                      minWidth: "148px",
-                      padding: "4px",
-                      zIndex: 50,
-                      boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-                    }}
-                  >
+                  <div className="absolute right-0 top-[calc(100%+8px)] z-50 min-w-[148px] rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-1 shadow-[var(--shadow-card-hover)]">
                     <Link
-                      href="/dashboard/settings"
+                      href="/settings"
                       onClick={() => setMenuOpen(false)}
-                      style={{
-                        display: "block",
-                        padding: "7px 10px",
-                        fontSize: "13px",
-                        color: "#ccc",
-                        borderRadius: "5px",
-                        textDecoration: "none",
-                        transition: "background 0.1s, color 0.1s",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "#1a1a1a";
-                        e.currentTarget.style.color = "#fff";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "transparent";
-                        e.currentTarget.style.color = "#ccc";
-                      }}
+                      className="block rounded px-2.5 py-1.5 text-[13px] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text)]"
                     >
                       Settings
                     </Link>
                     <SignOutButton>
-                      <button
-                        style={{
-                          display: "block",
-                          width: "100%",
-                          textAlign: "left",
-                          padding: "7px 10px",
-                          fontSize: "13px",
-                          color: "#ccc",
-                          background: "transparent",
-                          border: "none",
-                          borderRadius: "5px",
-                          cursor: "pointer",
-                          transition: "background 0.1s, color 0.1s",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = "#1a1a1a";
-                          e.currentTarget.style.color = "#fff";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = "transparent";
-                          e.currentTarget.style.color = "#ccc";
-                        }}
-                      >
+                      <button className="block w-full rounded px-2.5 py-1.5 text-left text-[13px] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text)]">
                         Sign out
                       </button>
                     </SignOutButton>
@@ -217,14 +127,13 @@ export function LandingNav() {
             <>
               <Link
                 href="/sign-in"
-                className="hidden text-sm font-medium text-[#555] transition-colors hover:text-[#888] sm:block"
+                className="hidden text-sm font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text)] sm:block"
               >
                 Sign in
               </Link>
               <Link
                 href="/sign-up"
-                className="inline-flex h-8 items-center rounded-lg px-4 text-sm font-semibold transition-all hover:opacity-90"
-                style={{ background: "#22d3ee", color: "#080808" }}
+                className="inline-flex h-8 items-center rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-fg)] transition-all hover:opacity-90"
               >
                 Get started
               </Link>
