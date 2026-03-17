@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef } from "react";
+import { useState, useTransition, useEffect, useRef, useCallback } from "react";
 import { JobCard } from "@/components/jobs/JobCard";
 import {
   getMoreJobs,
@@ -66,6 +66,44 @@ function UndoToast({
         key={toast.jobId}
         className="absolute bottom-0 left-0 h-[3px] w-full origin-left bg-[var(--accent)]"
         style={{ animation: "toast-drain 2s linear forwards" }}
+      />
+    </div>
+  );
+}
+
+// ─── Notice Toast ─────────────────────────────────────────────────────────────
+
+function NoticeToast({
+  message,
+  onDismiss,
+}: {
+  message: string;
+  onDismiss: () => void;
+}) {
+  return (
+    <div
+      className="pointer-events-auto relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-card)] shadow-2xl"
+      style={{
+        animation: "toast-slide-in 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.24), 0 2px 8px rgba(0,0,0,0.16)",
+        minWidth: "280px",
+      }}
+    >
+      <div className="flex items-center justify-between gap-4 px-4 py-3">
+        <span className="text-sm font-medium text-[var(--text)]">{message}</span>
+        <button
+          onClick={onDismiss}
+          className="cursor-pointer flex h-5 w-5 items-center justify-center rounded text-[var(--text-muted)] transition-colors hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+          aria-label="Dismiss"
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <path d="M1 1l8 8M9 1L1 9" />
+          </svg>
+        </button>
+      </div>
+      <div
+        className="absolute bottom-0 left-0 h-[3px] w-full origin-left bg-[var(--text-muted)]"
+        style={{ animation: "toast-drain 3s linear forwards" }}
       />
     </div>
   );
@@ -185,6 +223,24 @@ export function JobFeed({
   const [toast, setToast] = useState<ToastState | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Notice toast ─────────────────────────────────────────────────────────
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showNotice = useCallback((message: string) => {
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    setNotice(message);
+    noticeTimerRef.current = setTimeout(() => {
+      setNotice(null);
+      noticeTimerRef.current = null;
+    }, 3000);
+  }, []);
+
+  const dismissNotice = useCallback(() => {
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    setNotice(null);
+  }, []);
+
   function showToast(job: JobWithApplication) {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast({ jobId: job.id, job });
@@ -199,10 +255,11 @@ export function JobFeed({
     setToast(null);
   }
 
-  // Clean up timer on unmount
+  // Clean up timers on unmount
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
     };
   }, []);
 
@@ -236,6 +293,7 @@ export function JobFeed({
   function handleScored(jobId: string, update: JobScoreUpdate) {
     if (update.hidden) {
       setJobs((prev) => prev.filter((j) => j.id !== jobId));
+      showNotice("Weak match — removed from feed");
     } else {
       setJobs((prev) =>
         prev.map((j) =>
@@ -455,17 +513,24 @@ export function JobFeed({
         </div>
       )}
 
-      {/* Undo toast — fixed bottom-center */}
-      {toast && (
-        <div className="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2">
+      {/* Toast portal — fixed bottom-center, stacked */}
+      <div className="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 flex flex-col items-center gap-2">
+        {notice && (
+          <NoticeToast
+            key={notice}
+            message={notice}
+            onDismiss={dismissNotice}
+          />
+        )}
+        {toast && (
           <UndoToast
             key={toast.jobId}
             toast={toast}
             onUndo={handleUndo}
             onDismiss={dismissToast}
           />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
