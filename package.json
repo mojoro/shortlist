@@ -7,7 +7,9 @@
     "dev": "next dev",
     "build": "prisma migrate deploy && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.0.2",
@@ -40,7 +42,9 @@
     ]
   },
   "devDependencies": {
+    "@clerk/testing": "^2.0.5",
     "@next/bundle-analyzer": "^16.1.7",
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pdf-parse": "^1.1.5",
