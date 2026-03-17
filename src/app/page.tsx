@@ -7,6 +7,17 @@ import { prisma } from "@/lib/prisma";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { SignedInHero } from "@/components/landing/SignedInHero";
 import { FeatureRow } from "@/components/landing/FeatureRow";
+import dynamic from "next/dynamic";
+
+// HeroDemoPreview uses a named export, so the .then() re-wrap is required.
+// next/dynamic expects a default export; without it the component resolves to undefined.
+const HeroDemoPreview = dynamic(
+  () =>
+    import("@/components/landing/HeroDemoPreview").then((m) => ({
+      default: m.HeroDemoPreview,
+    })),
+  { ssr: false }
+);
 
 export const metadata: Metadata = {
   title: `${APP_CONFIG.name} — AI job search`,
@@ -601,122 +612,142 @@ const FEATURES: Feature[] = [
 
 /* ─── Hero — signed-out ────────────────────────────────────── */
 
+function StatsRow() {
+  return (
+    <div className="flex flex-row flex-wrap items-start gap-0">
+      {(
+        [
+          { stat: "<2m", label: "Setup" },
+          { stat: "Free", label: "Always" },
+          { stat: "AI", label: "Match scoring" },
+        ] as const
+      ).map(({ stat, label }, i) => (
+        <div key={stat} className="flex items-start">
+          {i > 0 && (
+            <div
+              style={{
+                width: "1px",
+                background: "#1e1e1e",
+                height: "36px",
+                margin: "0 20px",
+                flexShrink: 0,
+              }}
+            />
+          )}
+          <div>
+            <p
+              style={{
+                fontSize: "14px",
+                fontWeight: 800,
+                color: "#fff",
+                lineHeight: 1.2,
+              }}
+            >
+              {stat === "<2m" ? <>{"<"}2m</> : stat}
+            </p>
+            <p style={{ fontSize: "11px", color: "#444", marginTop: "2px" }}>{label}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SignedOutHero() {
   return (
-    <div className="max-w-2xl">
-      {/* Eyebrow */}
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "7px",
-          border: "1px solid rgba(34,211,238,0.2)",
-          borderRadius: "999px",
-          padding: "3px 12px",
-          fontSize: "11px",
-          color: "#666",
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          marginBottom: "24px",
-        }}
-      >
+    <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
+      {/* ── Left: copy ── */}
+      <div>
+        {/* Eyebrow */}
         <span
           style={{
-            width: "5px",
-            height: "5px",
-            borderRadius: "50%",
-            background: "#22d3ee",
-            flexShrink: 0,
-            animation: "pulse 2s cubic-bezier(0.4,0,0.6,1) infinite",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "7px",
+            border: "1px solid rgba(34,211,238,0.2)",
+            borderRadius: "999px",
+            padding: "3px 12px",
+            fontSize: "11px",
+            color: "#666",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            marginBottom: "24px",
           }}
-        />
-        AI-powered job search
-      </span>
-
-      {/* Headline */}
-      <h1
-        style={{
-          fontSize: "clamp(48px, 8vw, 72px)",
-          fontWeight: 900,
-          letterSpacing: "-0.05em",
-          lineHeight: 0.93,
-          color: "#fff",
-          marginBottom: "28px",
-        }}
-      >
-        Get on the
-        <br />
-        shortlist.
-      </h1>
-
-      {/* Subline */}
-      <p
-        style={{
-          fontSize: "13px",
-          color: "#666",
-          lineHeight: 1.75,
-          maxWidth: "360px",
-          marginBottom: "36px",
-        }}
-      >
-        Score every listing against your background. Tailor every application in seconds.
-        Track your entire search in one place.
-      </p>
-
-      {/* CTAs */}
-      <div className="mb-14 flex flex-wrap items-center gap-3">
-        <Link
-          href="/sign-up"
-          className="inline-flex h-11 items-center rounded-lg px-7 text-sm font-semibold transition-all hover:opacity-90"
-          style={{ background: "#22d3ee", color: "#080808" }}
         >
-          Get started free
-        </Link>
-        <Link
-          href="/sign-in"
-          className="inline-flex h-11 items-center rounded-lg border border-[#222] px-7 text-sm font-medium text-[#555] transition-colors hover:border-[#444] hover:text-[#888]"
+          <span
+            style={{
+              width: "5px",
+              height: "5px",
+              borderRadius: "50%",
+              background: "#22d3ee",
+              flexShrink: 0,
+              animation: "pulse 2s cubic-bezier(0.4,0,0.6,1) infinite",
+            }}
+          />
+          AI-powered job search
+        </span>
+
+        {/* Headline */}
+        <h1
+          style={{
+            fontSize: "clamp(48px, 8vw, 72px)",
+            fontWeight: 900,
+            letterSpacing: "-0.05em",
+            lineHeight: 0.93,
+            color: "#fff",
+            marginBottom: "28px",
+          }}
         >
-          Sign in
-        </Link>
+          Get on the
+          <br />
+          shortlist.
+        </h1>
+
+        {/* Subline */}
+        <p
+          style={{
+            fontSize: "13px",
+            color: "#666",
+            lineHeight: 1.75,
+            maxWidth: "360px",
+            marginBottom: "36px",
+          }}
+        >
+          Score every listing against your background. Tailor every application in seconds.
+          Track your entire search in one place.
+        </p>
+
+        {/* CTAs */}
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/sign-up"
+            className="inline-flex h-11 items-center rounded-lg px-7 text-sm font-semibold transition-all hover:opacity-90"
+            style={{ background: "#22d3ee", color: "#080808" }}
+          >
+            Get started free
+          </Link>
+          <Link
+            href="/sign-in"
+            className="inline-flex h-11 items-center rounded-lg border border-[#222] px-7 text-sm font-medium text-[#555] transition-colors hover:border-[#444] hover:text-[#888]"
+          >
+            Sign in
+          </Link>
+        </div>
+
+        {/* Stats — desktop position (below CTAs, hidden on mobile) */}
+        <div className="mt-10 hidden lg:block">
+          <StatsRow />
+        </div>
       </div>
 
-      {/* Stats row */}
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-0">
-        {(
-          [
-            { stat: "<2m", label: "Setup" },
-            { stat: "Free", label: "Always" },
-            { stat: "AI", label: "Match scoring" },
-          ] as const
-        ).map(({ stat, label }, i) => (
-          <div key={stat} className="flex items-start">
-            {i > 0 && (
-              <div
-                style={{
-                  width: "1px",
-                  background: "#1e1e1e",
-                  height: "36px",
-                  margin: "0 24px",
-                  flexShrink: 0,
-                }}
-                className="hidden sm:block"
-              />
-            )}
-            <div>
-              <p
-                style={{
-                  fontSize: "14px",
-                  fontWeight: 800,
-                  color: "#fff",
-                  lineHeight: 1.2,
-                }}
-              >
-                {stat === "<2m" ? <>{"<"}2m</> : stat}
-              </p>
-              <p style={{ fontSize: "11px", color: "#444", marginTop: "2px" }}>{label}</p>
-            </div>
-          </div>
-        ))}
+      {/* ── Right: preview ── */}
+      <div>
+        <HeroDemoPreview />
+
+        {/* Stats — mobile position (below preview, hidden on lg+) */}
+        <div className="mt-8 lg:hidden">
+          <StatsRow />
+        </div>
       </div>
     </div>
   );
