@@ -864,7 +864,7 @@ export default async function LandingPage() {
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2">
             <svg viewBox="0 0 32 32" className="h-5 w-5 shrink-0" aria-hidden="true">
-              <rect width="32" height="32" rx="7" fill="#333" />
+              <rect width="32" height="32" rx="7" style={{ fill: "#333" }} />
               <path
                 d="M8 17L13 22L24 10"
                 stroke="#080808"

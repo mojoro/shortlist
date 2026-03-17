@@ -15,14 +15,13 @@ export function BrandMark({ size = "md" }: BrandMarkProps) {
       className={`shrink-0 ${SIZE_CLASS[size]}`}
       aria-hidden="true"
     >
-      <rect width="32" height="32" rx="7" fill="var(--accent)" />
+      <rect width="32" height="32" rx="7" style={{ fill: "var(--accent)" }} />
       <path
         d="M8 17L13 22L24 10"
-        stroke="var(--accent-fg)"
+        style={{ stroke: "var(--accent-fg)", fill: "none" }}
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-        fill="none"
       />
     </svg>
   );

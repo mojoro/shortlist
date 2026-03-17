@@ -35,14 +35,13 @@ export function LandingNav({ isSignedIn }: LandingNavProps) {
         {/* Brand */}
         <div className="flex items-center gap-2.5">
           <svg viewBox="0 0 32 32" className="h-6 w-6 shrink-0" aria-hidden="true">
-            <rect width="32" height="32" rx="7" fill="#22d3ee" />
+            <rect width="32" height="32" rx="7" style={{ fill: "#22d3ee" }} />
             <path
               d="M8 17L13 22L24 10"
-              stroke="#080808"
+              style={{ stroke: "#080808", fill: "none" }}
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              fill="none"
             />
           </svg>
           <span
