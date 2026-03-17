@@ -30,6 +30,10 @@ const nextConfig: NextConfig = {
   experimental: {
     reactCompiler: true,
     optimizePackageImports: ["date-fns", "@clerk/nextjs"],
+    staleTimes: {
+      // Cache dynamic pages on the client for 30s — makes back-navigation instant
+      dynamic: 30,
+    },
   },
   images: {
     remotePatterns: [
