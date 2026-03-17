@@ -361,7 +361,7 @@ const FEATURES: Feature[] = [
 
 function StatsRow() {
   return (
-    <div className="flex flex-row flex-wrap items-start gap-0">
+    <div className="flex flex-row flex-nowrap items-start gap-0">
       {(
         [
           { stat: "<2m", label: "Setup" },
@@ -371,13 +371,13 @@ function StatsRow() {
       ).map(({ stat, label }, i) => (
         <div key={stat} className="flex items-start">
           {i > 0 && (
-            <div className="mx-5 h-9 w-px shrink-0 bg-[#1e1e1e]" />
+            <div className="mx-2.5 h-9 w-px shrink-0 bg-[#1e1e1e] sm:mx-5" />
           )}
           <div>
-            <p className="text-[14px] font-extrabold leading-[1.2] text-white">
+            <p className="text-[11px] font-extrabold leading-[1.2] text-white sm:text-[14px]">
               {stat === "<2m" ? <>{"<"}2m</> : stat}
             </p>
-            <p className="mt-0.5 text-[12px] text-[#999]">{label}</p>
+            <p className="mt-0.5 text-[9px] text-[#999] sm:text-[12px]">{label}</p>
           </div>
         </div>
       ))}
@@ -390,18 +390,18 @@ function Hero() {
     <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
       {/* Left: copy */}
       <div>
+        {/* Headline */}
+        <h1 className="mb-5 text-[clamp(48px,8vw,72px)] font-black leading-[0.93] tracking-[-0.05em] text-white">
+          Get on the
+          <br />
+          shortlist.
+        </h1>
+
         {/* Eyebrow */}
         <span className="mb-6 inline-flex items-center gap-[7px] rounded-full border border-[rgba(34,211,238,0.2)] px-3 py-[3px] text-[11px] uppercase tracking-[0.08em] text-[#999]">
           <span className="h-[5px] w-[5px] shrink-0 animate-pulse rounded-full bg-[#22d3ee]" />
           AI-powered job search
         </span>
-
-        {/* Headline */}
-        <h1 className="mb-7 text-[clamp(48px,8vw,72px)] font-black leading-[0.93] tracking-[-0.05em] text-white">
-          Get on the
-          <br />
-          shortlist.
-        </h1>
 
         {/* Subline */}
         <p className="mb-9 max-w-[360px] text-[13px] leading-[1.75] text-[#999]">
