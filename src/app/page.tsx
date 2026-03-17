@@ -12,7 +12,7 @@ import { HeroDemoPreview } from "@/components/landing/HeroDemoPreview";
 export const metadata: Metadata = {
   title: `${APP_CONFIG.name} — AI job search`,
   description:
-    "Score every listing against your background. Tailor every application in seconds. Track your entire search in one place.",
+    "Get access to a feed of job listings scored against your background. Tailor you resume to every job posting in seconds. Track your entire job search in one place.",
 };
 
 /* ─── Panel shell ──────────────────────────────────────────── */
@@ -353,7 +353,7 @@ const FEATURES: Feature[] = [
     bold: "Multi-track.",
     italic: "One account.",
     description:
-      "Running parallel searches — different roles, different cities — each gets its own profile with its own feed, pipeline, and settings.",
+      "Manage as many different searches as you want with a single account — different roles, different cities — each gets its own profile with its own feed, context, pipeline, and settings.",
     panel: <ProfilesPanel />,
   },
 ];
