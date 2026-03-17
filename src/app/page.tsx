@@ -1,10 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { APP_CONFIG } from "@/config/app";
 import { prisma } from "@/lib/prisma";
 import { LandingNav } from "@/components/landing/LandingNav";
+import { SignedInHero } from "@/components/landing/SignedInHero";
 
 export const metadata: Metadata = {
   title: `${APP_CONFIG.name} — AI job search`,
@@ -735,65 +736,16 @@ function SignedOutHero() {
   );
 }
 
-/* ─── Hero — signed-in ─────────────────────────────────────── */
-
-function SignedInHero({
-  greetingName,
-  dashboardHref,
-}: {
-  greetingName?: string;
-  dashboardHref: string;
-}) {
-  return (
-    <div>
-      <p
-        style={{
-          color: "#888",
-          fontSize: "13px",
-          marginBottom: greetingName ? "8px" : "28px",
-        }}
-      >
-        Welcome back{greetingName ? "," : "."}
-      </p>
-      {greetingName && (
-        <h1
-          style={{
-            fontSize: "clamp(40px, 7vw, 64px)",
-            fontWeight: 900,
-            letterSpacing: "-0.04em",
-            lineHeight: 1.0,
-            color: "#fff",
-            marginBottom: "28px",
-          }}
-        >
-          {greetingName}.
-        </h1>
-      )}
-      <Link
-        href={dashboardHref}
-        className="inline-flex h-11 items-center rounded-lg bg-white px-7 text-sm font-semibold text-[#080808] transition-colors hover:bg-[#e5e5e5]"
-      >
-        Go to dashboard →
-      </Link>
-    </div>
-  );
-}
-
 /* ─── Page ─────────────────────────────────────────────────── */
 
 export default async function LandingPage() {
   const { userId } = await auth();
   const isSignedIn = !!userId;
 
-  let greetingName: string | undefined;
   let dashboardHref = "/dashboard";
 
   if (isSignedIn && userId) {
-    const [user, hasProfile] = await Promise.all([
-      currentUser(),
-      prisma.profile.findFirst({ where: { userId }, select: { id: true } }),
-    ]);
-    greetingName = user?.firstName ?? undefined;
+    const hasProfile = await prisma.profile.findFirst({ where: { userId }, select: { id: true } });
     if (!hasProfile) dashboardHref = "/onboarding";
   }
 
@@ -804,7 +756,7 @@ export default async function LandingPage() {
       {/* ── Hero ──────────────────────────────────── */}
       <section className="mx-auto max-w-5xl px-6 py-24 sm:py-32">
         {isSignedIn ? (
-          <SignedInHero greetingName={greetingName} dashboardHref={dashboardHref} />
+          <SignedInHero dashboardHref={dashboardHref} />
         ) : (
           <SignedOutHero />
         )}
