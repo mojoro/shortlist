@@ -1,7 +1,7 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import {
   updateApplicationStatusSchema,
@@ -24,30 +24,33 @@ export async function updateApplicationStatus(
   const parsed = updateApplicationStatusSchema.safeParse({ applicationId, status });
   if (!parsed.success) throw new Error("Invalid status");
 
-  await prisma.application.update({
-    where: { id: applicationId },
-    data: {
-      status: parsed.data.status,
-      statusUpdatedAt: new Date(),
-      // Auto-set appliedAt when first transitioning to APPLIED
-      ...(parsed.data.status === "APPLIED" && !application.appliedAt
-        ? { appliedAt: new Date() }
-        : {}),
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.application.update({
+      where: { id: applicationId },
+      data: {
+        status: parsed.data.status,
+        statusUpdatedAt: new Date(),
+        // Auto-set appliedAt when first transitioning to APPLIED
+        ...(parsed.data.status === "APPLIED" && !application.appliedAt
+          ? { appliedAt: new Date() }
+          : {}),
+      },
+    });
+
+    // Archive the job from the feed when moving to APPLIED
+    if (parsed.data.status === "APPLIED") {
+      await tx.job.updateMany({
+        where: {
+          id: application.jobId,
+          feedStatus: { in: ["NEW", "SAVED"] },
+        },
+        data: { feedStatus: "ARCHIVED" },
+      });
+    }
   });
 
-  // Archive the job from the feed when moving to APPLIED
-  if (parsed.data.status === "APPLIED") {
-    await prisma.job.updateMany({
-      where: {
-        id: application.jobId,
-        feedStatus: { in: ["NEW", "SAVED"] },
-      },
-      data: { feedStatus: "ARCHIVED" },
-    });
-  }
-
   revalidatePath("/pipeline");
+  revalidateTag("dashboard-stats");
 }
 
 export async function updateApplicationDetail(
@@ -93,6 +96,11 @@ export async function updateApplicationDetail(
     data.recruiterEmail = parsed.data.recruiterEmail;
 
   await prisma.application.update({ where: { id: applicationId }, data });
+
+  // Bust the cached follow-up count when followUpAt changes
+  if (parsed.data.followUpAt !== undefined) {
+    revalidateTag("follow-up-count");
+  }
   // No revalidatePath — auto-save should not trigger a full page re-render.
 }
 

@@ -1,7 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { getActiveProfile } from "@/lib/get-active-profile";
 import { buildWhereClause, buildOrderBy, type SortDir } from "@/lib/jobs";
 import { formatDistanceToNow } from "date-fns";
 import { FeedToolbar } from "@/components/dashboard/FeedToolbar";
@@ -12,6 +14,42 @@ import { APP_CONFIG } from "@/config/app";
 import type { JobWithApplication } from "@/types";
 
 export const metadata: Metadata = { title: "Your matches" };
+
+const getCachedStats = unstable_cache(
+  async (profileId: string) => {
+    const [grouped, appliedCount, avgScoreResult] = await Promise.all([
+      prisma.job.groupBy({
+        by: ["feedStatus"],
+        where: { profileId },
+        _count: true,
+      }),
+      prisma.job.count({
+        where: {
+          profileId,
+          application: { status: { not: "INTERESTED" } },
+        },
+      }),
+      prisma.job.aggregate({
+        where: {
+          profileId,
+          aiScore: { not: null },
+          feedStatus: { notIn: ["HIDDEN", "ARCHIVED"] },
+        },
+        _avg: { aiScore: true },
+      }),
+    ]);
+
+    const newCount = grouped.find((g) => g.feedStatus === "NEW")?._count ?? 0;
+    const savedCount = grouped.find((g) => g.feedStatus === "SAVED")?._count ?? 0;
+    const ignoredCount = grouped.find((g) => g.feedStatus === "ARCHIVED")?._count ?? 0;
+    const allCount = newCount + savedCount;
+    const avgScore = avgScoreResult._avg.aiScore;
+
+    return { allCount, newCount, savedCount, appliedCount, ignoredCount, avgScore };
+  },
+  ["dashboard-stats"],
+  { revalidate: 60, tags: ["dashboard-stats"] },
+);
 
 const VALID_FILTERS = ["all", "new", "saved", "applied", "ignored"] as const;
 const VALID_SORTS   = ["match", "newest", "salary"] as const;
@@ -39,10 +77,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   try {
     const [profile, allProfiles] = await Promise.all([
-      prisma.profile.findFirst({
-        where: { userId },
-        orderBy: { isActive: "desc" },
-      }),
+      getActiveProfile(userId),
       prisma.profile.findMany({
         where: { userId },
         select: { id: true, name: true, isActive: true },
@@ -63,44 +98,19 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       );
     }
 
-    const [allCount, newCount, savedCount, appliedCount, ignoredCount, avgScoreResult, jobs] =
-      await Promise.all([
-        prisma.job.count({
-          where: { profileId: profile.id, feedStatus: { notIn: ["HIDDEN", "ARCHIVED"] } },
-        }),
-        prisma.job.count({
-          where: { profileId: profile.id, feedStatus: "NEW" },
-        }),
-        prisma.job.count({
-          where: { profileId: profile.id, feedStatus: "SAVED" },
-        }),
-        prisma.job.count({
-          where: {
-            profileId: profile.id,
-            application: { status: { not: "INTERESTED" } },
-          },
-        }),
-        prisma.job.count({
-          where: { profileId: profile.id, feedStatus: "ARCHIVED" },
-        }),
-        prisma.job.aggregate({
-          where: {
-            profileId: profile.id,
-            aiScore: { not: null },
-            feedStatus: { notIn: ["HIDDEN", "ARCHIVED"] },
-          },
-          _avg: { aiScore: true },
-        }),
-        prisma.job.findMany({
-          where: buildWhereClause(profile.id, safeFilter),
-          include: { jobPool: true, application: { select: { status: true } } },
-          orderBy: buildOrderBy(safeSort, safeDir),
-          take: 25,
-        }),
-      ]);
+    const [stats, jobs] = await Promise.all([
+      getCachedStats(profile.id),
+      prisma.job.findMany({
+        where: buildWhereClause(profile.id, safeFilter),
+        include: { jobPool: true, application: { select: { status: true } } },
+        orderBy: buildOrderBy(safeSort, safeDir),
+        take: 25,
+      }),
+    ]);
+
+    const { allCount, newCount, savedCount, appliedCount, ignoredCount, avgScore } = stats;
 
     const nextCursor = jobs.length === 25 ? jobs[jobs.length - 1].id : null;
-    const avgScore = avgScoreResult._avg.aiScore;
     const lastUpdatedText = profile.lastScrapedAt
       ? `Updated ${formatDistanceToNow(new Date(profile.lastScrapedAt), { addSuffix: true })}`
       : null;

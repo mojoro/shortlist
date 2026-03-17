@@ -97,6 +97,7 @@ model Profile {
   applications Application[]
   scrapeRuns   ScrapeRun[]
 
+  @@index([userId])
   @@map("profiles")
 }
 
@@ -183,6 +184,7 @@ model Job {
   @@unique([profileId, jobPoolId])
   @@index([profileId, feedStatus])
   @@index([profileId, aiScore(sort: Desc)])
+  @@index([profileId, feedStatus, aiScore(sort: Desc)])
   @@map("jobs")
 }
 

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { auth } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
@@ -10,16 +11,23 @@ import { JobDescription } from "@/components/jobs/JobDescription";
 import { AnalyzeButton } from "@/components/jobs/AnalyzeButton";
 import { ReanalyzeButton } from "@/components/jobs/ReanalyzeButton";
 
+const getJob = cache(async (jobId: string) => {
+  return prisma.job.findUnique({
+    where: { id: jobId },
+    include: {
+      jobPool: true,
+      profile: { select: { userId: true } },
+    },
+  });
+});
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const job = await prisma.job.findUnique({
-    where: { id },
-    include: { jobPool: true },
-  });
+  const job = await getJob(id);
   if (!job) return { title: "Job not found" };
   return { title: `${job.jobPool.title} at ${job.jobPool.company}` };
 }
@@ -53,13 +61,7 @@ export default async function JobDetailPage({ params }: PageProps) {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  const job = await prisma.job.findUnique({
-    where: { id },
-    include: {
-      jobPool: true,
-      profile: { select: { userId: true } },
-    },
-  });
+  const job = await getJob(id);
 
   if (!job || job.profile.userId !== userId) notFound();
 
