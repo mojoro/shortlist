@@ -103,14 +103,14 @@ function JobFeedPanel() {
               style={{
                 width: "32px",
                 height: "32px",
-                background: "#1a1a1a",
+                background: score === 94 ? "#22d3ee" : "#1a1a1a",
                 borderRadius: "4px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: "10px",
                 fontWeight: 900,
-                color: "#fff",
+                color: score === 94 ? "#080808" : "#fff",
                 flexShrink: 0,
               }}
             >
@@ -126,11 +126,11 @@ function JobFeedPanel() {
                   fontSize: "8px",
                   fontWeight: 700,
                   letterSpacing: "0.06em",
-                  color: tag === "GO" ? "#fff" : "#555",
-                  background: tag === "GO" ? "#1e1e1e" : "#141414",
+                  color: tag === "GO" ? "#22d3ee" : "#555",
+                  background: tag === "GO" ? "rgba(34,211,238,0.08)" : "#141414",
                   padding: "2px 7px",
                   borderRadius: "3px",
-                  border: `1px solid ${tag === "GO" ? "#2a2a2a" : "#1e1e1e"}`,
+                  border: `1px solid ${tag === "GO" ? "rgba(34,211,238,0.2)" : "#1e1e1e"}`,
                   whiteSpace: "nowrap",
                 }}
               >
@@ -490,7 +490,7 @@ function ProfilesPanel() {
                 width: "6px",
                 height: "6px",
                 borderRadius: "50%",
-                background: active ? "#fff" : "#2a2a2a",
+                background: active ? "#22d3ee" : "#2a2a2a",
                 flexShrink: 0,
               }}
             />
@@ -634,8 +634,10 @@ function SignedOutHero() {
       {/* Eyebrow */}
       <span
         style={{
-          display: "inline-block",
-          border: "1px solid #333",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "7px",
+          border: "1px solid rgba(34,211,238,0.2)",
           borderRadius: "999px",
           padding: "3px 12px",
           fontSize: "11px",
@@ -645,6 +647,16 @@ function SignedOutHero() {
           marginBottom: "24px",
         }}
       >
+        <span
+          style={{
+            width: "5px",
+            height: "5px",
+            borderRadius: "50%",
+            background: "#22d3ee",
+            flexShrink: 0,
+            animation: "pulse 2s cubic-bezier(0.4,0,0.6,1) infinite",
+          }}
+        />
         AI-powered job search
       </span>
 
@@ -682,7 +694,8 @@ function SignedOutHero() {
       <div className="mb-14 flex flex-wrap items-center gap-3">
         <Link
           href="/sign-up"
-          className="inline-flex h-11 items-center rounded-lg bg-white px-7 text-sm font-semibold text-[#080808] transition-colors hover:bg-[#e5e5e5]"
+          className="inline-flex h-11 items-center rounded-lg px-7 text-sm font-semibold transition-all hover:opacity-90"
+          style={{ background: "#22d3ee", color: "#080808" }}
         >
           Get started free
         </Link>
@@ -811,7 +824,8 @@ export default async function LandingPage() {
               </p>
               <Link
                 href={dashboardHref}
-                className="mt-8 inline-flex h-11 items-center rounded-lg bg-white px-8 text-sm font-semibold text-[#080808] transition-colors hover:bg-[#e5e5e5]"
+                className="mt-8 inline-flex h-11 items-center rounded-lg px-8 text-sm font-semibold transition-all hover:opacity-90"
+                style={{ background: "#22d3ee", color: "#080808" }}
               >
                 Go to dashboard →
               </Link>
@@ -835,7 +849,8 @@ export default async function LandingPage() {
               </p>
               <Link
                 href="/sign-up"
-                className="mt-8 inline-flex h-11 items-center rounded-lg bg-white px-8 text-sm font-semibold text-[#080808] transition-colors hover:bg-[#e5e5e5]"
+                className="mt-8 inline-flex h-11 items-center rounded-lg px-8 text-sm font-semibold transition-all hover:opacity-90"
+                style={{ background: "#22d3ee", color: "#080808" }}
               >
                 Get started free
               </Link>

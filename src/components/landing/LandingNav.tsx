@@ -170,7 +170,8 @@ export function LandingNav({ isSignedIn }: LandingNavProps) {
               </Link>
               <Link
                 href="/sign-up"
-                className="inline-flex h-8 items-center rounded-lg bg-white px-4 text-sm font-semibold text-[#080808] transition-colors hover:bg-[#e5e5e5]"
+                className="inline-flex h-8 items-center rounded-lg px-4 text-sm font-semibold transition-all hover:opacity-90"
+                style={{ background: "#22d3ee", color: "#080808" }}
               >
                 Get started
               </Link>

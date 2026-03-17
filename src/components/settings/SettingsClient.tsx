@@ -283,7 +283,7 @@ function ProfileInfoSection({ profile }: { profile: Profile }) {
           </div>
           <div>
             <Label>Display name</Label>
-            <Input value={fields.displayName} onChange={handleChange("displayName")} placeholder="John Moorman" />
+            <Input value={fields.displayName} onChange={handleChange("displayName")} placeholder="Alex Johnson" />
             <Hint>Full name as it appears on your resume.</Hint>
           </div>
         </div>
@@ -294,12 +294,12 @@ function ProfileInfoSection({ profile }: { profile: Profile }) {
           </div>
           <div>
             <Label>Phone</Label>
-            <Input type="tel" value={fields.phone} onChange={handleChange("phone")} placeholder="+49 123 456789" />
+            <Input type="tel" value={fields.phone} onChange={handleChange("phone")} placeholder="+1 555 000 0000" />
           </div>
         </div>
         <div>
           <Label>Location</Label>
-          <Input value={fields.location} onChange={handleChange("location")} placeholder="Berlin, Germany" />
+          <Input value={fields.location} onChange={handleChange("location")} placeholder="New York, USA" />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>

@@ -140,7 +140,7 @@ export function AppNav({ followUpCount = 0 }: AppNavProps) {
         {/* Logo */}
         <div className="flex h-16 shrink-0 items-center border-b border-[var(--border)] px-4">
           <Link
-            href="/dashboard"
+            href="/"
             className="flex items-center gap-3 rounded-sm transition-opacity hover:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
           >
             <BrandMark size="lg" />
