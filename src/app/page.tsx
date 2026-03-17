@@ -7,17 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { SignedInHero } from "@/components/landing/SignedInHero";
 import { FeatureRow } from "@/components/landing/FeatureRow";
-import dynamic from "next/dynamic";
-
-// HeroDemoPreview uses a named export, so the .then() re-wrap is required.
-// next/dynamic expects a default export; without it the component resolves to undefined.
-const HeroDemoPreview = dynamic(
-  () =>
-    import("@/components/landing/HeroDemoPreview").then((m) => ({
-      default: m.HeroDemoPreview,
-    })),
-  { ssr: false }
-);
+import { HeroDemoPreview } from "@/components/landing/HeroDemoPreview";
 
 export const metadata: Metadata = {
   title: `${APP_CONFIG.name} — AI job search`,
