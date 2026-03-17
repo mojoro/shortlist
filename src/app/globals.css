@@ -22,16 +22,16 @@
 }
 
 /* ── Dark mode ───────────────────────────────────────────────────────────────
-   Layered navy surfaces — clear visual hierarchy between page / card / hover.
+   Near-black neutral surfaces — matches the landing page's monochrome aesthetic.
    ─────────────────────────────────────────────────────────────────────────── */
 .dark {
-  --bg:           #06060e;   /* page background — deepest layer */
-  --bg-card:      #10101f;   /* cards — clearly lighter */
-  --bg-subtle:    #1a1a30;   /* hover states, inner panels */
-  --border:       #252540;   /* default border — more visible */
-  --border-strong: #3a3a60;  /* hover / focused border */
-  --text:         #e4e7f0;
-  --text-muted:   #7880a0;
+  --bg:           #0a0a0a;   /* page background */
+  --bg-card:      #111111;   /* cards — clearly lighter */
+  --bg-subtle:    #1a1a1a;   /* hover states, inner panels */
+  --border:       #222222;   /* default border */
+  --border-strong: #333333;  /* hover / focused border */
+  --text:         #ebebeb;
+  --text-muted:   #787878;
   --accent:       #a78bfa;   /* lighter purple — actually visible on dark bg */
   --accent-fg:    #ffffff;
   --accent-muted: #2d1f5e;

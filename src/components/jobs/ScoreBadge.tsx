@@ -11,10 +11,10 @@ function getBadgeStyle(score: number | null): {
     return { className: "bg-[var(--border)] text-[var(--text-muted)]", value: "—", label: null };
   }
   if (score >= 90)
-    return { className: "bg-[#16a34a] text-white", value: String(score), label: "Strong" };
+    return { className: "bg-green-600 text-white", value: String(score), label: "Strong" };
   if (score >= 75)
-    return { className: "bg-[#d97706] text-white", value: String(score), label: "Good" };
-  return { className: "bg-[#dc2626] text-white", value: String(score), label: "Weak" };
+    return { className: "bg-amber-500 text-white", value: String(score), label: "Good" };
+  return { className: "bg-red-600 text-white", value: String(score), label: "Weak" };
 }
 
 export function ScoreBadge({ score }: ScoreBadgeProps) {
