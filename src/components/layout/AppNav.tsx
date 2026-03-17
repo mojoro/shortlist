@@ -7,6 +7,7 @@ import { useState, useRef, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { APP_CONFIG } from "@/config/app";
 import { BrandMark } from "@/components/ui/BrandMark";
+import { useDashboardStore } from "@/lib/store";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -93,11 +94,8 @@ const LABEL =
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-interface AppNavProps {
-  followUpCount?: number;
-}
-
-export function AppNav({ followUpCount = 0 }: AppNavProps) {
+export function AppNav() {
+  const followUpCount = useDashboardStore((s) => s.followUpCount);
   const pathname = usePathname();
   const { user } = useUser();
   const { resolvedTheme, setTheme } = useTheme();

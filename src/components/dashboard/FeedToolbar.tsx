@@ -1,8 +1,5 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
-
 interface FeedToolbarProps {
   allCount: number;
   newCount: number;
@@ -11,6 +8,11 @@ interface FeedToolbarProps {
   ignoredCount: number;
   avgScore: number | null;
   lastUpdatedText: string | null;
+  filter: string;
+  sort: string;
+  dir: string;
+  onFilterChange: (filter: string) => void;
+  onSortChange: (sort: string) => void;
 }
 
 const CHIPS = [
@@ -28,7 +30,6 @@ const SORT_OPTIONS = [
 ] as const;
 
 type FilterKey = (typeof CHIPS)[number]["key"];
-type SortKey = (typeof SORT_OPTIONS)[number]["key"];
 
 
 export function FeedToolbar({
@@ -37,17 +38,15 @@ export function FeedToolbar({
   savedCount,
   appliedCount,
   ignoredCount,
+  filter,
+  sort,
+  dir,
+  onFilterChange,
+  onSortChange,
 }: FeedToolbarProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
-
-  const currentFilter = (searchParams.get("filter") ?? "all") as FilterKey;
-  const rawSort = searchParams.get("sort") ?? "match";
-  const currentSort: SortKey = (["match", "newest", "salary"] as string[]).includes(rawSort)
-    ? (rawSort as SortKey)
-    : "match";
-  const currentDir = searchParams.get("dir") === "asc" ? "asc" : "desc";
+  const currentFilter = filter as FilterKey;
+  const currentSort = sort;
+  const currentDir = dir;
 
   const counts: Record<FilterKey, number> = {
     all:     allCount,
@@ -56,29 +55,6 @@ export function FeedToolbar({
     applied: appliedCount,
     ignored: ignoredCount,
   };
-
-  function navigate(updates: Record<string, string | null>) {
-    startTransition(() => {
-      const params = new URLSearchParams(searchParams.toString());
-      for (const [k, v] of Object.entries(updates)) {
-        if (v === null) params.delete(k);
-        else params.set(k, v);
-      }
-      router.replace(`?${params.toString()}`);
-    });
-  }
-
-  function handleFilterChange(filter: FilterKey) {
-    navigate({ filter: filter === "all" ? null : filter });
-  }
-
-  function handleSortChange(sort: SortKey) {
-    if (sort === currentSort) {
-      navigate({ dir: currentDir === "desc" ? "asc" : null });
-    } else {
-      navigate({ sort: sort === "match" ? null : sort, dir: null });
-    }
-  }
 
   const showDirToggle = currentSort !== "match";
 
@@ -98,8 +74,7 @@ export function FeedToolbar({
                 />
               )}
               <button
-                onClick={() => handleFilterChange(key)}
-                disabled={isPending}
+                onClick={() => onFilterChange(key)}
                 aria-pressed={isActive}
                 className={[
                   "relative cursor-pointer px-1 pb-0.5 pt-1 text-sm font-medium transition-colors duration-150",
@@ -107,7 +82,6 @@ export function FeedToolbar({
                   isActive
                     ? "text-[var(--text)]"
                     : "text-[var(--text-muted)] hover:text-[var(--text)]",
-                  isPending ? "opacity-60 !cursor-wait" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
@@ -139,20 +113,18 @@ export function FeedToolbar({
           return (
             <button
               key={key}
-              onClick={() => handleSortChange(key)}
-              disabled={isPending}
+              onClick={() => onSortChange(key)}
               className={[
                 "cursor-pointer inline-flex min-h-[32px] items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2",
                 isActive
                   ? "text-[var(--text)] bg-[var(--bg-subtle)]"
                   : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-subtle)]",
-                isPending ? "opacity-60 !cursor-wait" : "",
               ].filter(Boolean).join(" ")}
             >
               {label}
               {isActive && showDirToggle && (
-                <span aria-hidden="true">{currentDir === "desc" ? "↓" : "↑"}</span>
+                <span aria-hidden="true">{currentDir === "desc" ? "\u2193" : "\u2191"}</span>
               )}
             </button>
           );

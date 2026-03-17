@@ -5,7 +5,8 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useTransition } from "react";
 import { ScoreBadge } from "@/components/jobs/ScoreBadge";
-import { toggleSaveJob, analyzeJob, type JobScoreUpdate } from "@/app/(dashboard)/dashboard/actions";
+import { useDashboardStore } from "@/lib/store";
+import { analyzeJob, type JobScoreUpdate } from "@/app/(dashboard)/dashboard/actions";
 import type { JobWithApplication } from "@/types";
 
 // ─── Source tag style ─────────────────────────────────────────────────────────
@@ -95,10 +96,12 @@ export function JobCard({
   onScored,
 }: JobCardProps) {
   const router = useRouter();
-  const [savePending, startSaveTransition] = useTransition();
-  const [isSaved, setIsSaved] = useState(job.feedStatus === "SAVED");
+  const storeToggleSaveJob = useDashboardStore((s) => s.toggleSaveJob);
+  const storeUpdateJobAiFields = useDashboardStore((s) => s.updateJobAiFields);
   const [scoreState, setScoreState] = useState<"idle" | "pending" | "done" | "error">("idle");
   const [, startScoreTransition] = useTransition();
+
+  const isSaved = job.feedStatus === "SAVED";
 
   function handleRequestScore(e: React.MouseEvent) {
     e.stopPropagation();
@@ -110,6 +113,8 @@ export function JobCard({
         setScoreState("error");
         return;
       }
+      setScoreState("done");
+      storeUpdateJobAiFields(job.id, result);
       onScored?.(job.id, result);
     });
   }
@@ -118,15 +123,7 @@ export function JobCard({
 
   function handleSave(e: React.MouseEvent) {
     e.stopPropagation();
-    const next = !isSaved;
-    setIsSaved(next);
-    startSaveTransition(async () => {
-      try {
-        await toggleSaveJob(job.id, job.profileId, next);
-      } catch {
-        setIsSaved(!next);
-      }
-    });
+    storeToggleSaveJob(job.id, job.profileId, !isSaved);
   }
 
   function handleCardClick(e: React.MouseEvent) {
@@ -174,14 +171,12 @@ export function JobCard({
           {!isIgnoredView && (
             <button
               onClick={handleSave}
-              disabled={savePending}
               className={[
                 "cursor-pointer flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
                 isSaved
                   ? "text-[var(--accent)] hover:opacity-70"
                   : "text-[var(--text-muted)] hover:text-[var(--text)]",
-                savePending ? "opacity-50 !cursor-wait" : "",
               ].filter(Boolean).join(" ")}
               aria-label={isSaved ? "Unsave job" : "Save job"}
             >
@@ -220,8 +215,8 @@ export function JobCard({
               onClick={handleRequestScore}
               disabled={scoreState === "pending" || scoreState === "done"}
               title={
-                scoreState === "done"    ? "Scoring in progress…" :
-                scoreState === "error"   ? "Failed — click to retry" :
+                scoreState === "done"    ? "Scoring in progress\u2026" :
+                scoreState === "error"   ? "Failed \u2014 click to retry" :
                 "Request a match score"
               }
               aria-label="Request match score"
@@ -254,7 +249,7 @@ export function JobCard({
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
             {subtitleParts.length > 0 && (
               <span className="text-xs text-[var(--text-muted)]">
-                {subtitleParts.join(" · ")}
+                {subtitleParts.join(" \u00b7 ")}
               </span>
             )}
             <SourceTag source={pool.source} />

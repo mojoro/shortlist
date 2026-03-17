@@ -1,16 +1,13 @@
 "use client";
 
-import { useState, useOptimistic, useTransition, useRef } from "react";
+import { useState, useRef } from "react";
 import dynamic from "next/dynamic";
-import { format, formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import type { ApplicationStatus } from "@prisma/client";
 import type { ApplicationWithJob, FieldOverrides } from "@/types";
 import { StatusSelect } from "@/components/pipeline/StatusSelect";
 import { ApplicationDrawer } from "@/components/pipeline/ApplicationDrawer";
-import {
-  updateApplicationStatus,
-  updateApplicationDetail,
-} from "@/app/(dashboard)/pipeline/actions";
+import { useDashboardStore } from "@/lib/store";
 
 const ResumePDFModal = dynamic(
   () =>
@@ -82,12 +79,14 @@ export function PipelineTable({
   activeApplications,
   closedApplications,
 }: PipelineTableProps) {
+  const storeUpdateAppStatus = useDashboardStore((s) => s.updateAppStatus);
+  const storeUpdateAppDetail = useDashboardStore((s) => s.updateAppDetail);
+
   const [activeTab, setActiveTab] = useState<"active" | "closed">("active");
   const [openDrawerAppId, setOpenDrawerAppId] = useState<string | null>(null);
   const [pdfPreviewFor, setPdfPreviewFor] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [editingNotesFor, setEditingNotesFor] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
 
   // Field overrides: display state for editable fields, keyed by appId
   const [fieldOverrides, setFieldOverrides] = useState<Map<string, FieldOverrides>>(new Map());
@@ -107,16 +106,10 @@ export function PipelineTable({
     timeoutId:      ReturnType<typeof setTimeout>;
   } | null>(null);
 
-  const [optimisticApps, applyOptimisticUpdate] = useOptimistic(
-    [...activeApplications, ...closedApplications],
-    (
-      state: ApplicationWithJob[],
-      update: { id: string; status: ApplicationStatus }
-    ) => state.map((a) => (a.id === update.id ? { ...a, status: update.status } : a))
-  );
+  const allApps = [...activeApplications, ...closedApplications];
 
-  // Apply terminal overrides on top of optimistic apps
-  const displayApps = optimisticApps.map((a) =>
+  // Apply terminal overrides on top of store-provided apps
+  const displayApps = allApps.map((a) =>
     terminalOverrides.has(a.id) ? { ...a, status: terminalOverrides.get(a.id)! } : a
   );
 
@@ -138,7 +131,7 @@ export function PipelineTable({
   }
 
   function handleFieldChange(appId: string, field: keyof FieldOverrides, value: string) {
-    const app = optimisticApps.find((a) => a.id === appId);
+    const app = allApps.find((a) => a.id === appId);
     const defaults = app ? getDefaultFields(app) : { notes: "", appliedAt: "", followUpAt: "", recruiterName: "", recruiterEmail: "" };
 
     setFieldOverrides((prev) => {
@@ -154,16 +147,16 @@ export function PipelineTable({
     const existing = saveTimers.current.get(appId);
     if (existing) clearTimeout(existing);
 
-    const timer = setTimeout(async () => {
+    const timer = setTimeout(() => {
       saveTimers.current.delete(appId);
       const fields = pendingSaves.current.get(appId);
       if (!fields) return;
-      await updateApplicationDetail(appId, {
-        notes:          fields.notes || undefined,
-        appliedAt:      fields.appliedAt || null,
-        followUpAt:     fields.followUpAt || null,
-        recruiterName:  fields.recruiterName || null,
-        recruiterEmail: fields.recruiterEmail || null,
+      storeUpdateAppDetail(appId, {
+        notes:          fields.notes,
+        appliedAt:      fields.appliedAt,
+        followUpAt:     fields.followUpAt,
+        recruiterName:  fields.recruiterName,
+        recruiterEmail: fields.recruiterEmail,
       });
     }, 1500);
 
@@ -176,7 +169,7 @@ export function PipelineTable({
     const previousStatus = app.status;
 
     if (TERMINAL_STATUSES.has(newStatus)) {
-      // Dismiss any existing undo toast — fire its server action immediately
+      // Dismiss any existing undo toast — commit its status via the store
       if (undoState) {
         clearTimeout(undoState.timeoutId);
         const { applicationId: prevId, newStatus: prevNew } = undoState;
@@ -186,27 +179,20 @@ export function PipelineTable({
           return next;
         });
         setUndoState(null);
-        startTransition(async () => {
-          await updateApplicationStatus(prevId, prevNew).catch(() => {});
-        });
+        storeUpdateAppStatus(prevId, prevNew);
       }
 
       // Apply terminal override for immediate UI update
       setTerminalOverrides((prev) => new Map(prev).set(applicationId, newStatus));
 
-      const timeoutId = setTimeout(async () => {
+      const timeoutId = setTimeout(() => {
         setUndoState(null);
         setTerminalOverrides((prev) => {
           const next = new Map(prev);
           next.delete(applicationId);
           return next;
         });
-        try {
-          await updateApplicationStatus(applicationId, newStatus);
-        } catch {
-          setErrorMessage("Couldn't update status. Please try again.");
-          setTimeout(() => setErrorMessage(null), 4000);
-        }
+        storeUpdateAppStatus(applicationId, newStatus);
       }, 5000);
 
       setUndoState({
@@ -217,16 +203,7 @@ export function PipelineTable({
         timeoutId,
       });
     } else {
-      startTransition(async () => {
-        applyOptimisticUpdate({ id: applicationId, status: newStatus });
-        try {
-          await updateApplicationStatus(applicationId, newStatus);
-          setErrorMessage(null);
-        } catch {
-          setErrorMessage("Couldn't update status. Please try again.");
-          setTimeout(() => setErrorMessage(null), 4000);
-        }
-      });
+      storeUpdateAppStatus(applicationId, newStatus);
     }
   }
 
@@ -251,14 +228,7 @@ export function PipelineTable({
       return next;
     });
     setUndoState(null);
-    startTransition(async () => {
-      try {
-        await updateApplicationStatus(applicationId, newStatus);
-      } catch {
-        setErrorMessage("Couldn't update status. Please try again.");
-        setTimeout(() => setErrorMessage(null), 4000);
-      }
-    });
+    storeUpdateAppStatus(applicationId, newStatus);
   }
 
   const rows = activeTab === "active" ? displayedActive : displayedClosed;
@@ -355,7 +325,7 @@ export function PipelineTable({
                       className={[
                         "cursor-pointer transition-colors hover:bg-[var(--bg)] active:bg-[var(--bg)]",
                         openDrawerAppId === app.id ? "bg-[var(--bg)]" : "",
-                        isPending ? "opacity-70" : "",
+                        "",
                       ].join(" ")}
                     >
                       {/* Job — sticky left column */}
@@ -373,7 +343,7 @@ export function PipelineTable({
                         <StatusSelect
                           value={app.status}
                           onChange={(s) => handleStatusChange(app.id, s)}
-                          disabled={isPending}
+                          disabled={false}
                           jobId={app.id}
                         />
                       </td>
