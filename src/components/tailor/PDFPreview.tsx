@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { usePDF, PDFViewer } from "@react-pdf/renderer";
 import { ResumePDFDocument } from "@/components/tailor/ResumePDFDocument";
 
@@ -22,6 +22,17 @@ export function PDFPreview({
   });
   const [appliedToast, setAppliedToast] = useState(false);
   const anchorRef = useRef<HTMLAnchorElement>(null);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(max-width: 768px)").matches
+      : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   function handleMarkApplied() {
     anchorRef.current?.click();
@@ -72,9 +83,27 @@ export function PDFPreview({
       </div>
 
       <div className="min-h-0 flex-1">
-        <PDFViewer width="100%" height="100%" showToolbar={false}>
-          <ResumePDFDocument markdown={markdown} />
-        </PDFViewer>
+        {isMobile ? (
+          <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+            <p className="text-sm text-[var(--text-muted)]">
+              PDF preview isn&apos;t supported in mobile browsers.
+            </p>
+            {url && (
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg)] hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+              >
+                Open PDF
+              </a>
+            )}
+          </div>
+        ) : (
+          <PDFViewer width="100%" height="100%" showToolbar={false}>
+            <ResumePDFDocument markdown={markdown} />
+          </PDFViewer>
+        )}
       </div>
 
       {/* Applied toast */}
