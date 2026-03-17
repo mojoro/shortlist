@@ -6,6 +6,7 @@ import { LandingNav } from "@/components/landing/LandingNav";
 import { FeatureRow } from "@/components/landing/FeatureRow";
 import { HeroDemoPreview } from "@/components/landing/HeroDemoPreview";
 import { HeroCTA, BottomCTA } from "@/components/landing/AuthAwareCTA";
+import { DashboardPrefetcher } from "@/components/providers/DashboardPrefetcher";
 
 export const metadata: Metadata = {
   title: `${APP_CONFIG.name} — AI job search`,
@@ -435,6 +436,8 @@ function Hero() {
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#080808] text-white">
+      {/* Prefetch dashboard data as soon as Clerk confirms sign-in */}
+      <DashboardPrefetcher />
       <LandingNav />
 
       {/* Hero */}

@@ -12,12 +12,17 @@ interface Props {
 export function DashboardDataProvider({ data, children }: Props) {
   const hydrate = useDashboardStore((s) => s.hydrate);
   const sync = useDashboardStore((s) => s.sync);
+  const hydrated = useDashboardStore((s) => s.hydrated);
   const lastSyncedAt = useDashboardStore((s) => s.lastSyncedAt);
 
   // Hydrate synchronously on first render — NOT in useEffect.
   // This ensures the store is populated before any child component renders.
+  // If DashboardPrefetcher already hydrated the store from the landing page,
+  // use the server's fresher data (it was fetched at request time, not earlier).
   const didHydrate = useRef(false);
   if (!didHydrate.current) {
+    // Always hydrate from the server's data — it's authoritative and fresher
+    // than any client-side prefetch that may have happened on the landing page.
     hydrate(data);
     didHydrate.current = true;
   }
