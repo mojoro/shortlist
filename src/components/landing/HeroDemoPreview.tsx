@@ -66,7 +66,7 @@ function FeedScene() {
     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
       {JOBS.map(({ score, title, company, tag }, index) => (
         <motion.div
-          key={score}
+          key={title}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.35, duration: 0.3, ease: "easeOut" }}
@@ -358,7 +358,7 @@ export function HeroDemoPreview() {
       setSceneIndex((i) => (i + 1) % SCENE_ORDER.length);
     }, SCENE_DURATIONS[scene]);
     return () => clearTimeout(timer);
-  }, [sceneIndex]);
+  }, [sceneIndex, scene]);
 
   return (
     <div
