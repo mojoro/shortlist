@@ -142,7 +142,8 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
         const { fetchDashboardData } = await import(
           "@/app/(dashboard)/actions-sync"
         );
-        const data = await fetchDashboardData(activeProfile.id);
+        const data = await fetchDashboardData();
+        if (!data) return;
         set({
           jobs: data.jobs,
           applications: data.applications,

@@ -22,7 +22,14 @@ export default async function DashboardLayout({
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  const data = await fetchDashboardData(userId);
+  const data = await fetchDashboardData() ?? {
+    userId,
+    activeProfile: null,
+    profiles: [],
+    jobs: [],
+    applications: [],
+    followUpCount: 0,
+  };
 
   return (
     <div className="min-h-screen bg-[var(--bg)]">
