@@ -1,12 +1,19 @@
+"use client";
+
 import Link from "next/link";
+import { useUser } from "@clerk/nextjs";
 import { APP_CONFIG } from "@/config/app";
 
 interface LandingNavProps {
   isSignedIn: boolean;
-  userInitial?: string;
 }
 
-export function LandingNav({ isSignedIn, userInitial }: LandingNavProps) {
+export function LandingNav({ isSignedIn }: LandingNavProps) {
+  const { user } = useUser();
+  const initial =
+    user?.firstName?.[0]?.toUpperCase() ??
+    user?.primaryEmailAddress?.emailAddress?.[0]?.toUpperCase() ??
+    "?";
   return (
     <header style={{ backgroundColor: "#080808" }}>
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
@@ -50,7 +57,7 @@ export function LandingNav({ isSignedIn, userInitial }: LandingNavProps) {
                   fontWeight: 600,
                 }}
               >
-                {userInitial ?? "?"}
+                {initial}
               </span>
               <Link
                 href="/dashboard"

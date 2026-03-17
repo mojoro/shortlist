@@ -785,28 +785,21 @@ export default async function LandingPage() {
   const { userId } = await auth();
   const isSignedIn = !!userId;
 
-  let userInitial: string | undefined;
   let greetingName: string | undefined;
   let dashboardHref = "/dashboard";
 
   if (isSignedIn && userId) {
-    const user = await currentUser();
-    userInitial =
-      user?.firstName?.[0]?.toUpperCase() ??
-      user?.emailAddresses?.[0]?.emailAddress?.[0]?.toUpperCase() ??
-      "?";
+    const [user, hasProfile] = await Promise.all([
+      currentUser(),
+      prisma.profile.findFirst({ where: { userId }, select: { id: true } }),
+    ]);
     greetingName = user?.firstName ?? undefined;
-
-    const hasProfile = await prisma.profile.findFirst({
-      where: { userId },
-      select: { id: true },
-    });
     if (!hasProfile) dashboardHref = "/onboarding";
   }
 
   return (
     <div style={{ backgroundColor: "#080808", color: "#ffffff" }} className="min-h-screen">
-      <LandingNav isSignedIn={isSignedIn} userInitial={userInitial} />
+      <LandingNav isSignedIn={isSignedIn} />
 
       {/* ── Hero ──────────────────────────────────── */}
       <section className="mx-auto max-w-5xl px-6 py-24 sm:py-32">
