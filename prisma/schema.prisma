@@ -280,7 +280,7 @@ model Usage {
   tailorCallCount   Int @default(0)
 
   // Soft limit — pause AI features if exceeded
-  monthlyLimitInputTokens Int @default(500000)
+  monthlyLimitInputTokens Int @default(100000)
 
   // Rolling window — reset monthly via cron
   currentMonthInputTokens  Int @default(0)

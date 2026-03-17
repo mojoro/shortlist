@@ -61,6 +61,13 @@ export function LandingNav({ isSignedIn }: LandingNavProps) {
         <div className="flex items-center gap-3">
           {isSignedIn ? (
             <>
+              <Link
+                href="/dashboard"
+                className="inline-flex h-8 items-center rounded-lg bg-white px-4 text-sm font-semibold text-[#080808] transition-colors hover:bg-[#e5e5e5]"
+              >
+                Dashboard →
+              </Link>
+
               {/* Avatar chip + dropdown */}
               <div ref={menuRef} style={{ position: "relative" }}>
                 <button
@@ -152,13 +159,6 @@ export function LandingNav({ isSignedIn }: LandingNavProps) {
                   </div>
                 )}
               </div>
-
-              <Link
-                href="/dashboard"
-                className="inline-flex h-8 items-center rounded-lg bg-white px-4 text-sm font-semibold text-[#080808] transition-colors hover:bg-[#e5e5e5]"
-              >
-                Dashboard →
-              </Link>
             </>
           ) : (
             <>

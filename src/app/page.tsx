@@ -792,27 +792,55 @@ export default async function LandingPage() {
       {/* ── CTA strip ─────────────────────────────── */}
       <section style={{ backgroundColor: "#0d0d0d", borderTop: "1px solid #111" }}>
         <div className="mx-auto max-w-5xl px-6 py-20 text-center">
-          <h2
-            style={{
-              fontSize: "clamp(22px, 4vw, 30px)",
-              fontWeight: 900,
-              lineHeight: 1.1,
-              letterSpacing: "-0.03em",
-            }}
-          >
-            Start your search.
-            <br />
-            <span style={{ color: "#333" }}>It&apos;s free.</span>
-          </h2>
-          <p style={{ color: "#444", fontSize: "13px", marginTop: "12px" }}>
-            Set up your profile in under two minutes.
-          </p>
-          <Link
-            href="/sign-up"
-            className="mt-8 inline-flex h-11 items-center rounded-lg bg-white px-8 text-sm font-semibold text-[#080808] transition-colors hover:bg-[#e5e5e5]"
-          >
-            Get started free
-          </Link>
+          {isSignedIn ? (
+            <>
+              <h2
+                style={{
+                  fontSize: "clamp(22px, 4vw, 30px)",
+                  fontWeight: 900,
+                  lineHeight: 1.1,
+                  letterSpacing: "-0.03em",
+                }}
+              >
+                Keep going.
+                <br />
+                <span style={{ color: "#333" }}>Your matches are waiting.</span>
+              </h2>
+              <p style={{ color: "#444", fontSize: "13px", marginTop: "12px" }}>
+                Pick up where you left off.
+              </p>
+              <Link
+                href={dashboardHref}
+                className="mt-8 inline-flex h-11 items-center rounded-lg bg-white px-8 text-sm font-semibold text-[#080808] transition-colors hover:bg-[#e5e5e5]"
+              >
+                Go to dashboard →
+              </Link>
+            </>
+          ) : (
+            <>
+              <h2
+                style={{
+                  fontSize: "clamp(22px, 4vw, 30px)",
+                  fontWeight: 900,
+                  lineHeight: 1.1,
+                  letterSpacing: "-0.03em",
+                }}
+              >
+                Start your search.
+                <br />
+                <span style={{ color: "#333" }}>It&apos;s free.</span>
+              </h2>
+              <p style={{ color: "#444", fontSize: "13px", marginTop: "12px" }}>
+                Set up your profile in under two minutes.
+              </p>
+              <Link
+                href="/sign-up"
+                className="mt-8 inline-flex h-11 items-center rounded-lg bg-white px-8 text-sm font-semibold text-[#080808] transition-colors hover:bg-[#e5e5e5]"
+              >
+                Get started free
+              </Link>
+            </>
+          )}
         </div>
       </section>
 
