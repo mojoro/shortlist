@@ -25,7 +25,7 @@ test.describe("Navigation (authenticated)", () => {
       page.getByRole("heading", { name: "Your pipeline" })
     ).toBeVisible({ timeout: 30_000 });
 
-    await page.getByRole("link", { name: "Feed" }).click();
+    await page.getByRole("link", { name: "Feed", exact: true }).first().click();
     await page.waitForURL(/\/dashboard/, { timeout: 10_000 });
     await expect(page.getByRole("article").first()).toBeVisible({ timeout: 30_000 });
   });
@@ -53,8 +53,8 @@ test.describe("Navigation (authenticated)", () => {
     await firstCard.click();
     await page.waitForURL(/\/jobs\//, { timeout: 10_000 });
 
-    // Navigate back
-    await page.getByRole("link", { name: "Feed" }).click();
+    // Navigate back via AppNav (exact: true avoids matching "Back to feed" on job-not-found state)
+    await page.getByRole("link", { name: "Feed", exact: true }).first().click();
     await page.waitForURL(/\/dashboard/, { timeout: 10_000 });
     await expect(page.getByRole("article").first()).toBeVisible({ timeout: 30_000 });
   });
