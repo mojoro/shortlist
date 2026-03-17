@@ -104,13 +104,22 @@ export function GeneratePane({
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let fullText = "";
+      let rafId: number | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         fullText += decoder.decode(value, { stream: true });
-        setStreamingText(fullText);
+        if (!rafId) {
+          rafId = requestAnimationFrame(() => {
+            setStreamingText(fullText);
+            rafId = null;
+          });
+        }
       }
+      // Final flush after stream ends
+      if (rafId) cancelAnimationFrame(rafId);
+      setStreamingText(fullText);
 
       // Stream done — persist to DB and get ID
       onMarkdownChange(fullText);
