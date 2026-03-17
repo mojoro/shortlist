@@ -104,12 +104,25 @@ The chrome-bar label cross-fades with the scene using the same `AnimatePresence`
 
 ---
 
+## Feature Card Animations
+
+The existing "What it does" feature rows (`FeatureRow` in `page.tsx`) are currently static. Each row should animate in as it enters the viewport.
+
+**Approach:** Extract `FeatureRow` into a `"use client"` island (`src/components/landing/FeatureRow.tsx`) that uses framer-motion's `useInView` hook to trigger the animation when the row scrolls into view.
+
+**Animation:** `motion.div` with `initial={{ opacity: 0, y: 20 }}` → `animate={{ opacity: 1, y: 0 }}` when in view. `once: true` so it only fires once per page load. Stagger the text column and panel column slightly: text at `delay: 0`, panel at `delay: 0.1`.
+
+**SSR note:** `FeatureRow` renders in a Server Component context today. After extraction to a client island, the parent `page.tsx` just maps over `FEATURES` and renders `<FeatureRow ... />` — no change to the data or structure. The `FEATURES` array stays in `page.tsx` and is passed as props.
+
+---
+
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/app/page.tsx` | Restructure `SignedOutHero` into two-column grid; fix mobile stats row; add `<HeroDemoPreview />` in correct DOM position; add `dynamic` import |
+| `src/app/page.tsx` | Restructure `SignedOutHero` into two-column grid; fix mobile stats row; add `<HeroDemoPreview />` in correct DOM position; add `dynamic` imports; render `<FeatureRow>` client component |
 | `src/components/landing/HeroDemoPreview.tsx` | New client component — full demo loop |
+| `src/components/landing/FeatureRow.tsx` | New client component — animated feature row with scroll-triggered entrance |
 | `package.json` / `pnpm-lock.yaml` | Add `framer-motion` |
 
 ---
