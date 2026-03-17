@@ -2,14 +2,11 @@
 
 import Link from "next/link";
 import { useRef, useState, useEffect } from "react";
-import { useUser, SignOutButton } from "@clerk/nextjs";
+import { useAuth, useUser, SignOutButton } from "@clerk/nextjs";
 import { APP_CONFIG } from "@/config/app";
 
-interface LandingNavProps {
-  isSignedIn: boolean;
-}
-
-export function LandingNav({ isSignedIn }: LandingNavProps) {
+export function LandingNav() {
+  const { isSignedIn, isLoaded } = useAuth();
   const { user } = useUser();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -58,7 +55,7 @@ export function LandingNav({ isSignedIn }: LandingNavProps) {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
-          {isSignedIn ? (
+          {isLoaded && isSignedIn ? (
             <>
               <Link
                 href="/dashboard"

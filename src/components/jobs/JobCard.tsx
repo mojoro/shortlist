@@ -157,21 +157,14 @@ export function JobCard({
   return (
     <article
       className={[
-        "group rounded-xl border p-6 transition-all duration-200",
+        "group rounded-xl border p-6 transition-all duration-200 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)]",
         isSelected
           ? "cursor-default border-[var(--accent)] bg-[var(--accent-muted)]"
           : isIgnoredView
             ? "cursor-pointer border-[var(--border)] bg-[var(--bg-card)] opacity-80 hover:border-[var(--border-strong)] hover:opacity-100"
             : "cursor-pointer border-[var(--border)] bg-[var(--bg-card)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-subtle)]",
       ].join(" ")}
-      style={{ boxShadow: "var(--shadow-card)" }}
       onClick={handleCardClick}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-card-hover)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-card)";
-      }}
     >
       {/* Top row: score · title/subtitle/source · bookmark · ×/✓ */}
       <div className="overflow-hidden">
