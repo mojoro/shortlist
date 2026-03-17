@@ -18,18 +18,18 @@ export const metadata: Metadata = {
 
 function PanelShell({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-md border border-[#1a1a1a] bg-[#0d0d0d]">
+    <div className="overflow-hidden rounded-md border border-[var(--border)] bg-[var(--bg-card)]">
       {/* Chrome bar */}
-      <div className="flex items-center gap-2 border-b border-b-[#1a1a1a] bg-[#111] px-3 py-[7px]">
+      <div className="flex items-center gap-2 border-b border-b-[var(--border)] bg-[var(--bg-subtle)] px-3 py-[7px]">
         <div className="flex gap-1">
           {[0, 1, 2].map((i) => (
             <span
               key={i}
-              className="inline-block h-1.5 w-1.5 rounded-full bg-[#2a2a2a]"
+              className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--border-strong)]"
             />
           ))}
         </div>
-        <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#333]">
+        <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">
           {label}
         </span>
       </div>
@@ -43,7 +43,7 @@ function PanelShell({ label, children }: { label: string; children: ReactNode })
 function Bar({ w, h = 3, o = 1 }: { w: string; h?: number; o?: number }) {
   return (
     <div
-      className="rounded-[2px] bg-[#252525]"
+      className="rounded-[2px] bg-[var(--border-strong)]"
       style={{ height: `${h}px`, width: w, opacity: o }}
     />
   );
@@ -68,7 +68,7 @@ function JobFeedPanel() {
           >
             <div
               className={`flex h-8 w-8 shrink-0 items-center justify-center rounded text-[10px] font-black ${
-                score === 94 ? "bg-[#22d3ee] text-[#080808]" : "bg-[#1a1a1a] text-white"
+                score === 94 ? "bg-[var(--accent)] text-[var(--accent-fg)]" : "bg-[var(--bg-subtle)] text-[var(--text)]"
               }`}
             >
               {score}
@@ -81,8 +81,8 @@ function JobFeedPanel() {
               <span
                 className={`whitespace-nowrap rounded-[3px] border px-[7px] py-0.5 text-[8px] font-bold tracking-[0.06em] ${
                   tag === "GO"
-                    ? "border-[rgba(34,211,238,0.2)] bg-[rgba(34,211,238,0.08)] text-[#22d3ee]"
-                    : "border-[#1e1e1e] bg-[#141414] text-[#555]"
+                    ? "border-[var(--accent-muted)] bg-[var(--accent-muted)] text-[var(--accent)]"
+                    : "border-[var(--border)] bg-[var(--bg-subtle)] text-[var(--text-muted)]"
                 }`}
               >
                 {tag}
@@ -99,36 +99,36 @@ function JobDetailPanel() {
   return (
     <PanelShell label="Job Detail">
       <div className="mb-3 flex items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-[#1a1a1a] text-base font-black text-white">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-[var(--accent)] text-base font-black text-[var(--accent-fg)]">
           94
         </div>
         <div className="flex flex-1 flex-col gap-[5px]">
           <Bar w="70%" h={4} />
-          <span className="text-[8px] font-semibold uppercase tracking-[0.06em] text-[#555]">
+          <span className="text-[8px] font-semibold uppercase tracking-[0.06em] text-[var(--accent)]">
             Strong match
           </span>
         </div>
       </div>
 
       <div className="mb-2">
-        <p className="mb-[5px] text-[8px] font-bold uppercase tracking-[0.1em] text-[#444]">
+        <p className="mb-[5px] text-[8px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
           Match points
         </p>
         {["72%", "58%", "48%"].map((w, i) => (
           <div key={i} className="mb-1 flex items-center gap-1.5">
-            <span className="w-2 text-[8px] text-[#444]">✓</span>
+            <span className="w-2 text-[8px] text-[var(--text-muted)]">✓</span>
             <Bar w={w} h={3} />
           </div>
         ))}
       </div>
 
       <div>
-        <p className="mb-[5px] text-[8px] font-bold uppercase tracking-[0.1em] text-[#444]">
+        <p className="mb-[5px] text-[8px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
           Gap points
         </p>
         {["44%", "32%"].map((w, i) => (
           <div key={i} className="mb-1 flex items-center gap-1.5">
-            <span className="w-2 text-[8px] text-[#2a2a2a]">—</span>
+            <span className="w-2 text-[8px] text-[var(--border-strong)]">—</span>
             <Bar w={w} h={3} o={0.45} />
           </div>
         ))}
@@ -141,17 +141,17 @@ function ImportPanel() {
   return (
     <PanelShell label="Import">
       <div className="mb-3 flex gap-1.5">
-        <div className="flex h-7 flex-1 items-center rounded border border-[#222] bg-[#161616] px-2.5">
-          <span className="text-[9px] text-[#333]">https://...</span>
+        <div className="flex h-7 flex-1 items-center rounded border border-[var(--border)] bg-[var(--bg-subtle)] px-2.5">
+          <span className="text-[9px] text-[var(--text-muted)]">https://...</span>
         </div>
-        <div className="flex h-7 items-center whitespace-nowrap rounded border border-[#2a2a2a] bg-[#1e1e1e] px-2.5 text-[9px] font-bold text-[#666]">
+        <div className="flex h-7 items-center whitespace-nowrap rounded border border-[var(--border)] bg-[var(--bg-subtle)] px-2.5 text-[9px] font-bold text-[var(--text-muted)]">
           Extract
         </div>
       </div>
-      <div className="border-t border-t-[#1a1a1a] pt-3">
-        <div className="rounded border border-[#1e1e1e] bg-[#131313] px-3 py-2.5">
-          <p className="mb-1 text-[11px] font-bold text-white">Senior Product Engineer</p>
-          <p className="text-[9px] text-[#555]">Acme Corp · Full-time</p>
+      <div className="border-t border-t-[var(--border)] pt-3">
+        <div className="rounded border border-[var(--border)] bg-[var(--bg-subtle)] px-3 py-2.5">
+          <p className="mb-1 text-[11px] font-bold text-[var(--text)]">Senior Product Engineer</p>
+          <p className="text-[9px] text-[var(--text-muted)]">Acme Corp · Full-time</p>
         </div>
       </div>
     </PanelShell>
@@ -163,7 +163,7 @@ function TailorPanel() {
     <PanelShell label="Tailor">
       <div className="mb-2.5 flex gap-3">
         <div className="min-w-0 flex-1">
-          <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[#444]">
+          <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
             Job Description
           </p>
           <div className="flex flex-col gap-1">
@@ -173,9 +173,9 @@ function TailorPanel() {
             <Bar w="60%" h={3} o={0.45} />
           </div>
         </div>
-        <div className="w-px shrink-0 bg-[#1e1e1e]" />
+        <div className="w-px shrink-0 bg-[var(--border)]" />
         <div className="min-w-0 flex-1">
-          <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[#444]">
+          <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
             Your Resume
           </p>
           <div className="flex flex-col gap-1">
@@ -186,7 +186,7 @@ function TailorPanel() {
           </div>
         </div>
       </div>
-      <div className="inline-flex h-[22px] items-center rounded bg-white px-2.5 text-[9px] font-bold text-[#080808]">
+      <div className="inline-flex h-[22px] items-center rounded bg-[var(--accent)] px-2.5 text-[9px] font-bold text-[var(--accent-fg)]">
         Export PDF
       </div>
     </PanelShell>
@@ -203,14 +203,14 @@ function WritingRulesPanel() {
       <div className="flex flex-col gap-3">
         {sections.map(({ label, pills }) => (
           <div key={label}>
-            <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[#444]">
+            <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[var(--text-muted)]">
               {label}
             </p>
             <div className="flex flex-wrap gap-[5px]">
               {pills.map((pill) => (
                 <span
                   key={pill}
-                  className="rounded-[3px] border border-[#222] bg-[#161616] px-2 py-0.5 text-[9px] text-[#888]"
+                  className="rounded-[3px] border border-[var(--border)] bg-[var(--bg-subtle)] px-2 py-0.5 text-[9px] text-[var(--text-muted)]"
                 >
                   {pill}
                 </span>
@@ -235,14 +235,14 @@ function PipelinePanel() {
       <div className="flex gap-2">
         {cols.map(({ label, n }) => (
           <div key={label} className="min-w-0 flex-1">
-            <p className="mb-1.5 truncate text-[8px] font-bold uppercase tracking-[0.06em] text-[#444]">
+            <p className="mb-1.5 truncate text-[8px] font-bold uppercase tracking-[0.06em] text-[var(--text-muted)]">
               {label}
             </p>
             <div className="flex flex-col gap-1">
               {Array.from({ length: n }).map((_, i) => (
                 <div
                   key={i}
-                  className="h-5 rounded-[3px] border border-[#1e1e1e] bg-[#161616]"
+                  className="h-5 rounded-[3px] border border-[var(--border)] bg-[var(--bg-subtle)]"
                 />
               ))}
             </div>
@@ -265,27 +265,27 @@ function ProfilesPanel() {
           <div
             key={name}
             className={`flex items-center gap-2 rounded border px-2.5 py-2 ${
-              active ? "border-[#222] bg-[#131313]" : "border-[#181818] bg-[#0f0f0f]"
+              active ? "border-[var(--border)] bg-[var(--bg-subtle)]" : "border-[var(--border)] bg-[var(--bg)]"
             }`}
           >
             <span
               className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                active ? "bg-[#22d3ee]" : "bg-[#2a2a2a]"
+                active ? "bg-[var(--accent)]" : "bg-[var(--border-strong)]"
               }`}
             />
             <span
               className={`flex-1 text-[10px] ${
-                active ? "font-semibold text-white" : "font-normal text-[#555]"
+                active ? "font-semibold text-[var(--text)]" : "font-normal text-[var(--text-muted)]"
               }`}
             >
               {name}
             </span>
             {active ? (
-              <span className="text-[8px] uppercase tracking-[0.06em] text-[#444]">
+              <span className="text-[8px] uppercase tracking-[0.06em] text-[var(--text-muted)]">
                 Active
               </span>
             ) : (
-              <span className="rounded-[3px] border border-[#252525] bg-[#1a1a1a] px-2 py-0.5 text-[8px] font-bold text-[#666]">
+              <span className="rounded-[3px] border border-[var(--border)] bg-[var(--bg-subtle)] px-2 py-0.5 text-[8px] font-bold text-[var(--text-muted)]">
                 Switch
               </span>
             )}
