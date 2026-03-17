@@ -2,13 +2,7 @@
 
 import { useState } from "react";
 import { useDashboardStore } from "@/lib/store";
-import {
-  selectActiveApplications,
-  selectClosedApplications,
-  selectPipelineStats,
-  selectFollowUpDue,
-  sortApplications,
-} from "@/lib/store-selectors";
+import { isTerminalStatus, sortApplications } from "@/lib/store-filters";
 import { PipelineStats } from "@/components/pipeline/PipelineStats";
 import { FollowUpBanner } from "@/components/pipeline/FollowUpBanner";
 import { PipelineTable } from "@/components/pipeline/PipelineTable";
@@ -20,11 +14,25 @@ interface PipelineClientProps {
 }
 
 export function PipelineClient({ initialSort, initialDir }: PipelineClientProps) {
-  const activeApps = useDashboardStore(selectActiveApplications);
-  const closedApps = useDashboardStore(selectClosedApplications);
-  const stats = useDashboardStore(selectPipelineStats);
-  const followUpDue = useDashboardStore(selectFollowUpDue);
+  const applications = useDashboardStore((s) => s.applications);
   const hydrated = useDashboardStore((s) => s.hydrated);
+
+  // Derive from raw applications array (stable reference from store)
+  const activeApps = applications.filter((a) => !isTerminalStatus(a.status));
+  const closedApps = applications.filter((a) => isTerminalStatus(a.status));
+
+  const endOfToday = new Date();
+  endOfToday.setUTCHours(23, 59, 59, 999);
+  const followUpDue = activeApps.filter(
+    (a) => a.followUpAt && new Date(a.followUpAt) <= endOfToday,
+  );
+
+  const stats = {
+    total: applications.length,
+    applied: applications.filter((a) => a.status === "APPLIED").length,
+    interviewing: applications.filter((a) => a.status === "INTERVIEWING").length,
+    offer: applications.filter((a) => a.status === "OFFER").length,
+  };
 
   const [sort, setSort] = useState(initialSort);
   const [dir, setDir] = useState(initialDir);

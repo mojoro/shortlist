@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useShallow } from "zustand/react/shallow";
 import { formatDistanceToNow } from "date-fns";
 import { useDashboardStore } from "@/lib/store";
-import { selectStats, makeFilteredJobsSelector } from "@/lib/store-selectors";
+import { filterJobs, sortJobs, computeStats } from "@/lib/store-filters";
 import { ProfileSwitcher } from "@/components/dashboard/ProfileSwitcher";
 import { FeedToolbar } from "@/components/dashboard/FeedToolbar";
 import { JobFeed } from "@/components/jobs/JobFeed";
@@ -34,9 +35,12 @@ export function DashboardClient({
   const [dir, setDir] = useState(initialDir);
 
   const activeProfile = useDashboardStore((s) => s.activeProfile);
-  const profiles = useDashboardStore((s) => s.profiles);
-  const stats = useDashboardStore(selectStats);
-  const jobs = useDashboardStore(makeFilteredJobsSelector(filter, sort, dir));
+  const profiles = useDashboardStore(useShallow((s) => s.profiles));
+  const allJobs = useDashboardStore((s) => s.jobs);
+
+  // Derive stats and filtered jobs from the raw jobs array (stable reference from store)
+  const stats = computeStats(allJobs);
+  const jobs = sortJobs(filterJobs(allJobs, filter), sort, dir);
 
   const { allCount, newCount, savedCount, appliedCount, ignoredCount, avgScore } = stats;
 

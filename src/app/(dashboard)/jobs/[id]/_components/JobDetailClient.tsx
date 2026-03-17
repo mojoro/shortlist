@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { format, formatDistanceToNow } from "date-fns";
 import { useDashboardStore } from "@/lib/store";
-import { makeJobByIdSelector } from "@/lib/store-selectors";
 import { JobDetailActions } from "@/components/jobs/JobDetailActions";
 import { JobNotesInput } from "@/components/jobs/JobNotesInput";
 import { JobDescription } from "@/components/jobs/JobDescription";
@@ -39,7 +38,7 @@ interface JobDetailClientProps {
 }
 
 export function JobDetailClient({ jobId }: JobDetailClientProps) {
-  const job = useDashboardStore(makeJobByIdSelector(jobId));
+  const job = useDashboardStore((s) => s.jobs.find((j) => j.id === jobId) ?? null);
 
   if (!job) {
     return (
