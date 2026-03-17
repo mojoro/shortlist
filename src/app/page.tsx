@@ -6,6 +6,7 @@ import { APP_CONFIG } from "@/config/app";
 import { prisma } from "@/lib/prisma";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { SignedInHero } from "@/components/landing/SignedInHero";
+import { FeatureRow } from "@/components/landing/FeatureRow";
 
 export const metadata: Metadata = {
   title: `${APP_CONFIG.name} — AI job search`,
@@ -597,34 +598,6 @@ const FEATURES: Feature[] = [
     panel: <ProfilesPanel />,
   },
 ];
-
-/* ─── Feature row ──────────────────────────────────────────── */
-
-function FeatureRow({ bold, italic, description, panel }: Feature) {
-  return (
-    <div
-      className="flex flex-col gap-8 py-10 md:flex-row md:items-start"
-      style={{ borderTop: "1px solid #0f0f0f" }}
-    >
-      <div className="w-full shrink-0 md:w-[220px]">
-        <p
-          className="mb-3"
-          style={{
-            fontSize: "17px",
-            fontWeight: 800,
-            letterSpacing: "-0.02em",
-            lineHeight: 1.3,
-          }}
-        >
-          <strong style={{ color: "#fff", fontWeight: 800 }}>{bold}</strong>{" "}
-          <em style={{ fontStyle: "italic", color: "#3a3a3a", fontWeight: 400 }}>{italic}</em>
-        </p>
-        <p style={{ fontSize: "12px", color: "#555", lineHeight: 1.75 }}>{description}</p>
-      </div>
-      <div className="min-w-0 flex-1">{panel}</div>
-    </div>
-  );
-}
 
 /* ─── Hero — signed-out ────────────────────────────────────── */
 
