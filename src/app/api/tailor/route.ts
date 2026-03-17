@@ -3,6 +3,7 @@ import { appendFileSync } from "fs";
 import { prisma } from "@/lib/prisma";
 import { openrouter, TAILOR_MODEL } from "@/lib/openrouter";
 import { tailorSchema } from "@/lib/validations";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const maxDuration = 60;
 
@@ -14,11 +15,19 @@ export async function POST(req: Request) {
     const { userId } = await auth();
     if (!userId) return new Response("Unauthorized", { status: 401 });
 
+    const { allowed, retryAfterMs } = checkRateLimit(userId, "tailor", 5);
+    if (!allowed) {
+      return Response.json(
+        { error: "Too many requests. Please wait a moment." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil(retryAfterMs / 1000)) } },
+      );
+    }
+
     const body = await req.json().catch(() => null);
     const parsed = tailorSchema.safeParse(body);
     if (!parsed.success) {
       return Response.json(
-        { error: "Invalid request", details: parsed.error.flatten() },
+        { error: "Invalid request" },
         { status: 400 }
       );
     }
