@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/env";
 import { scrapeGreenhouse } from "@/lib/scrapers/greenhouse";
@@ -199,6 +200,7 @@ export async function POST(req: Request) {
     console.log(`[/api/scrape] Exit — totalPoolNew: ${totalPoolNew}, profiles: ${results.length}, durationMs: ${Date.now() - startMs}`);
   }
 
+  revalidateTag("dashboard-stats");
   return Response.json({ poolNew: totalPoolNew, results });
 }
 

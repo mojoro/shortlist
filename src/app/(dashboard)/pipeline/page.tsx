@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { getActiveProfile } from "@/lib/get-active-profile";
 import { PipelineStats } from "@/components/pipeline/PipelineStats";
 import { FollowUpBanner } from "@/components/pipeline/FollowUpBanner";
 import { PipelineTable } from "@/components/pipeline/PipelineTable";
@@ -50,11 +51,8 @@ export default async function PipelinePage({ searchParams }: PageProps) {
     : "desc";
 
   try {
-    const profile = await prisma.profile.findFirst({
-      where: { userId },
-      orderBy: { isActive: "desc" },
-      select: { id: true },
-    });
+    const fullProfile = await getActiveProfile(userId);
+    const profile = fullProfile ? { id: fullProfile.id } : null;
 
     if (!profile) {
       return (
