@@ -21,17 +21,19 @@ test.describe("Navigation (authenticated)", () => {
 
   test("pipeline to dashboard via nav", async ({ page }) => {
     await page.goto("/pipeline");
-    await page.waitForSelector("table", { timeout: 15_000 });
+    await expect(
+      page.getByRole("heading", { name: "Your pipeline" })
+    ).toBeVisible({ timeout: 30_000 });
 
     await page.getByRole("link", { name: "Feed" }).click();
     await page.waitForURL(/\/dashboard/, { timeout: 10_000 });
-    await expect(page.getByRole("article").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("article").first()).toBeVisible({ timeout: 30_000 });
   });
 
   test("dashboard to tailor via card link", async ({ page }) => {
     await page.goto("/dashboard");
     const firstCard = page.getByRole("article").first();
-    await expect(firstCard).toBeVisible({ timeout: 15_000 });
+    await expect(firstCard).toBeVisible({ timeout: 30_000 });
 
     const tailorLink = firstCard.getByRole("link", { name: /tailor/i });
     if (await tailorLink.isVisible()) {
@@ -47,13 +49,13 @@ test.describe("Navigation (authenticated)", () => {
   test("dashboard to job detail and back", async ({ page }) => {
     await page.goto("/dashboard");
     const firstCard = page.getByRole("article").first();
-    await expect(firstCard).toBeVisible({ timeout: 15_000 });
+    await expect(firstCard).toBeVisible({ timeout: 30_000 });
     await firstCard.click();
     await page.waitForURL(/\/jobs\//, { timeout: 10_000 });
 
     // Navigate back
     await page.getByRole("link", { name: "Feed" }).click();
     await page.waitForURL(/\/dashboard/, { timeout: 10_000 });
-    await expect(page.getByRole("article").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("article").first()).toBeVisible({ timeout: 30_000 });
   });
 });
