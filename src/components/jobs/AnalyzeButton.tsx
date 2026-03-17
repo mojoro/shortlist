@@ -13,12 +13,8 @@ export function AnalyzeButton({ jobId, profileId }: { jobId: string; profileId: 
     setState("pending");
     startTransition(async () => {
       const result = await analyzeJob(jobId, profileId);
-      if (result.error === "CREDITS") {
-        setState("credits");
-        return;
-      }
-      if (result.error === "UNKNOWN") {
-        setState("error");
+      if ("error" in result) {
+        setState(result.error === "CREDITS" ? "credits" : "error");
         return;
       }
       router.refresh();

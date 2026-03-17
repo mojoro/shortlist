@@ -46,7 +46,7 @@ export function ReanalyzeButton({ jobId, profileId }: ReanalyzeButtonProps) {
       setState("pending");
       const result = await analyzeJob(jobId, profileId);
 
-      if (result.error) {
+      if ("error" in result) {
         setState("error");
         return;
       }

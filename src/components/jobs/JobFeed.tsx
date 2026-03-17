@@ -8,6 +8,7 @@ import {
   unignoreJob,
   batchIgnoreJobs,
   batchSaveJobs,
+  type JobScoreUpdate,
 } from "@/app/(dashboard)/dashboard/actions";
 import type { JobWithApplication } from "@/types";
 import { groupJobsByDate } from "@/lib/feed";
@@ -231,6 +232,21 @@ export function JobFeed({
     });
   }
 
+  // Score update — update job in place or remove if hidden (NO_GO)
+  function handleScored(jobId: string, update: JobScoreUpdate) {
+    if (update.hidden) {
+      setJobs((prev) => prev.filter((j) => j.id !== jobId));
+    } else {
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.id === jobId
+            ? { ...j, aiScore: update.score, aiStatus: update.status, aiSummary: update.summary, aiMatchPoints: update.matchPoints, aiGapPoints: update.gapPoints }
+            : j
+        )
+      );
+    }
+  }
+
   // Unignore from ignored view — just remove from visible list
   function handleUnignore(jobId: string) {
     const job = jobs.find((j) => j.id === jobId);
@@ -394,6 +410,7 @@ export function JobFeed({
                       onIgnore={handleIgnore}
                       onUnignore={handleUnignore}
                       onSelect={handleSelect}
+                      onScored={handleScored}
                     />
                   );
                 })}
@@ -408,6 +425,7 @@ export function JobFeed({
                 onIgnore={handleIgnore}
                 onUnignore={handleUnignore}
                 onSelect={handleSelect}
+                onScored={handleScored}
               />
             ))}
       </div>

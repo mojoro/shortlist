@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
+import type { AiStatus } from "@prisma/client";
 import { headers } from "next/headers";
 import { appendFileSync } from "fs";
 import { revalidatePath } from "next/cache";
@@ -157,10 +158,19 @@ export async function batchSaveJobs(
   revalidatePath("/dashboard");
 }
 
+export type JobScoreUpdate = {
+  score: number;
+  status: AiStatus;
+  summary: string;
+  matchPoints: string[];
+  gapPoints: string[];
+  hidden: boolean;
+};
+
 export async function analyzeJob(
   jobId: string,
   profileId: string,
-): Promise<{ error?: "CREDITS" | "UNKNOWN" }> {
+): Promise<{ error: "CREDITS" | "UNKNOWN" } | JobScoreUpdate> {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
@@ -246,13 +256,20 @@ export async function analyzeJob(
         },
       });
     }
+
+    revalidatePath("/dashboard");
+    return {
+      score:       Math.round(result.score),
+      status:      result.status,
+      summary:     result.summary,
+      matchPoints: result.matchPoints,
+      gapPoints:   result.gapPoints,
+      hidden:      result.status === "NO_GO" && job.jobPool.source !== "CUSTOM",
+    };
   } catch (err) {
     console.error("[analyzeJob]", err);
     return { error: "UNKNOWN" };
   }
-
-  revalidatePath("/dashboard");
-  return {};
 }
 
 export async function discardAnalysis(

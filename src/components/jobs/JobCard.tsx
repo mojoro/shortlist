@@ -5,7 +5,7 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useTransition } from "react";
 import { ScoreBadge } from "@/components/jobs/ScoreBadge";
-import { toggleSaveJob, analyzeJob } from "@/app/(dashboard)/dashboard/actions";
+import { toggleSaveJob, analyzeJob, type JobScoreUpdate } from "@/app/(dashboard)/dashboard/actions";
 import type { JobWithApplication } from "@/types";
 
 // ─── Source tag style ─────────────────────────────────────────────────────────
@@ -82,6 +82,7 @@ interface JobCardProps {
   onIgnore?: (jobId: string) => void;
   onUnignore?: (jobId: string) => void;
   onSelect?: (jobId: string, e: React.MouseEvent, index: number) => void;
+  onScored?: (jobId: string, update: JobScoreUpdate) => void;
 }
 
 export function JobCard({
@@ -91,6 +92,7 @@ export function JobCard({
   onIgnore,
   onUnignore,
   onSelect,
+  onScored,
 }: JobCardProps) {
   const router = useRouter();
   const [savePending, startSaveTransition] = useTransition();
@@ -104,12 +106,11 @@ export function JobCard({
     setScoreState("pending");
     startScoreTransition(async () => {
       const result = await analyzeJob(job.id, job.profileId);
-      if (result.error) {
+      if ("error" in result) {
         setScoreState("error");
         return;
       }
-      setScoreState("done");
-      router.refresh();
+      onScored?.(job.id, result);
     });
   }
 
