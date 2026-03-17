@@ -49,6 +49,13 @@ export async function POST(req: Request) {
     // Create or update TailoredResume
     let tailoredResume;
     if (tailoredResumeId) {
+      // Verify the resume belongs to this application before updating
+      const existing = await prisma.tailoredResume.findFirst({
+        where: { id: tailoredResumeId, applicationId: application.id },
+        select: { id: true },
+      });
+      if (!existing) return new Response("Not found", { status: 404 });
+
       tailoredResume = await prisma.tailoredResume.update({
         where: { id: tailoredResumeId },
         data: {

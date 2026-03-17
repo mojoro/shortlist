@@ -2,11 +2,16 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { JobDescription } from "@/components/jobs/JobDescription";
 import { JobDescriptionPane } from "@/components/tailor/JobDescriptionPane";
 import { GeneratePane } from "@/components/tailor/GeneratePane";
-import { PDFPreview } from "@/components/tailor/PDFPreview";
 import { MobileTabBar, type MobileTab } from "@/components/tailor/MobileTabBar";
+
+const PDFPreview = dynamic(
+  () => import("@/components/tailor/PDFPreview").then((m) => m.PDFPreview),
+  { ssr: false }
+);
 import type { SaveStatus } from "@/components/tailor/AutoSaveIndicator";
 
 interface TailorPanelProps {
