@@ -18,8 +18,7 @@ export function FeatureRow({ bold, italic, description, panel }: FeatureRowProps
   return (
     <div
       ref={ref}
-      className="flex flex-col gap-8 py-10 md:flex-row md:items-start"
-      style={{ borderTop: "1px solid #0f0f0f" }}
+      className="flex flex-col gap-8 border-t border-t-[#0f0f0f] py-10 md:flex-row md:items-start"
     >
       <motion.div
         className="w-full shrink-0 md:w-[220px]"
@@ -27,19 +26,11 @@ export function FeatureRow({ bold, italic, description, panel }: FeatureRowProps
         animate={isInView ? { opacity: 1, y: 0 } : {}}
         transition={{ duration: 0.4, ease: "easeOut" }}
       >
-        <p
-          className="mb-3"
-          style={{
-            fontSize: "17px",
-            fontWeight: 800,
-            letterSpacing: "-0.02em",
-            lineHeight: 1.3,
-          }}
-        >
-          <strong style={{ color: "#fff", fontWeight: 800 }}>{bold}</strong>{" "}
-          <em style={{ fontStyle: "italic", color: "#3a3a3a", fontWeight: 400 }}>{italic}</em>
+        <p className="mb-3 text-[17px] font-extrabold leading-[1.3] tracking-[-0.02em]">
+          <strong className="font-extrabold text-white">{bold}</strong>{" "}
+          <em className="font-normal not-italic text-[#3a3a3a]">{italic}</em>
         </p>
-        <p style={{ fontSize: "12px", color: "#555", lineHeight: 1.75 }}>{description}</p>
+        <p className="text-[12px] leading-[1.75] text-[#555]">{description}</p>
       </motion.div>
       <motion.div
         className="min-w-0 flex-1"

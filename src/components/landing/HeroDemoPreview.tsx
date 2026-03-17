@@ -63,62 +63,33 @@ const sceneVariants = {
 
 function FeedScene() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+    <div className="flex flex-col gap-2">
       {JOBS.map(({ score, title, company, tag }, index) => (
         <motion.div
           key={title}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.35, duration: 0.3, ease: "easeOut" }}
-          style={{ display: "flex", alignItems: "center", gap: "10px" }}
+          className="flex items-center gap-2.5"
         >
           <div
-            style={{
-              width: "36px",
-              height: "36px",
-              background: score === 94 ? "#22d3ee" : "#1a1a1a",
-              borderRadius: "4px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "10px",
-              fontWeight: 900,
-              color: score === 94 ? "#080808" : "#fff",
-              flexShrink: 0,
-            }}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded text-[10px] font-black ${
+              score === 94 ? "bg-[#22d3ee] text-[#080808]" : "bg-[#1a1a1a] text-white"
+            }`}
           >
             {score}
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p
-              style={{
-                fontSize: "11px",
-                fontWeight: 600,
-                color: "#e0e0e0",
-                marginBottom: "2px",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {title}
-            </p>
-            <p style={{ fontSize: "9px", color: "#444" }}>{company}</p>
+          <div className="min-w-0 flex-1">
+            <p className="mb-0.5 truncate text-[11px] font-semibold text-[#e0e0e0]">{title}</p>
+            <p className="text-[9px] text-[#444]">{company}</p>
           </div>
           {tag && (
             <span
-              style={{
-                fontSize: "8px",
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                color: tag === "GO" ? "#22d3ee" : "#555",
-                background: tag === "GO" ? "rgba(34,211,238,0.08)" : "#141414",
-                padding: "2px 7px",
-                borderRadius: "3px",
-                border: `1px solid ${tag === "GO" ? "rgba(34,211,238,0.2)" : "#1e1e1e"}`,
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-              }}
+              className={`shrink-0 whitespace-nowrap rounded-[3px] border px-[7px] py-0.5 text-[8px] font-bold tracking-[0.06em] ${
+                tag === "GO"
+                  ? "border-[rgba(34,211,238,0.2)] bg-[rgba(34,211,238,0.08)] text-[#22d3ee]"
+                  : "border-[#1e1e1e] bg-[#141414] text-[#555]"
+              }`}
             >
               {tag}
             </span>
@@ -164,55 +135,37 @@ function TailorScene() {
   }, [phase]);
 
   return (
-    <div style={{ position: "relative" }}>
+    <div className="relative">
       {/* Two-column layout */}
-      <div style={{ display: "flex", gap: "12px", marginBottom: "12px" }}>
+      <div className="mb-3 flex gap-3">
         {/* Job Description */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p
-            style={{
-              fontSize: "8px",
-              color: "#444",
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              marginBottom: "6px",
-            }}
-          >
+        <div className="min-w-0 flex-1">
+          <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[#444]">
             Job Description
           </p>
-          <div style={{ fontSize: "9px", color: "#555", lineHeight: 1.65 }}>
+          <div className="text-[9px] leading-[1.65] text-[#555]">
             <p>Senior Frontend Engineer</p>
-            <p style={{ marginTop: "4px", opacity: 0.7 }}>5+ yrs React, TypeScript</p>
-            <p style={{ marginTop: "4px", opacity: 0.5 }}>Remote · Series B startup</p>
-            <p style={{ marginTop: "4px", opacity: 0.35 }}>Own the design system</p>
+            <p className="mt-1 opacity-70">5+ yrs React, TypeScript</p>
+            <p className="mt-1 opacity-50">Remote · Series B startup</p>
+            <p className="mt-1 opacity-[0.35]">Own the design system</p>
           </div>
         </div>
-        <div style={{ width: "1px", background: "#1e1e1e", flexShrink: 0 }} />
+        <div className="w-px shrink-0 bg-[#1e1e1e]" />
         {/* Your Resume */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p
-            style={{
-              fontSize: "8px",
-              color: "#444",
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              marginBottom: "6px",
-            }}
-          >
+        <div className="min-w-0 flex-1">
+          <p className="mb-1.5 text-[8px] font-bold uppercase tracking-[0.1em] text-[#444]">
             Your Resume
           </p>
-          <div style={{ fontSize: "9px", lineHeight: 1.65, minHeight: "60px" }}>
+          <div className="min-h-[60px] text-[9px] leading-[1.65]">
             {phase === "streaming" ? (
-              <p style={{ color: "#aaa" }}>
+              <p className="text-[#aaa]">
                 {streamedText}
-                <span style={{ opacity: 0.5 }}>|</span>
+                <span className="opacity-50">|</span>
               </p>
             ) : (
-              <div style={{ color: "#555" }}>
+              <div className="text-[#555]">
                 <p>Led frontend at early-stage startup</p>
-                <p style={{ marginTop: "4px", opacity: 0.7 }}>React, Node, PostgreSQL</p>
+                <p className="mt-1 opacity-70">React, Node, PostgreSQL</p>
               </div>
             )}
           </div>
@@ -221,35 +174,18 @@ function TailorScene() {
 
       {/* Tailor button — lights up cyan after click */}
       <div
-        style={{
-          display: "inline-flex",
-          height: "22px",
-          alignItems: "center",
-          padding: "0 10px",
-          background:
-            phase === "moving" ? "rgba(34,211,238,0.08)" : "#22d3ee",
-          color: phase === "moving" ? "#22d3ee" : "#080808",
-          border: "1px solid rgba(34,211,238,0.25)",
-          borderRadius: "4px",
-          fontSize: "9px",
-          fontWeight: 700,
-          transition: "all 0.15s",
-        }}
+        className={`inline-flex h-[22px] items-center rounded border border-[rgba(34,211,238,0.25)] px-[10px] text-[9px] font-bold transition-all duration-150 ${
+          phase === "moving"
+            ? "bg-[rgba(34,211,238,0.08)] text-[#22d3ee]"
+            : "bg-[#22d3ee] text-[#080808]"
+        }`}
       >
         Tailor →
       </div>
 
       {/* Simulated cursor */}
       <motion.div
-        style={{
-          position: "absolute",
-          pointerEvents: "none",
-          zIndex: 10,
-          width: "14px",
-          height: "18px",
-          bottom: 0,
-          left: 0,
-        }}
+        className="pointer-events-none absolute bottom-0 left-0 z-10 h-[18px] w-[14px]"
         // x: 76 targets the "Tailor →" button approximately.
         // These are pixel offsets from the relative parent; they look correct at
         // typical desktop widths. At very narrow widths the cursor may land slightly
@@ -259,8 +195,8 @@ function TailorScene() {
           phase === "moving"
             ? { x: 76, y: 6, opacity: 1 }
             : phase === "clicking"
-            ? { x: 76, y: 6, scale: 0.8, opacity: 1 }
-            : { x: 76, y: 6, opacity: 0 }
+              ? { x: 76, y: 6, scale: 0.8, opacity: 1 }
+              : { x: 76, y: 6, opacity: 0 }
         }
         transition={{
           duration: phase === "moving" ? 0.6 : 0.1,
@@ -284,25 +220,13 @@ function TailorScene() {
 
 function PipelineScene() {
   return (
-    <div style={{ display: "flex", gap: "8px" }}>
+    <div className="flex gap-2">
       {PIPELINE_COLS.map(({ label, cards }, colIndex) => (
-        <div key={label} style={{ flex: 1, minWidth: 0 }}>
-          <p
-            style={{
-              fontSize: "8px",
-              color: "#444",
-              fontWeight: 700,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              marginBottom: "6px",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
+        <div key={label} className="min-w-0 flex-1">
+          <p className="mb-1.5 truncate text-[8px] font-bold uppercase tracking-[0.06em] text-[#444]">
             {label}
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+          <div className="flex flex-col gap-1">
             {cards.map(({ title, company }, cardIndex) => (
               <motion.div
                 key={title}
@@ -313,27 +237,10 @@ function PipelineScene() {
                   duration: 0.25,
                   ease: "easeOut",
                 }}
-                style={{
-                  padding: "6px 8px",
-                  background: "#161616",
-                  border: "1px solid #1e1e1e",
-                  borderRadius: "3px",
-                }}
+                className="rounded-[3px] border border-[#1e1e1e] bg-[#161616] px-2 py-1.5"
               >
-                <p
-                  style={{
-                    fontSize: "8px",
-                    fontWeight: 600,
-                    color: "#ccc",
-                    marginBottom: "1px",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {title}
-                </p>
-                <p style={{ fontSize: "7px", color: "#444" }}>{company}</p>
+                <p className="mb-px truncate text-[8px] font-semibold text-[#ccc]">{title}</p>
+                <p className="text-[7px] text-[#444]">{company}</p>
               </motion.div>
             ))}
           </div>
@@ -361,37 +268,14 @@ export function HeroDemoPreview() {
   }, [sceneIndex, scene]);
 
   return (
-    <div
-      style={{
-        background: "#0d0d0d",
-        border: "1px solid #1a1a1a",
-        borderRadius: "6px",
-        overflow: "hidden",
-        boxShadow: "0 0 60px rgba(34,211,238,0.04)",
-      }}
-    >
+    <div className="overflow-hidden rounded-md border border-[#1a1a1a] bg-[#0d0d0d] shadow-[0_0_60px_rgba(34,211,238,0.04)]">
       {/* Chrome bar */}
-      <div
-        style={{
-          background: "#111",
-          padding: "7px 12px",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          borderBottom: "1px solid #1a1a1a",
-        }}
-      >
-        <div style={{ display: "flex", gap: "4px" }}>
+      <div className="flex items-center gap-2 border-b border-b-[#1a1a1a] bg-[#111] px-3 py-[7px]">
+        <div className="flex gap-1">
           {[0, 1, 2].map((i) => (
             <span
               key={i}
-              style={{
-                width: "6px",
-                height: "6px",
-                borderRadius: "50%",
-                background: "#2a2a2a",
-                display: "inline-block",
-              }}
+              className="inline-block h-1.5 w-1.5 rounded-full bg-[#2a2a2a]"
             />
           ))}
         </div>
@@ -402,13 +286,7 @@ export function HeroDemoPreview() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            style={{
-              fontSize: "9px",
-              fontWeight: 700,
-              letterSpacing: "0.12em",
-              color: "#333",
-              textTransform: "uppercase",
-            }}
+            className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#333]"
           >
             {SCENE_LABELS[scene]}
           </motion.span>
@@ -416,7 +294,7 @@ export function HeroDemoPreview() {
       </div>
 
       {/* Scene content */}
-      <div style={{ padding: "14px 14px 12px", minHeight: "148px" }}>
+      <div className="min-h-[148px] px-3.5 pb-3 pt-3.5">
         <AnimatePresence mode="wait">
           <motion.div
             key={scene}
