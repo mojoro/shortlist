@@ -3,14 +3,8 @@
 import { useState, useTransition, useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { JobCard } from "@/components/jobs/JobCard";
-import {
-  getMoreJobs,
-  ignoreJob,
-  unignoreJob,
-  batchIgnoreJobs,
-  batchSaveJobs,
-  type JobScoreUpdate,
-} from "@/app/(dashboard)/dashboard/actions";
+import { useDashboardStore } from "@/lib/store";
+import type { JobScoreUpdate } from "@/app/(dashboard)/dashboard/actions";
 import type { JobWithApplication } from "@/types";
 import { groupJobsByDate } from "@/lib/feed";
 
@@ -180,8 +174,7 @@ type VirtualItem =
   | { type: "job"; job: JobWithApplication; jobIndex: number };
 
 interface JobFeedProps {
-  initialJobs: JobWithApplication[];
-  initialNextCursor: string | null;
+  jobs: JobWithApplication[];
   profileId: string;
   filter: string;
   sort: string;
@@ -189,18 +182,21 @@ interface JobFeedProps {
 }
 
 export function JobFeed({
-  initialJobs,
-  initialNextCursor,
+  jobs,
   profileId,
   filter,
   sort,
   lastUpdatedText,
 }: JobFeedProps) {
-  const [jobs, setJobs] = useState<JobWithApplication[]>(initialJobs);
-  const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [batchPending, startBatchTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+
+  // Store mutations
+  const storeIgnoreJob = useDashboardStore((s) => s.ignoreJob);
+  const storeUnignoreJob = useDashboardStore((s) => s.unignoreJob);
+  const storeBatchIgnoreJobs = useDashboardStore((s) => s.batchIgnoreJobs);
+  const storeBatchSaveJobs = useDashboardStore((s) => s.batchSaveJobs);
+  const storeUpdateJobAiFields = useDashboardStore((s) => s.updateJobAiFields);
 
   // ── Selection state ──────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -253,56 +249,28 @@ export function JobFeed({
   // ── Ignore / unignore ────────────────────────────────────────────────────
   function handleIgnore(jobId: string) {
     const removed = jobs.find((j) => j.id === jobId);
-    setJobs((prev) => prev.filter((j) => j.id !== jobId));
     if (removed) showToast(removed);
-    startTransition(async () => {
-      try {
-        await ignoreJob(jobId, profileId);
-      } catch {
-        // restore on failure
-        if (removed) setJobs((prev) => [removed, ...prev]);
-        dismissToast();
-      }
-    });
+    storeIgnoreJob(jobId, profileId);
   }
 
   function handleUndo() {
     if (!toast) return;
     dismissToast();
     const { job } = toast;
-    setJobs((prev) => [job, ...prev]);
-    startTransition(async () => {
-      await unignoreJob(job.id, profileId, job.feedStatus);
-    });
+    storeUnignoreJob(job.id, profileId, job.feedStatus);
   }
 
-  // Score update — update job in place or remove if hidden (NO_GO)
+  // Score update — update store with AI fields
   function handleScored(jobId: string, update: JobScoreUpdate) {
+    storeUpdateJobAiFields(jobId, update);
     if (update.hidden) {
-      setJobs((prev) => prev.filter((j) => j.id !== jobId));
       showNotice("Weak match — removed from feed");
-    } else {
-      setJobs((prev) =>
-        prev.map((j) =>
-          j.id === jobId
-            ? { ...j, aiScore: update.score, aiStatus: update.status, aiSummary: update.summary, aiMatchPoints: update.matchPoints, aiGapPoints: update.gapPoints }
-            : j
-        )
-      );
     }
   }
 
-  // Unignore from ignored view — just remove from visible list
+  // Unignore from ignored view — restore via store
   function handleUnignore(jobId: string) {
-    const job = jobs.find((j) => j.id === jobId);
-    setJobs((prev) => prev.filter((j) => j.id !== jobId));
-    startTransition(async () => {
-      try {
-        await unignoreJob(jobId, profileId, "NEW");
-      } catch {
-        if (job) setJobs((prev) => [job, ...prev]);
-      }
-    });
+    storeUnignoreJob(jobId, profileId, "NEW");
   }
 
   // ── Selection ────────────────────────────────────────────────────────────
@@ -338,33 +306,17 @@ export function JobFeed({
   // ── Batch actions ────────────────────────────────────────────────────────
   function handleBatchIgnore() {
     const ids = Array.from(selectedIds);
-    setJobs((prev) => prev.filter((j) => !selectedIds.has(j.id)));
     clearSelection();
-    startBatchTransition(async () => {
-      await batchIgnoreJobs(ids, profileId);
+    startBatchTransition(() => {
+      storeBatchIgnoreJobs(ids, profileId);
     });
   }
 
   function handleBatchSave(save: boolean) {
     const ids = Array.from(selectedIds);
     clearSelection();
-    startBatchTransition(async () => {
-      await batchSaveJobs(ids, profileId, save);
-    });
-  }
-
-  // ── Load more ────────────────────────────────────────────────────────────
-  function handleLoadMore() {
-    if (!nextCursor) return;
-    setError(null);
-    startTransition(async () => {
-      try {
-        const result = await getMoreJobs(profileId, nextCursor, filter, sort);
-        setJobs((prev) => [...prev, ...result.jobs]);
-        setNextCursor(result.nextCursor);
-      } catch {
-        setError("Couldn't load more jobs. Please try again.");
-      }
+    startBatchTransition(() => {
+      storeBatchSaveJobs(ids, profileId, save);
     });
   }
 
@@ -386,7 +338,7 @@ export function JobFeed({
           {filter === "new"     && "Check back soon — new listings are added daily."}
           {filter === "saved"   && "Bookmark a job you like and it'll appear here."}
           {filter === "applied" && "Move a job to Applied in the pipeline to track it here."}
-          {filter === "ignored" && "Tap × on a job card to hide it from your feed."}
+          {filter === "ignored" && "Tap \u00d7 on a job card to hide it from your feed."}
           {isAll                && "Try adjusting your search criteria in Settings, or check back after the next daily update."}
         </p>
         {isAll && (
@@ -420,16 +372,12 @@ export function JobFeed({
     <VirtualizedJobList
       virtualItems={virtualItems}
       jobs={jobs}
-      nextCursor={nextCursor}
-      isPending={isPending}
       batchPending={batchPending}
-      error={error}
       isIgnoredView={isIgnoredView}
       selectedIds={selectedIds}
       lastUpdatedText={lastUpdatedText}
       toast={toast}
       notice={notice}
-      onLoadMore={handleLoadMore}
       onIgnore={handleIgnore}
       onUnignore={handleUnignore}
       onSelect={handleSelect}
@@ -449,16 +397,12 @@ export function JobFeed({
 interface VirtualizedJobListProps {
   virtualItems: VirtualItem[];
   jobs: JobWithApplication[];
-  nextCursor: string | null;
-  isPending: boolean;
   batchPending: boolean;
-  error: string | null;
   isIgnoredView: boolean;
   selectedIds: Set<string>;
   lastUpdatedText?: string | null;
   toast: ToastState | null;
   notice: string | null;
-  onLoadMore: () => void;
   onIgnore: (jobId: string) => void;
   onUnignore: (jobId: string) => void;
   onSelect: (jobId: string, e: React.MouseEvent, index: number) => void;
@@ -474,16 +418,12 @@ interface VirtualizedJobListProps {
 function VirtualizedJobList({
   virtualItems,
   jobs,
-  nextCursor,
-  isPending,
   batchPending,
-  error,
   isIgnoredView,
   selectedIds,
   lastUpdatedText,
   toast,
   notice,
-  onLoadMore,
   onIgnore,
   onUnignore,
   onSelect,
@@ -579,31 +519,6 @@ function VirtualizedJobList({
             );
           })}
         </div>
-
-        {/* Load more — inside scroll container at the bottom */}
-        {nextCursor && (
-          <div className="flex justify-center py-6">
-            <button
-              onClick={onLoadMore}
-              disabled={isPending}
-              className="inline-flex min-h-[44px] items-center rounded-full bg-[var(--bg)] px-6 py-2 text-sm font-medium text-[var(--text)] ring-1 ring-inset ring-[var(--border)] transition-colors hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
-            >
-              {isPending ? "Loading…" : "Load more"}
-            </button>
-          </div>
-        )}
-
-        {error && (
-          <div className="mx-auto mt-4 max-w-lg rounded-lg bg-red-50 p-4 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-            <p>{error}</p>
-            <button
-              onClick={onLoadMore}
-              className="mt-1 font-medium underline underline-offset-2"
-            >
-              Try again
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Toast portal — fixed bottom-center, stacked — outside virtual container */}
