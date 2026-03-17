@@ -19,9 +19,9 @@ const JOB_TYPE_LABELS: Record<string, string> = {
 };
 
 const SCORE_CONFIGS = [
-  { min: 90, label: "Strong match", color: "#16a34a" },
-  { min: 75, label: "Good match", color: "#d97706" },
-  { min: 0, label: "Weak match", color: "#dc2626" },
+  { min: 90, label: "Strong match", className: "bg-green-600 text-white" },
+  { min: 75, label: "Good match",   className: "bg-amber-500 text-white" },
+  { min: 0,  label: "Weak match",   className: "bg-red-600 text-white" },
 ] as const;
 
 function getScoreConfig(score: number) {
@@ -167,8 +167,7 @@ export function JobDescriptionPane({
           <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-subtle)] p-3 space-y-3">
             <div className="flex items-center gap-2.5">
               <span
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
-                style={{ backgroundColor: scoreConfig.color }}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${scoreConfig.className}`}
                 aria-label={`${aiScore} — ${scoreConfig.label}`}
               >
                 {aiScore}

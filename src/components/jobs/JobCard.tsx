@@ -8,18 +8,9 @@ import { ScoreBadge } from "@/components/jobs/ScoreBadge";
 import { toggleSaveJob, analyzeJob } from "@/app/(dashboard)/dashboard/actions";
 import type { JobWithApplication } from "@/types";
 
-// ─── Source tag styles (light + dark variants) ───────────────────────────────
+// ─── Source tag style ─────────────────────────────────────────────────────────
 
-const SOURCE_TAG_CLASSES: Record<string, string> = {
-  GREENHOUSE:          "bg-[#dbeafe] text-[#1d4ed8] dark:bg-[#1a2744] dark:text-[#93c5fd]",
-  LEVER:               "bg-[#dbeafe] text-[#1d4ed8] dark:bg-[#1a2744] dark:text-[#93c5fd]",
-  ASHBY:               "bg-[#dbeafe] text-[#1d4ed8] dark:bg-[#1a2744] dark:text-[#93c5fd]",
-  LINKEDIN:            "bg-[#eff6ff] text-[#1e40af] dark:bg-[#172236] dark:text-[#60a5fa]",
-  BERLIN_STARTUP_JOBS: "bg-[#f3e8ff] text-[#6d28d9] dark:bg-[#1e1a2e] dark:text-[#c4b5fd]",
-  HONEYPOT:            "bg-[#fdf4ff] text-[#a21caf] dark:bg-[#2a1a2e] dark:text-[#e879f9]",
-  YC_JOBS:             "bg-[#fff7ed] text-[#c2410c] dark:bg-[#2a1a0e] dark:text-[#fb923c]",
-  NO_FLUFF_JOBS:       "bg-[#f0fdf4] text-[#15803d] dark:bg-[#1a2e1a] dark:text-[#86efac]",
-};
+const SOURCE_TAG_CLASS = "bg-[var(--bg-subtle)] text-[var(--text-muted)]";
 
 const SOURCE_LABELS: Record<string, string> = {
   LINKEDIN:            "LinkedIn",
@@ -43,12 +34,11 @@ const LOCATION_TYPE_LABELS: Record<string, string> = {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SourceTag({ source }: { source: string }) {
-  const classes = SOURCE_TAG_CLASSES[source];
   const label = SOURCE_LABELS[source] ?? source;
 
   return (
     <span
-      className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ${classes ?? "bg-[var(--bg-subtle)] text-[var(--text-muted)]"}`}
+      className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ${SOURCE_TAG_CLASS}`}
     >
       {label}
     </span>
