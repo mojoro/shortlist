@@ -50,6 +50,8 @@ jobs:
       CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
+      E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
       NEXT_PUBLIC_APP_URL: http://localhost:3001
       NEXT_PUBLIC_DEFAULT_THEME: system
     steps:
