@@ -52,6 +52,57 @@ test.describe("Pipeline (authenticated)", () => {
     }
   });
 
+  test("view toggle is visible and switches between table and board", async ({ page }) => {
+    await page.goto("/pipeline");
+    await page.waitForSelector("[data-testid='view-toggle-table']", { timeout: 15_000 });
+
+    // Table toggle and board toggle both visible
+    await expect(page.getByTestId("view-toggle-table")).toBeVisible();
+    await expect(page.getByTestId("view-toggle-board")).toBeVisible();
+
+    // Switch to board view
+    await page.getByTestId("view-toggle-board").click();
+    await expect(page.getByTestId("kanban-board")).toBeVisible();
+    // Table should be gone
+    await expect(page.getByRole("table")).toBeHidden();
+
+    // Switch back to table view
+    await page.getByTestId("view-toggle-table").click();
+    await expect(page.getByRole("table")).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("board view shows kanban columns with status headers", async ({ page }) => {
+    await page.goto("/pipeline");
+    await page.waitForSelector("[data-testid='view-toggle-board']", { timeout: 15_000 });
+    await page.getByTestId("view-toggle-board").click();
+    await expect(page.getByTestId("kanban-board")).toBeVisible();
+
+    // Verify column headers exist (desktop only — hidden on mobile)
+    // Check for status labels within the board
+    const board = page.getByTestId("kanban-board");
+    await expect(board.getByText("Interested")).toBeVisible();
+    await expect(board.getByText("Applied")).toBeVisible();
+    await expect(board.getByText("Screening")).toBeVisible();
+    await expect(board.getByText("Interviewing")).toBeVisible();
+    await expect(board.getByText("Offer")).toBeVisible();
+  });
+
+  test("clicking a kanban card opens the application drawer", async ({ page }) => {
+    await page.goto("/pipeline");
+    await page.waitForSelector("[data-testid='view-toggle-board']", { timeout: 15_000 });
+    await page.getByTestId("view-toggle-board").click();
+    await expect(page.getByTestId("kanban-board")).toBeVisible();
+
+    // Find and click a draggable card
+    const card = page.locator("[draggable='true']").first();
+    if (await card.isVisible().catch(() => false)) {
+      await card.click();
+      await expect(
+        page.locator("aside[aria-label='Application details']")
+      ).toBeVisible({ timeout: 5_000 });
+    }
+  });
+
   test("active/closed tab toggle works", async ({ page }) => {
     await page.goto("/pipeline");
     // Wait for the pipeline table container (always renders, even with empty state)
