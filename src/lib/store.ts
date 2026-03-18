@@ -25,6 +25,14 @@ export type ProfileSummary = {
   isActive: boolean;
 };
 
+export type UsageSummary = {
+  currentMonthInputTokens: number;
+  monthlyLimitInputTokens: number;
+  analysisCallCount: number;
+  tailorCallCount: number;
+  currentMonthResetsAt: Date | null;
+};
+
 export type HydrationPayload = {
   userId: string;
   activeProfile: Profile | null;
@@ -32,6 +40,7 @@ export type HydrationPayload = {
   jobs: JobWithApplication[];
   applications: ApplicationWithJob[];
   followUpCount: number;
+  usage: UsageSummary | null;
 };
 
 export interface DashboardState {
@@ -42,6 +51,7 @@ export interface DashboardState {
   jobs: JobWithApplication[];
   applications: ApplicationWithJob[];
   followUpCount: number;
+  usage: UsageSummary | null;
 
   // Sync state
   hydrated: boolean;
@@ -112,6 +122,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
       jobs: [],
       applications: [],
       followUpCount: 0,
+      usage: null,
       hydrated: false,
       lastSyncedAt: 0,
       isSyncing: false,
@@ -127,6 +138,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           jobs: data.jobs,
           applications: data.applications,
           followUpCount: data.followUpCount,
+          usage: data.usage,
           hydrated: true,
           lastSyncedAt: Date.now(),
         });
@@ -150,6 +162,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
             jobs: data.jobs,
             applications: data.applications,
             followUpCount: data.followUpCount,
+            usage: data.usage,
             lastSyncedAt: Date.now(),
           });
         } catch (err) {
@@ -361,6 +374,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
         })),
         applications: state.applications,
         followUpCount: state.followUpCount,
+        usage: state.usage,
         lastSyncedAt: state.lastSyncedAt,
         // hydrated / isSyncing intentionally excluded
       }),

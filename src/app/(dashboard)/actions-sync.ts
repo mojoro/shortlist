@@ -23,29 +23,51 @@ export async function fetchDashboardData() {
       jobs: [],
       applications: [],
       followUpCount: 0,
+      usage: null,
     };
   }
 
-  const [profiles, jobs, applications, followUpCount] = await Promise.all([
-    prisma.profile.findMany({
-      where: { userId },
-      select: { id: true, name: true, isActive: true },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.job.findMany({
-      where: { profileId: activeProfile.id },
-      include: { jobPool: true, application: { select: { status: true } } },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.application.findMany({
-      where: { profileId: activeProfile.id },
-      include: { job: { include: { jobPool: true } } },
-      orderBy: { updatedAt: "desc" },
-    }),
-    getFollowUpCount(userId),
-  ]);
+  const [profiles, jobs, applications, followUpCount, usageRecord] =
+    await Promise.all([
+      prisma.profile.findMany({
+        where: { userId },
+        select: { id: true, name: true, isActive: true },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.job.findMany({
+        where: { profileId: activeProfile.id },
+        include: { jobPool: true, application: { select: { status: true } } },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.application.findMany({
+        where: { profileId: activeProfile.id },
+        include: { job: { include: { jobPool: true } } },
+        orderBy: { updatedAt: "desc" },
+      }),
+      getFollowUpCount(userId),
+      prisma.usage.findUnique({
+        where: { userId },
+        select: {
+          currentMonthInputTokens: true,
+          monthlyLimitInputTokens: true,
+          analysisCallCount: true,
+          tailorCallCount: true,
+          currentMonthResetsAt: true,
+        },
+      }),
+    ]);
 
-  return { userId, activeProfile, profiles, jobs, applications, followUpCount };
+  const usage = usageRecord
+    ? {
+        currentMonthInputTokens: usageRecord.currentMonthInputTokens,
+        monthlyLimitInputTokens: usageRecord.monthlyLimitInputTokens,
+        analysisCallCount: usageRecord.analysisCallCount,
+        tailorCallCount: usageRecord.tailorCallCount,
+        currentMonthResetsAt: usageRecord.currentMonthResetsAt,
+      }
+    : null;
+
+  return { userId, activeProfile, profiles, jobs, applications, followUpCount, usage };
 }
 
 export type HydrationPayload = Awaited<ReturnType<typeof fetchDashboardData>>;
