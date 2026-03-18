@@ -103,10 +103,19 @@ export function NavFeedbackPopover({ labelClass }: NavFeedbackPopoverProps) {
       </button>
 
       {open && (
-        <div
-          className="absolute bottom-12 left-0 z-50 w-72 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4"
-          style={{ boxShadow: "var(--shadow-card-hover)" }}
-        >
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-40 bg-black/30"
+            onClick={() => setOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Centered modal */}
+          <div
+            className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5"
+            style={{ boxShadow: "var(--shadow-card-hover)" }}
+          >
           <p className="mb-2 text-sm font-semibold text-[var(--text)]">
             Send feedback
           </p>
@@ -157,7 +166,8 @@ export function NavFeedbackPopover({ labelClass }: NavFeedbackPopoverProps) {
               </button>
             </>
           )}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
