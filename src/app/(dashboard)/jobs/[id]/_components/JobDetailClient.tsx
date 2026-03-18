@@ -42,6 +42,10 @@ interface JobDetailClientProps {
 export function JobDetailClient({ jobId }: JobDetailClientProps) {
   const hydrated = useDashboardStore((s) => s.hydrated);
   const job = useDashboardStore((s) => s.jobs.find((j) => j.id === jobId) ?? null);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const sync = useDashboardStore((s) => s.sync);
 
   // Store not yet hydrated — show skeleton while data loads
   if (!hydrated) {
@@ -69,11 +73,6 @@ export function JobDetailClient({ jobId }: JobDetailClientProps) {
 
   const pool = job.jobPool;
   const isCustom = pool.source === "CUSTOM";
-
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const sync = useDashboardStore((s) => s.sync);
 
   const postedDate = pool.postedAt
     ? formatDistanceToNow(new Date(pool.postedAt), { addSuffix: true })
