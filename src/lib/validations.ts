@@ -167,3 +167,8 @@ export const feedbackSchema = z.object({
     .min(10, "Feedback must be at least 10 characters")
     .max(2000, "Feedback must be under 2,000 characters"),
 });
+
+// ── Account deletion confirmation ────────────────────────────────────────
+export const deleteAccountSchema = z.object({
+  confirmation: z.literal("DELETE"),
+});
