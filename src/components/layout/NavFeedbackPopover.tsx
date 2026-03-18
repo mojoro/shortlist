@@ -137,7 +137,7 @@ export function NavFeedbackPopover({ labelClass }: NavFeedbackPopoverProps) {
             </p>
           ) : (
             <>
-              <div className="relative my-2">
+              <div className="relative mt-3">
                 <textarea
                   autoFocus
                   aria-label="Your feedback"
