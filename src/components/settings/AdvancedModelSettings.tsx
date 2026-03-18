@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { Profile } from "@prisma/client";
-import { TAILOR_MODEL, ANALYZE_MODEL, EXTRACT_MODEL } from "@/lib/openrouter";
+import { TAILOR_MODEL, ANALYZE_MODEL, EXTRACT_MODEL } from "@/lib/models";
 import { updateModelSettings } from "@/app/(dashboard)/settings/model-actions";
 
 // ── Preset definitions ───────────────────────────────────────────────────
