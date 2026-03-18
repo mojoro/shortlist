@@ -16,6 +16,8 @@ import {
   rematchProfile,
 } from "@/app/(dashboard)/settings/actions";
 
+import { UsageSection } from "@/components/settings/UsageSection";
+
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -683,6 +685,8 @@ function ResumeWritingRulesSection({ profile }: { profile: Profile }) {
 export function SettingsClient({ profile, allProfiles }: Props) {
   return (
     <div className="space-y-10">
+      <UsageSection />
+      <Divider />
       <ProfilesSection profile={profile} allProfiles={allProfiles} />
       <Divider />
       <ProfileInfoSection profile={profile} />
