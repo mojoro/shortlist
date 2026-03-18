@@ -45,7 +45,7 @@ export function KanbanColumn({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       className={[
-        "flex min-w-[240px] flex-1 flex-col rounded-xl border bg-[var(--bg)] transition-all",
+        "flex min-w-0 flex-1 flex-col rounded-xl border bg-[var(--bg)] transition-all",
         isDragOver
           ? "border-[var(--accent)] ring-2 ring-inset ring-[var(--accent)]"
           : "border-[var(--border)]",
@@ -55,11 +55,11 @@ export function KanbanColumn({
       <div className="flex items-center justify-between border-b border-[var(--border)] px-3 py-2.5">
         <div className="flex items-center gap-2">
           <span className={`h-2 w-2 rounded-full ${dotColor}`} />
-          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text)]">
+          <span className="text-sm font-semibold uppercase tracking-wide text-[var(--text)]">
             {label}
           </span>
         </div>
-        <span className="rounded-full bg-[var(--bg-subtle)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text-muted)]">
+        <span className="rounded-full bg-[var(--bg-subtle)] px-2 py-0.5 text-xs font-semibold text-[var(--text-muted)]">
           {applications.length}
         </span>
       </div>

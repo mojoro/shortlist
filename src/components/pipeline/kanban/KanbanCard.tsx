@@ -23,7 +23,7 @@ function ScorePill({ score }: { score: number | null }) {
         : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400";
   return (
     <span
-      className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${color}`}
+      className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-semibold ${color}`}
     >
       {score}
     </span>
@@ -44,7 +44,7 @@ function FollowUpBadge({ followUpAt }: { followUpAt: Date | null }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+      className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold ${
         isOverdue
           ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
           : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
@@ -84,21 +84,21 @@ export function KanbanCard({
       style={{ boxShadow: "var(--shadow-card)" }}
     >
       {/* Company */}
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
         {jobPool.company}
       </p>
 
       {/* Title */}
-      <p className="mt-0.5 truncate text-[13px] font-semibold leading-snug text-[var(--text)]">
+      <p className="mt-0.5 truncate text-sm font-semibold leading-snug text-[var(--text)]">
         {jobPool.title}
       </p>
 
       {/* Location */}
       {jobPool.location && (
-        <p className="mt-1 flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
+        <p className="mt-1 flex items-center gap-1 text-xs text-[var(--text-muted)]">
           <svg
-            width="10"
-            height="10"
+            width="12"
+            height="12"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -124,7 +124,7 @@ export function KanbanCard({
           {skills.map((skill) => (
             <span
               key={skill}
-              className="rounded-full bg-[var(--bg-subtle)] px-1.5 py-0.5 text-[10px] text-[var(--text-muted)]"
+              className="rounded-full bg-[var(--bg-subtle)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
             >
               {skill}
             </span>

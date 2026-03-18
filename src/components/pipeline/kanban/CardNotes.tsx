@@ -76,7 +76,7 @@ export function CardNotes({ notes, onNotesChange }: CardNotesProps) {
       <button
         data-testid="card-notes-empty"
         onClick={handlePreviewClick}
-        className="w-full text-left text-[11px] text-[var(--text-muted)] italic hover:text-[var(--text)] transition-colors"
+        className="w-full text-left text-xs text-[var(--text-muted)] italic hover:text-[var(--text)] transition-colors"
       >
         Add notes...
       </button>
@@ -90,7 +90,7 @@ export function CardNotes({ notes, onNotesChange }: CardNotesProps) {
         <button
           data-testid="card-notes-preview"
           onClick={handlePreviewClick}
-          className="w-full text-left text-[11px] leading-relaxed text-[var(--text-muted)] line-clamp-2 hover:text-[var(--text)] transition-colors"
+          className="w-full text-left text-xs leading-relaxed text-[var(--text-muted)] line-clamp-2 hover:text-[var(--text)] transition-colors"
         >
           {notes}
         </button>
@@ -101,7 +101,7 @@ export function CardNotes({ notes, onNotesChange }: CardNotesProps) {
         <div
           data-testid="card-notes-expanded"
           onClick={handleExpandedClick}
-          className="absolute left-0 right-0 top-0 z-20 cursor-text rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-2 text-[11px] leading-relaxed text-[var(--text-muted)] shadow-lg"
+          className="absolute left-0 right-0 top-0 z-20 cursor-text rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-2 text-xs leading-relaxed text-[var(--text-muted)] shadow-lg"
           style={{ boxShadow: "var(--shadow-card-hover)" }}
         >
           {notes}
@@ -124,7 +124,7 @@ export function CardNotes({ notes, onNotesChange }: CardNotesProps) {
             onBlur={handleEditorBlur}
             rows={4}
             placeholder="Add notes..."
-            className="w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--bg)] p-2 text-[11px] leading-relaxed text-[var(--text)] shadow-lg placeholder:text-[var(--text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+            className="w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--bg)] p-2 text-xs leading-relaxed text-[var(--text)] shadow-lg placeholder:text-[var(--text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
             style={{ boxShadow: "var(--shadow-card-hover)" }}
           />
         </div>

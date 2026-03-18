@@ -271,7 +271,7 @@ export function KanbanBoard({
     : null;
 
   const TAB_STYLES = {
-    base: "rounded-md px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap",
+    base: "rounded-md px-3 py-1.5 text-sm font-medium transition-all whitespace-nowrap",
     selected:
       "bg-[var(--bg-card)] text-[var(--text)] shadow-sm ring-1 ring-inset ring-[var(--border)]",
     unselected: "text-[var(--text-muted)] hover:text-[var(--text)]",
@@ -281,7 +281,7 @@ export function KanbanBoard({
     <>
       <div data-testid="kanban-board">
         {/* ── Desktop: horizontal columns ── */}
-        <div className="hidden sm:flex sm:gap-3 sm:overflow-x-auto sm:pb-2">
+        <div className="hidden sm:flex sm:gap-3 sm:pb-2">
           {KANBAN_COLUMNS.map((col) => (
             <KanbanColumn
               key={col.status}
@@ -396,7 +396,7 @@ export function KanbanBoard({
                         {app.job.jobPool.company}
                       </p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-[var(--bg-subtle)] px-2 py-0.5 text-[10px] font-medium text-[var(--text-muted)]">
+                    <span className="shrink-0 rounded-full bg-[var(--bg-subtle)] px-2 py-0.5 text-xs font-medium text-[var(--text-muted)]">
                       {getClosedLabel(app.status)}
                     </span>
                   </button>
