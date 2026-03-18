@@ -4,7 +4,13 @@ import { auth, clerkClient } from "@clerk/nextjs/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { createHash } from "crypto";
 import { deleteAccountSchema } from "@/lib/validations";
+
+/** One-way hash of the email for billing audit without storing PII */
+function hashEmail(email: string): string {
+  return createHash("sha256").update(email.toLowerCase()).digest("hex");
+}
 
 export async function deleteAccount(data: unknown): Promise<void> {
   const { userId } = await auth();
@@ -19,21 +25,21 @@ export async function deleteAccount(data: unknown): Promise<void> {
   const email =
     clerkUser.primaryEmailAddress?.emailAddress ?? "unknown@deleted";
 
-  // Copy usage stats and delete user in a single transaction
-  const usage = await prisma.usage.findUnique({ where: { userId } });
-
-  await prisma.$transaction([
-    prisma.deletedUserUsage.create({
+  // Archive usage and delete user atomically — interactive transaction
+  // ensures the usage read and the delete share a consistent snapshot
+  await prisma.$transaction(async (tx) => {
+    const usage = await tx.usage.findUnique({ where: { userId } });
+    await tx.deletedUserUsage.create({
       data: {
-        email,
+        email: hashEmail(email),
         totalInputTokens: usage?.totalInputTokens ?? 0,
         totalOutputTokens: usage?.totalOutputTokens ?? 0,
         analysisCallCount: usage?.analysisCallCount ?? 0,
         tailorCallCount: usage?.tailorCallCount ?? 0,
       },
-    }),
-    prisma.user.delete({ where: { id: userId } }),
-  ]);
+    });
+    await tx.user.delete({ where: { id: userId } });
+  });
 
   // Delete the Clerk user — if this fails, the Prisma data is already
   // gone but the Clerk account lingers (acceptable, can be cleaned up)
