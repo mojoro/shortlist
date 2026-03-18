@@ -19,3 +19,19 @@ export const ANALYZE_MODEL = "anthropic/claude-haiku-4.5";
 
 // Job listing extraction — simple structured extraction from pasted text
 export const EXTRACT_MODEL = "anthropic/claude-haiku-4.5";
+
+/**
+ * Resolve which models to use for AI tasks, preferring profile overrides
+ * when set and falling back to the defaults above.
+ */
+export function getModels(profile: {
+  customTailorModel: string | null;
+  customAnalyzeModel: string | null;
+  customExtractModel: string | null;
+}) {
+  return {
+    tailor: profile.customTailorModel || TAILOR_MODEL,
+    analyze: profile.customAnalyzeModel || ANALYZE_MODEL,
+    extract: profile.customExtractModel || EXTRACT_MODEL,
+  };
+}
