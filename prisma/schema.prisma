@@ -86,6 +86,11 @@ model Profile {
   verifiedMetrics  String[]  // Use exactly these figures/achievements
   neverClaim       String[]  // Never imply experience with these
 
+  // AI model overrides (null = use default from openrouter.ts)
+  customTailorModel    String?
+  customAnalyzeModel   String?
+  customExtractModel   String?
+
   // Scraping config
   scraperEnabled   Boolean   @default(true)
   scraperSources   ScraperSource[]
