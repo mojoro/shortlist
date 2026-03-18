@@ -116,9 +116,20 @@ export function NavFeedbackPopover({ labelClass }: NavFeedbackPopoverProps) {
             className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5"
             style={{ boxShadow: "var(--shadow-card-hover)" }}
           >
-          <p className="mb-2 text-sm font-semibold text-[var(--text)]">
-            Send feedback
-          </p>
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-sm font-semibold text-[var(--text)]">
+              Send feedback
+            </p>
+            <button
+              onClick={() => setOpen(false)}
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+              aria-label="Close feedback"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
 
           {status === "success" ? (
             <p className="py-4 text-center text-sm text-green-600 dark:text-green-400">
