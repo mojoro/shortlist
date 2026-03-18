@@ -116,13 +116,13 @@ export function NavFeedbackPopover({ labelClass }: NavFeedbackPopoverProps) {
             className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-5"
             style={{ boxShadow: "var(--shadow-card-hover)" }}
           >
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold text-[var(--text)]">
               Send feedback
             </p>
             <button
               onClick={() => setOpen(false)}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
               aria-label="Close feedback"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -137,7 +137,7 @@ export function NavFeedbackPopover({ labelClass }: NavFeedbackPopoverProps) {
             </p>
           ) : (
             <>
-              <div className="relative">
+              <div className="relative my-2">
                 <textarea
                   autoFocus
                   aria-label="Your feedback"
@@ -149,7 +149,7 @@ export function NavFeedbackPopover({ labelClass }: NavFeedbackPopoverProps) {
                   placeholder="What could we improve?"
                   rows={3}
                   maxLength={MAX_LENGTH}
-                  className="w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                  className="w-full resize-none rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                 />
                 <span
                   className={`absolute bottom-2.5 right-3 text-[10px] ${
