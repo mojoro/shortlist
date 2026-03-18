@@ -158,3 +158,12 @@ export const updateApplicationDetailSchema = z.object({
   recruiterName:  z.string().max(200).nullable().optional(),
   recruiterEmail: z.string().email().max(200).nullable().optional(),
 });
+
+// ── Feedback submission ──────────────────────────────────────────────────
+export const feedbackSchema = z.object({
+  message: z
+    .string()
+    .trim()
+    .min(10, "Feedback must be at least 10 characters")
+    .max(2000, "Feedback must be under 2,000 characters"),
+});

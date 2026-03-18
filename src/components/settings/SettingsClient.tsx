@@ -17,6 +17,7 @@ import {
 } from "@/app/(dashboard)/settings/actions";
 
 import { UsageSection } from "@/components/settings/UsageSection";
+import { FeedbackForm } from "@/components/settings/FeedbackForm";
 
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
 
@@ -696,6 +697,14 @@ export function SettingsClient({ profile, allProfiles }: Props) {
       <ResumeSection profile={profile} />
       <Divider />
       <ResumeWritingRulesSection profile={profile} />
+      <Divider />
+      <section>
+        <SectionHeading>Feedback</SectionHeading>
+        <p className="mt-1 mb-4 text-sm text-[var(--text-muted)]">
+          Let us know how we can improve.
+        </p>
+        <FeedbackForm />
+      </section>
       <Divider />
       <section>
         <SectionHeading>Account</SectionHeading>
