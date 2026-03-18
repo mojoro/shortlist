@@ -8,7 +8,7 @@ import type { ApplicationWithJob, FieldOverrides } from "@/types";
 import { useDashboardStore } from "@/lib/store";
 import { ApplicationDrawer } from "@/components/pipeline/ApplicationDrawer";
 import { useKanbanDnd } from "./use-kanban-dnd";
-import { KANBAN_COLUMNS, CLOSED_STATUSES, getClosedLabel, groupByStatus } from "./constants";
+import { KANBAN_COLUMNS, getClosedLabel, groupByStatus } from "./constants";
 import { KanbanColumn } from "./KanbanColumn";
 
 const ResumePDFModal = dynamic(
