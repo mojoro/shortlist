@@ -41,6 +41,7 @@ export function FeedbackForm() {
             setMessage(e.target.value);
             if (status !== "idle") setStatus("idle");
           }}
+          aria-label="Your feedback"
           placeholder="What could we improve? What's working well?"
           rows={4}
           maxLength={MAX_LENGTH}

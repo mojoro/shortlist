@@ -163,6 +163,7 @@ export const updateApplicationDetailSchema = z.object({
 export const feedbackSchema = z.object({
   message: z
     .string()
+    .trim()
     .min(10, "Feedback must be at least 10 characters")
     .max(2000, "Feedback must be under 2,000 characters"),
 });
