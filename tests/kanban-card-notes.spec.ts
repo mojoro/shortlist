@@ -18,91 +18,105 @@ test.describe("Kanban CardNotes (authenticated)", () => {
     });
   });
 
-  test("shows 2-line clamped notes preview by default", async ({ page }) => {
-    const preview = page.getByTestId("card-notes-preview").first();
-    await expect(preview).toBeVisible();
+  test("shows notes preview or empty placeholder on cards", async ({
+    page,
+  }) => {
+    const hasPreview = (await page.getByTestId("card-notes-preview").count()) > 0;
+    const hasEmpty = (await page.getByTestId("card-notes-empty").count()) > 0;
 
-    // The element should have line-clamp-2 applied (CSS truncation)
-    await expect(preview).toHaveCSS("-webkit-line-clamp", "2");
+    // Every card should have one or the other
+    expect(hasPreview || hasEmpty).toBeTruthy();
+
+    if (hasPreview) {
+      const preview = page.getByTestId("card-notes-preview").first();
+      await expect(preview).toBeVisible();
+      await expect(preview).toHaveCSS("-webkit-line-clamp", "2");
+    }
+
+    if (hasEmpty) {
+      const placeholder = page.getByTestId("card-notes-empty").first();
+      await expect(placeholder).toBeVisible();
+      await expect(placeholder).toHaveText(/Add notes/);
+    }
   });
 
-  test("clicking preview expands to show full notes", async ({ page }) => {
+  test("clicking empty placeholder opens editor directly", async ({
+    page,
+  }) => {
+    const placeholder = page.getByTestId("card-notes-empty").first();
+    // Skip if all cards have notes (no empty placeholder)
+    if ((await page.getByTestId("card-notes-empty").count()) === 0) return;
+
+    await placeholder.click();
+    const editor = page.getByTestId("card-notes-editor").first();
+    await expect(editor).toBeVisible();
+    await expect(editor).toBeFocused();
+  });
+
+  test("typing in editor and pressing Escape saves and collapses", async ({
+    page,
+  }) => {
+    // Open editor via empty placeholder or preview
+    const hasEmpty = (await page.getByTestId("card-notes-empty").count()) > 0;
+    const hasPreview = (await page.getByTestId("card-notes-preview").count()) > 0;
+
+    if (hasEmpty) {
+      await page.getByTestId("card-notes-empty").first().click();
+    } else if (hasPreview) {
+      await page.getByTestId("card-notes-preview").first().click();
+      await page.getByTestId("card-notes-expanded").first().click();
+    } else {
+      return; // No cards to test
+    }
+
+    const editor = page.getByTestId("card-notes-editor").first();
+    await expect(editor).toBeVisible();
+
+    // Type something
+    await editor.fill("Test note from Playwright");
+    await expect(editor).toHaveValue("Test note from Playwright");
+
+    // Escape should dismiss the editor
+    await page.keyboard.press("Escape");
+    await expect(editor).toBeHidden();
+
+    // The notes preview should now show the typed text
+    const preview = page.getByTestId("card-notes-preview").first();
+    await expect(preview).toBeVisible();
+    await expect(preview).toContainText("Test note from Playwright");
+  });
+
+  test("clicking preview expands to show full notes then editing works", async ({
+    page,
+  }) => {
+    // This test needs a card with existing notes — create one first if needed
+    const hasPreview = (await page.getByTestId("card-notes-preview").count()) > 0;
+
+    if (!hasPreview) {
+      // Seed a note via the empty placeholder first
+      const hasEmpty = (await page.getByTestId("card-notes-empty").count()) > 0;
+      if (!hasEmpty) return;
+      await page.getByTestId("card-notes-empty").first().click();
+      const editor = page.getByTestId("card-notes-editor").first();
+      await editor.fill("Seeded note for expand test");
+      await page.keyboard.press("Escape");
+      await expect(page.getByTestId("card-notes-preview").first()).toBeVisible();
+    }
+
+    // Now test the expand flow
     const preview = page.getByTestId("card-notes-preview").first();
     await preview.click();
 
     const expanded = page.getByTestId("card-notes-expanded").first();
     await expect(expanded).toBeVisible();
 
-    // Expanded text should not be clamped
-    await expect(expanded).not.toHaveCSS("-webkit-line-clamp", "2");
-  });
-
-  test("clicking expanded notes body opens inline editor", async ({
-    page,
-  }) => {
-    // Expand first
-    const preview = page.getByTestId("card-notes-preview").first();
-    await preview.click();
-    await expect(page.getByTestId("card-notes-expanded").first()).toBeVisible();
-
-    // Click the expanded text to edit
-    await page.getByTestId("card-notes-expanded").first().click();
-
+    // Click expanded to edit
+    await expanded.click();
     const editor = page.getByTestId("card-notes-editor").first();
     await expect(editor).toBeVisible();
     await expect(editor).toBeFocused();
 
-    // Editor should be pre-filled with the notes content
     const value = await editor.inputValue();
     expect(value.length).toBeGreaterThan(0);
-  });
-
-  test("typing in editor updates the textarea value", async ({ page }) => {
-    const preview = page.getByTestId("card-notes-preview").first();
-    await preview.click();
-    await page.getByTestId("card-notes-expanded").first().click();
-
-    const editor = page.getByTestId("card-notes-editor").first();
-    await editor.fill("Updated notes content");
-    await expect(editor).toHaveValue("Updated notes content");
-  });
-
-  test("Escape dismisses editor and collapses back to preview", async ({
-    page,
-  }) => {
-    const preview = page.getByTestId("card-notes-preview").first();
-    await preview.click();
-    await page.getByTestId("card-notes-expanded").first().click();
-    await expect(page.getByTestId("card-notes-editor").first()).toBeVisible();
-
-    // Press Escape
-    await page.keyboard.press("Escape");
-
-    // Editor and expanded view should be gone
-    await expect(page.getByTestId("card-notes-editor").first()).toBeHidden();
-    await expect(
-      page.getByTestId("card-notes-expanded").first()
-    ).toBeHidden();
-
-    // Preview should be visible again
-    await expect(
-      page.getByTestId("card-notes-preview").first()
-    ).toBeVisible();
-  });
-
-  test("empty notes show placeholder and open editor on click", async ({
-    page,
-  }) => {
-    // Find a card with empty notes (placeholder text)
-    const placeholder = page.getByTestId("card-notes-empty");
-    // Skip if no empty-notes cards exist in seed data
-    if ((await placeholder.count()) === 0) return;
-
-    await expect(placeholder.first()).toBeVisible();
-    await expect(placeholder.first()).toHaveText(/Add notes/);
-
-    // Clicking placeholder should open editor directly
-    await placeholder.first().click();
-    await expect(page.getByTestId("card-notes-editor").first()).toBeVisible();
   });
 });

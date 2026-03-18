@@ -77,14 +77,14 @@ test.describe("Pipeline (authenticated)", () => {
     await page.getByTestId("view-toggle-board").click();
     await expect(page.getByTestId("kanban-board")).toBeVisible();
 
-    // Verify column headers exist (desktop only — hidden on mobile)
-    // Check for status labels within the board
+    // Verify column headers exist — use .first() since both desktop
+    // column headers and mobile tabs render in the DOM simultaneously
     const board = page.getByTestId("kanban-board");
-    await expect(board.getByText("Interested")).toBeVisible();
-    await expect(board.getByText("Applied")).toBeVisible();
-    await expect(board.getByText("Screening")).toBeVisible();
-    await expect(board.getByText("Interviewing")).toBeVisible();
-    await expect(board.getByText("Offer")).toBeVisible();
+    await expect(board.getByText("Interested").first()).toBeVisible();
+    await expect(board.getByText("Applied").first()).toBeVisible();
+    await expect(board.getByText("Screening").first()).toBeVisible();
+    await expect(board.getByText("Interviewing").first()).toBeVisible();
+    await expect(board.getByText("Offer").first()).toBeVisible();
   });
 
   test("clicking a kanban card opens the application drawer", async ({ page }) => {
