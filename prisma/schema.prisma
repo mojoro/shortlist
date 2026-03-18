@@ -340,6 +340,24 @@ model Feedback {
 }
 
 // ============================================================
+// DELETED USER USAGE
+// Preserves AI usage stats after account deletion for billing
+// records. Not linked to User (the user no longer exists).
+// ============================================================
+
+model DeletedUserUsage {
+  id                  String   @id @default(cuid())
+  email               String
+  deletedAt           DateTime @default(now())
+  totalInputTokens    Int      @default(0)
+  totalOutputTokens   Int      @default(0)
+  analysisCallCount   Int      @default(0)
+  tailorCallCount     Int      @default(0)
+
+  @@map("deleted_user_usage")
+}
+
+// ============================================================
 // ENUMS
 // ============================================================
 
