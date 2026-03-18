@@ -46,3 +46,4 @@ ai-context.log
 next-env.d.ts
 .superpowers/
 .playwright-mcp/
+.worktrees/
