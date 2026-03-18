@@ -519,6 +519,7 @@ function VirtualizedJobList({
             );
           })}
         </div>
+
       </div>
 
       {/* Toast portal — fixed bottom-center, stacked — outside virtual container */}

@@ -118,7 +118,7 @@ export function FeedToolbar({
                 "cursor-pointer inline-flex min-h-[32px] items-center gap-1 rounded-md px-2.5 text-xs font-medium transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2",
                 isActive
-                  ? "text-[var(--text)] bg-[var(--bg-subtle)]"
+                  ? "text-[var(--accent)] bg-[var(--accent-muted)]"
                   : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-subtle)]",
               ].filter(Boolean).join(" ")}
             >
