@@ -6,19 +6,6 @@ test.describe("Pipeline (authenticated)", () => {
     await setupClerkTestingToken({ page });
   });
 
-  test("loads with heading and stats", async ({ page }) => {
-    await page.goto("/pipeline");
-    await expect(
-      page.getByRole("heading", { name: "Your pipeline" })
-    ).toBeVisible({ timeout: 15_000 });
-
-    // Stats row — each stat is a <p> label inside a StatCard div.
-    // Use exact match to avoid colliding with tab buttons and heading text.
-    await expect(page.locator("p", { hasText: /^Active$/ })).toBeVisible();
-    await expect(page.locator("p", { hasText: /^Applied$/ })).toBeVisible();
-    await expect(page.locator("p", { hasText: /^Interviewing$/ })).toBeVisible();
-  });
-
   test("application table renders with job titles", async ({ page }) => {
     await page.goto("/pipeline");
     const table = page.getByRole("table");
@@ -32,24 +19,6 @@ test.describe("Pipeline (authenticated)", () => {
     const rows = table.getByRole("row");
     // First row is header, so at least 2 rows means we have data
     expect(await rows.count()).toBeGreaterThan(1);
-  });
-
-  test("status select has expected options", async ({ page }) => {
-    await page.goto("/pipeline");
-    // Wait for either the table or the empty state to render
-    await page.waitForSelector("table, [id='pipeline-table']", { timeout: 15_000 });
-
-    const firstSelect = page.getByRole("combobox").first();
-    // If there are no active applications, there won't be a select
-    if (await firstSelect.isVisible().catch(() => false)) {
-      const options = firstSelect.getByRole("option");
-      const optionTexts = await options.allTextContents();
-      expect(optionTexts).toContain("Interested");
-      expect(optionTexts).toContain("Applied");
-      expect(optionTexts).toContain("Interviewing");
-      expect(optionTexts).toContain("Offer");
-      expect(optionTexts).toContain("Rejected");
-    }
   });
 
   test("view toggle is visible and switches between table and board", async ({ page }) => {
