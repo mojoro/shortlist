@@ -4,10 +4,16 @@ import { env } from "@/env";
 import { scrapeGreenhouse } from "@/lib/scrapers/greenhouse";
 import { scrapeLever } from "@/lib/scrapers/lever";
 import { scrapeAshby } from "@/lib/scrapers/ashby";
+import { scrapeUSAJobs } from "@/lib/scrapers/usajobs";
+import { scrapeAdzuna } from "@/lib/scrapers/adzuna";
+import { scrapeArbeitnow } from "@/lib/scrapers/arbeitnow";
 import {
   normalizeGreenhouseForPool,
   normalizeLeverForPool,
   normalizeAshbyForPool,
+  normalizeUSAJobsForPool,
+  normalizeAdzunaForPool,
+  normalizeArbeitnowForPool,
 } from "@/lib/normalize";
 import { jobMatchesProfile } from "@/lib/match";
 import type { ScraperSource } from "@prisma/client";
@@ -35,15 +41,34 @@ export async function POST(req: Request) {
   // Scrape all sources in parallel, write each to the pool, log per-source.
 
   if (!skipPool) {
-    const [ghSettled, leverSettled, ashbySettled] = await Promise.allSettled([
+    const scraperCalls: Promise<unknown>[] = [
       scrapeGreenhouse("_global"),
       scrapeLever("_global"),
       scrapeAshby("_global"),
-    ]);
+      scrapeArbeitnow("_global"),
+    ];
+
+    const usajobsEnabled = !!(env.USAJOBS_API_KEY && env.USAJOBS_EMAIL);
+    if (usajobsEnabled) {
+      scraperCalls.push(scrapeUSAJobs());
+    }
+
+    const adzunaEnabled = !!(env.ADZUNA_APP_ID && env.ADZUNA_APP_KEY);
+    if (adzunaEnabled) {
+      scraperCalls.push(scrapeAdzuna("_global"));
+    }
+
+    const settled = await Promise.allSettled(scraperCalls);
+    const [ghSettled, leverSettled, ashbySettled, arbeitnowSettled] = settled;
+
+    // Optional scrapers are at dynamic indices after the 4 fixed scrapers
+    let nextIdx = 4;
+    const usajobsSettled = usajobsEnabled ? settled[nextIdx++] : undefined;
+    const adzunaSettled = adzunaEnabled ? settled[nextIdx++] : undefined;
 
     type SourceSpec = {
       source: ScraperSource;
-      settled: typeof ghSettled | typeof leverSettled | typeof ashbySettled;
+      settled: PromiseSettledResult<unknown>;
       normalize: (results: unknown[]) => ReturnType<typeof normalizeGreenhouseForPool>[];
     };
 
@@ -72,7 +97,37 @@ export async function POST(req: Request) {
             normalizeAshbyForPool(j.raw, j.slug, j.companyName),
           ),
       },
+      {
+        source:    "ARBEITNOW",
+        settled:   arbeitnowSettled,
+        normalize: (r) =>
+          (r as Awaited<ReturnType<typeof scrapeArbeitnow>>).map((j) =>
+            normalizeArbeitnowForPool(j.raw),
+          ),
+      },
     ];
+
+    if (usajobsSettled) {
+      sources.push({
+        source:    "USAJOBS",
+        settled:   usajobsSettled,
+        normalize: (r) =>
+          (r as Awaited<ReturnType<typeof scrapeUSAJobs>>).map((j) =>
+            normalizeUSAJobsForPool(j.raw),
+          ),
+      });
+    }
+
+    if (adzunaSettled) {
+      sources.push({
+        source:    "ADZUNA",
+        settled:   adzunaSettled,
+        normalize: (r) =>
+          (r as Awaited<ReturnType<typeof scrapeAdzuna>>).map((j) =>
+            normalizeAdzunaForPool(j.raw, j.country),
+          ),
+      });
+    }
 
     for (const { source, settled, normalize } of sources) {
       const sourceStart = Date.now();
