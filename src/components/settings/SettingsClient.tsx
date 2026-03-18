@@ -18,6 +18,7 @@ import {
 
 import { UsageSection } from "@/components/settings/UsageSection";
 import { FeedbackForm } from "@/components/settings/FeedbackForm";
+import { DeleteAccountSection } from "@/components/settings/DeleteAccountSection";
 
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
 
@@ -717,6 +718,8 @@ export function SettingsClient({ profile, allProfiles }: Props) {
           </button>
         </SignOutButton>
       </section>
+      <Divider />
+      <DeleteAccountSection />
     </div>
   );
 }
