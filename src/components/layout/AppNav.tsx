@@ -8,6 +8,7 @@ import { useTheme } from "next-themes";
 import { APP_CONFIG } from "@/config/app";
 import { BrandMark } from "@/components/ui/BrandMark";
 import { UsageWheel } from "@/components/ui/UsageWheel";
+import { NavFeedbackPopover } from "@/components/layout/NavFeedbackPopover";
 import { useDashboardStore } from "@/lib/store";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -184,23 +185,8 @@ export function AppNav() {
           })}
         </nav>
 
-        {/* Bottom: usage + theme + account */}
+        {/* Bottom (top-to-bottom): theme → feedback → usage → account */}
         <div className="shrink-0 space-y-0.5 border-t border-[var(--border)] px-3 py-3">
-          {/* Usage wheel */}
-          {usageRemaining !== null && (
-            <Link
-              href="/settings#usage"
-              className="flex h-10 w-full items-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]"
-              title={`${usageRemaining}% of monthly AI usage remaining`}
-            >
-              <span className="flex w-10 shrink-0 justify-center">
-                <UsageWheel percentage={usageRemaining} />
-              </span>
-              <span className={`${LABEL} text-sm font-medium`}>
-                {usageRemaining}% remaining
-              </span>
-            </Link>
-          )}
 
           {/* Theme toggle */}
           <button
@@ -216,6 +202,25 @@ export function AppNav() {
               {mounted ? (isDark ? "Light mode" : "Dark mode") : "Theme"}
             </span>
           </button>
+
+          {/* Feedback */}
+          <NavFeedbackPopover labelClass={LABEL} />
+
+          {/* Usage wheel */}
+          {usageRemaining !== null && (
+            <Link
+              href="/settings#usage"
+              className="flex h-10 w-full items-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]"
+              title={`${usageRemaining}% of monthly AI usage remaining`}
+            >
+              <span className="flex w-10 shrink-0 justify-center">
+                <UsageWheel percentage={usageRemaining} />
+              </span>
+              <span className={`${LABEL} text-sm font-medium`}>
+                {usageRemaining}% remaining
+              </span>
+            </Link>
+          )}
 
           {/* Account */}
           <div ref={menuRef} className="relative">
