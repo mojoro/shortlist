@@ -40,11 +40,10 @@ const TASKS: {
   description: string;
   defaultModel: string;
   presets: Preset[];
-  profileField: "customAnalyzeModel" | "customTailorModel" | "customExtractModel";
 }[] = [
-  { key: "analyze", label: "Scoring", description: "Evaluates how well a job matches your profile", defaultModel: ANALYZE_MODEL, presets: ANALYZE_PRESETS, profileField: "customAnalyzeModel" },
-  { key: "tailor", label: "Tailoring", description: "Rewrites your resume for a specific job", defaultModel: TAILOR_MODEL, presets: TAILOR_PRESETS, profileField: "customTailorModel" },
-  { key: "extract", label: "Extraction", description: "Extracts structured data from pasted job text", defaultModel: EXTRACT_MODEL, presets: EXTRACT_PRESETS, profileField: "customExtractModel" },
+  { key: "analyze", label: "Scoring", description: "Evaluates how well a job matches your profile", defaultModel: ANALYZE_MODEL, presets: ANALYZE_PRESETS },
+  { key: "tailor", label: "Tailoring", description: "Rewrites your resume for a specific job", defaultModel: TAILOR_MODEL, presets: TAILOR_PRESETS },
+  { key: "extract", label: "Extraction", description: "Extracts structured data from pasted job text", defaultModel: EXTRACT_MODEL, presets: EXTRACT_PRESETS },
 ];
 
 export function AdvancedModelSettings({ profile }: Props) {
@@ -64,15 +63,20 @@ export function AdvancedModelSettings({ profile }: Props) {
 
   const hasOverrides = Object.values(models).some((v) => v !== null);
 
+  // Track which tasks have the custom radio selected (separate from model value)
+  const [customActive, setCustomActive] = useState<Record<TaskKey, boolean>>({
+    analyze: profile.customAnalyzeModel !== null && !ANALYZE_PRESETS.some((p) => p.value === profile.customAnalyzeModel),
+    tailor: profile.customTailorModel !== null && !TAILOR_PRESETS.some((p) => p.value === profile.customTailorModel),
+    extract: profile.customExtractModel !== null && !EXTRACT_PRESETS.some((p) => p.value === profile.customExtractModel),
+  });
+
   function isCustom(key: TaskKey): boolean {
-    const task = TASKS.find((t) => t.key === key)!;
-    const value = models[key];
-    if (value === null) return false;
-    return !task.presets.some((p) => p.value === value);
+    return customActive[key];
   }
 
   function handlePresetChange(key: TaskKey, value: string | null) {
     setModels((prev) => ({ ...prev, [key]: value }));
+    setCustomActive((prev) => ({ ...prev, [key]: false }));
     if (status !== "idle") setStatus("idle");
   }
 
@@ -102,6 +106,7 @@ export function AdvancedModelSettings({ profile }: Props) {
   function handleReset() {
     setModels({ analyze: null, tailor: null, extract: null });
     setCustomInputs({ analyze: "", tailor: "", extract: "" });
+    setCustomActive({ analyze: false, tailor: false, extract: false });
     // Persist the reset immediately
     startTransition(async () => {
       try {
@@ -200,7 +205,8 @@ export function AdvancedModelSettings({ profile }: Props) {
                   checked={custom}
                   onChange={() => {
                     setCustomInputs((prev) => ({ ...prev, [task.key]: "" }));
-                    setModels((prev) => ({ ...prev, [task.key]: "" }));
+                    setModels((prev) => ({ ...prev, [task.key]: null }));
+                    setCustomActive((prev) => ({ ...prev, [task.key]: true }));
                   }}
                   className="mt-0.5 accent-[var(--accent)]"
                 />
