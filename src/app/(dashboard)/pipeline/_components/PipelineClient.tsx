@@ -7,6 +7,8 @@ import { PipelineStats } from "@/components/pipeline/PipelineStats";
 import { FollowUpBanner } from "@/components/pipeline/FollowUpBanner";
 import { PipelineTable } from "@/components/pipeline/PipelineTable";
 import { PipelineSortBar } from "@/components/pipeline/PipelineSortBar";
+import { ViewToggle } from "@/components/pipeline/ViewToggle";
+import { KanbanBoard } from "@/components/pipeline/kanban";
 
 interface PipelineClientProps {
   initialSort: string;
@@ -36,6 +38,7 @@ export function PipelineClient({ initialSort, initialDir }: PipelineClientProps)
 
   const [sort, setSort] = useState(initialSort);
   const [dir, setDir] = useState(initialDir);
+  const [view, setView] = useState<"table" | "board">("table");
 
   if (!hydrated) {
     return <PipelineSkeleton />;
@@ -70,19 +73,32 @@ export function PipelineClient({ initialSort, initialDir }: PipelineClientProps)
         <FollowUpBanner dueApplications={followUpDue} />
       )}
 
-      <PipelineSortBar
-        sort={sort}
-        dir={dir}
-        onSortChange={(newSort, newDir) => {
-          setSort(newSort);
-          setDir(newDir);
-        }}
-      />
+      <div className="flex items-center justify-between gap-3">
+        {view === "table" && (
+          <PipelineSortBar
+            sort={sort}
+            dir={dir}
+            onSortChange={(newSort, newDir) => {
+              setSort(newSort);
+              setDir(newDir);
+            }}
+          />
+        )}
+        {view === "board" && <div />}
+        <ViewToggle view={view} onViewChange={setView} />
+      </div>
 
-      <PipelineTable
-        activeApplications={sortedActive}
-        closedApplications={sortedClosed}
-      />
+      {view === "table" ? (
+        <PipelineTable
+          activeApplications={sortedActive}
+          closedApplications={sortedClosed}
+        />
+      ) : (
+        <KanbanBoard
+          activeApplications={activeApps}
+          closedApplications={closedApps}
+        />
+      )}
     </div>
   );
 }
