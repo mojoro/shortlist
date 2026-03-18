@@ -30,8 +30,6 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    # Pre-existing lint errors in other files — remove once those are fixed
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

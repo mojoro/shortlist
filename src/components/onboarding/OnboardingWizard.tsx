@@ -288,7 +288,7 @@ export function OnboardingWizard() {
                   What kind of role are you looking for?
                 </p>
                 <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  Enter the job titles you'd apply for.
+                  Enter the job titles you&apos;d apply for.
                 </p>
               </div>
               <div>
@@ -347,7 +347,7 @@ export function OnboardingWizard() {
                   Where would you like to work?
                 </p>
                 <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  We'll use this to filter listings for you.
+                  We&apos;ll use this to filter listings for you.
                 </p>
               </div>
               <div>
@@ -662,10 +662,10 @@ export function OnboardingWizard() {
             <>
               <div>
                 <p className="text-lg font-semibold text-[var(--text)]">
-                  What's your salary target?
+                  What&apos;s your salary target?
                 </p>
                 <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  We'll use this to flag listings that are way outside your
+                  We&apos;ll use this to flag listings that are way outside your
                   range. You can skip this for now.
                 </p>
               </div>
