@@ -19,6 +19,7 @@ import {
 import { UsageSection } from "@/components/settings/UsageSection";
 import { FeedbackForm } from "@/components/settings/FeedbackForm";
 import { DeleteAccountSection } from "@/components/settings/DeleteAccountSection";
+import { AdvancedModelSettings } from "@/components/settings/AdvancedModelSettings";
 
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
 
@@ -698,6 +699,8 @@ export function SettingsClient({ profile, allProfiles }: Props) {
       <ResumeSection profile={profile} />
       <Divider />
       <ResumeWritingRulesSection profile={profile} />
+      <Divider />
+      <AdvancedModelSettings profile={profile} />
       <Divider />
       <section>
         <SectionHeading>Feedback</SectionHeading>

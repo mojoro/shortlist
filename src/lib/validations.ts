@@ -172,3 +172,11 @@ export const feedbackSchema = z.object({
 export const deleteAccountSchema = z.object({
   confirmation: z.literal("DELETE"),
 });
+
+// ── Custom model settings ────────────────────────────────────────────────
+export const updateModelSettingsSchema = z.object({
+  profileId:          z.string().cuid(),
+  customTailorModel:  z.string().trim().min(1).max(200).nullable().optional(),
+  customAnalyzeModel: z.string().trim().min(1).max(200).nullable().optional(),
+  customExtractModel: z.string().trim().min(1).max(200).nullable().optional(),
+});
