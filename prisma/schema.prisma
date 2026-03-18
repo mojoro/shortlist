@@ -28,6 +28,7 @@ model User {
 
   profiles Profile[]
   usage    Usage?
+  feedback Feedback[]
 
   @@map("users")
 }
@@ -319,6 +320,23 @@ model ScrapeRun {
 
   @@index([profileId, createdAt(sort: Desc)])
   @@map("scrape_runs")
+}
+
+// ============================================================
+// FEEDBACK
+// User-submitted feedback from the settings page.
+// ============================================================
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("feedback")
 }
 
 // ============================================================
