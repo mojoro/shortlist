@@ -13,6 +13,7 @@ import {
 import {
   updateApplicationStatus as serverUpdateAppStatus,
   updateApplicationDetail as serverUpdateAppDetail,
+  bulkRemoveApplications as serverBulkRemoveApps,
 } from "@/app/(dashboard)/pipeline/actions";
 
 // ---------------------------------------------------------------------------
@@ -86,6 +87,7 @@ export interface DashboardActions {
   // Application mutations
   updateAppStatus: (appId: string, status: string) => void;
   updateAppDetail: (appId: string, fields: Partial<FieldOverrides>) => void;
+  bulkRemoveApps: (appIds: string[]) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -343,6 +345,29 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
 
         serverUpdateAppDetail(appId, fields).catch(() => {
           set({ applications: prev });
+        });
+      },
+
+      bulkRemoveApps(appIds) {
+        const prevApps = get().applications;
+        const prevJobs = get().jobs;
+        const idSet = new Set(appIds);
+
+        // Find the jobIds linked to these applications
+        const jobIds = new Set(
+          prevApps.filter((a) => idSet.has(a.id)).map((a) => a.jobId),
+        );
+
+        // Optimistic: remove apps and hide their jobs
+        set({
+          applications: prevApps.filter((a) => !idSet.has(a.id)),
+          jobs: prevJobs.map((j) =>
+            jobIds.has(j.id) ? { ...j, feedStatus: "HIDDEN" as const } : j,
+          ),
+        });
+
+        serverBulkRemoveApps(appIds).catch(() => {
+          set({ applications: prevApps, jobs: prevJobs });
         });
       },
     }),

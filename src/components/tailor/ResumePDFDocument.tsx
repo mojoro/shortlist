@@ -5,8 +5,8 @@ const styles = StyleSheet.create({
   page: {
     fontFamily: "Helvetica",
     fontSize: 10,
-    paddingTop: 40,
-    paddingBottom: 40,
+    paddingTop: 30,
+    paddingBottom: 30,
     paddingHorizontal: 48,
     color: "#111",
     lineHeight: 1.5,
@@ -16,8 +16,8 @@ const styles = StyleSheet.create({
   sectionHeader: {
     fontSize: 11,
     fontFamily: "Helvetica-Bold",
-    marginTop: 12,
-    marginBottom: 4,
+    marginTop: 4,
+    marginBottom: 2,
     borderBottomWidth: 0.5,
     borderBottomColor: "#ccc",
     paddingBottom: 2,

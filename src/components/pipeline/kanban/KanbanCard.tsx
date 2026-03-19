@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ApplicationWithJob } from "@/types";
 import { ScorePill } from "@/components/pipeline/shared";
 import { CardNotes } from "./CardNotes";
@@ -72,10 +73,14 @@ export function KanbanCard({
         {jobPool.company}
       </p>
 
-      {/* Title */}
-      <p className="mt-0.5 truncate text-sm font-semibold leading-snug text-[var(--text)]">
+      {/* Title — links to job detail */}
+      <Link
+        href={`/jobs/${application.job.id}`}
+        onClick={(e) => e.stopPropagation()}
+        className="mt-0.5 block truncate text-sm font-semibold leading-snug text-[var(--text)] hover:text-[var(--accent)] transition-colors"
+      >
         {jobPool.title}
-      </p>
+      </Link>
 
       {/* Location */}
       {jobPool.location && (
