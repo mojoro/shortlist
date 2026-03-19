@@ -110,13 +110,9 @@ async function fetchSearch(
  * Paginates automatically when results exceed RESULTS_PER_PAGE.
  * Each search error is caught independently — a single failure never
  * aborts the whole run.
- *
- * _profileId is unused; reserved for when search terms move to
- * the Profile model.
  */
 export async function scrapeUSAJobs(
   searches: USAJobsSearchConfig[] = USAJOBS_SEARCHES,
-  _profileId?: string,
 ): Promise<USAJobsRawJob[]> {
   const apiKey = env.USAJOBS_API_KEY;
   const email = env.USAJOBS_EMAIL;

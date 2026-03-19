@@ -21,9 +21,6 @@ export interface GreenhouseRawJob {
  * Scrapes all job listings from every company in GREENHOUSE_COMPANIES.
  * Companies that don't use Greenhouse (404) or fail for any reason are
  * silently skipped — a single failure never aborts the whole run.
- *
- * _profileId is unused now; reserved for when the company list moves
- * to the Profile model and is managed via settings.
  */
 async function fetchCompany(company: (typeof GREENHOUSE_COMPANIES)[number]): Promise<GreenhouseRawJob[]> {
   try {
@@ -39,7 +36,7 @@ async function fetchCompany(company: (typeof GREENHOUSE_COMPANIES)[number]): Pro
   }
 }
 
-export async function scrapeGreenhouse(_profileId: string): Promise<GreenhouseRawJob[]> {
+export async function scrapeGreenhouse(): Promise<GreenhouseRawJob[]> {
   const results: GreenhouseRawJob[] = [];
   const BATCH = 10;
   for (let i = 0; i < GREENHOUSE_COMPANIES.length; i += BATCH) {
