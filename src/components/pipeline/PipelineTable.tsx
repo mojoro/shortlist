@@ -268,7 +268,7 @@ export function PipelineTable({
                       aria-label="Select all"
                     />
                   </th>
-                  <th className="sticky left-0 z-10 bg-[var(--bg-card)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] w-[140px] max-w-[140px]">
+                  <th className="sticky left-0 z-10 bg-[var(--bg-card)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] w-[180px] max-w-[180px]">
                     Job
                   </th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
@@ -324,7 +324,7 @@ export function PipelineTable({
                         />
                       </td>
                       {/* Job — sticky left column */}
-                      <td className="sticky left-0 z-10 bg-[var(--bg-card)] px-4 py-3 w-[140px] max-w-[140px]">
+                      <td className="sticky left-0 z-10 bg-[var(--bg-card)] px-4 py-3 w-[180px] max-w-[180px]">
                         <Link
                           href={`/jobs/${app.job.id}`}
                           onClick={(e) => e.stopPropagation()}
