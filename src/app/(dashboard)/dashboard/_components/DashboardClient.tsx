@@ -12,10 +12,6 @@ import { JobFeed } from "@/components/jobs/JobFeed";
 import { ImportJobButton } from "@/components/jobs/ImportJobModal";
 import { APP_CONFIG } from "@/config/app";
 
-const VALID_FILTERS = ["all", "new", "saved", "applied", "ignored"] as const;
-const VALID_SORTS = ["match", "newest", "salary"] as const;
-const VALID_DIRS = ["asc", "desc"] as const;
-
 interface DashboardClientProps {
   initialFilter: string;
   initialSort: string;

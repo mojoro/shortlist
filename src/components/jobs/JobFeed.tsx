@@ -188,7 +188,6 @@ export function JobFeed({
   sort,
   lastUpdatedText,
 }: JobFeedProps) {
-  const [, startTransition] = useTransition();
   const [batchPending, startBatchTransition] = useTransition();
 
   // Store mutations

@@ -83,5 +83,3 @@ export async function fetchDashboardData() {
     };
   }
 }
-
-export type HydrationPayload = Awaited<ReturnType<typeof fetchDashboardData>>;

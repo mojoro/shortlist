@@ -2,7 +2,7 @@ import { startOfDay, subDays, isAfter } from "date-fns";
 
 export type DateBucket = "Today" | "Yesterday" | "This week" | "Older";
 
-export function getDateBucket(createdAt: Date | string): DateBucket {
+function getDateBucket(createdAt: Date | string): DateBucket {
   const now = new Date();
   const todayStart     = startOfDay(now);
   const yesterdayStart = subDays(todayStart, 1);

@@ -107,7 +107,7 @@ interface Props {
 
 // ─── Profiles section ─────────────────────────────────────────────────────────
 
-function ProfilesSection({ profile, allProfiles }: Props) {
+function ProfilesSection({ profile: _profile, allProfiles }: Props) {
   const router = useRouter();
   const [newName, setNewName]         = useState("");
   const [creating, startCreating]     = useTransition();

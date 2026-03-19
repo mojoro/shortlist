@@ -1,5 +1,3 @@
-export const MAX_CANDIDATES_PER_RUN = 30;
-
 // Generic words that appear in almost every job title and carry no role-specific signal.
 // When building match tokens from a target role, these are stripped so we only match
 // on the meaningful part (e.g. "Frontend Engineer" → ["frontend"]).
