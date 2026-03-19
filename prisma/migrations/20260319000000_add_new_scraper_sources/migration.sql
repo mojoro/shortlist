@@ -1,4 +1,0 @@
--- AlterEnum
-ALTER TYPE "ScraperSource" ADD VALUE 'USAJOBS';
-ALTER TYPE "ScraperSource" ADD VALUE 'ADZUNA';
-ALTER TYPE "ScraperSource" ADD VALUE 'ARBEITNOW';
