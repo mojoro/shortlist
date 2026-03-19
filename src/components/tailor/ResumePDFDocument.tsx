@@ -5,8 +5,8 @@ const styles = StyleSheet.create({
   page: {
     fontFamily: "Helvetica",
     fontSize: 10,
-    paddingTop: 40,
-    paddingBottom: 40,
+    paddingTop: 30,
+    paddingBottom: 30,
     paddingHorizontal: 48,
     color: "#111",
     lineHeight: 1.5,
