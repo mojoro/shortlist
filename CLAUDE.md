@@ -25,11 +25,9 @@ project by John Moorman, will become multi-user SaaS.
 | Scheduling | Vercel Cron |
 | Theme | next-themes |
 | PDF export | @react-pdf/renderer |
-| PDF parsing | pdf-parse |
 | Markdown editor | @uiw/react-md-editor |
 | HTML → Markdown | turndown |
 | Validation | Zod |
-| Webhooks | svix (signature verification) |
 | React Compiler | babel-plugin-react-compiler (enabled) |
 | Date formatting | date-fns |
 | Testing | Playwright (E2E), Vitest + React Testing Library (unit) |
@@ -70,9 +68,10 @@ src/
     tailor/               # TailorPanel, GeneratePane, JobDescriptionPane,
                           #   ResumePDFDocument, PDFPreview, AutoSaveIndicator, MobileTabBar
     pipeline/             # PipelineTable, ApplicationDrawer, StatusSelect,
-                          #   FollowUpBanner, PipelineStats, PipelineSortBar, ResumePDFModal
+                          #   FollowUpBanner, PipelineStats, PipelineSortBar, ResumePDFModal,
+                          #   shared (ScorePill, TERMINAL_STATUSES, STATUS_LABELS, getDefaultFields)
       kanban/             # KanbanBoard, KanbanColumn, KanbanCard, CardNotes, ViewToggle
-    landing/              # LandingNav, AuthAwareCTA, HeroDemoPreview, FeatureRow, SignedInHero
+    landing/              # LandingNav, AuthAwareCTA, HeroDemoPreview, FeatureRow
     onboarding/           # OnboardingWizard
     settings/             # SettingsClient, UsageSection, FeedbackForm, DeleteAccountSection,
                           #   AdvancedModelSettings
@@ -84,7 +83,8 @@ src/
     openrouter.ts         # OpenRouter client (server-only — imports env vars)
     models.ts             # Model constants + getModels() helper (client-safe)
     ai-analysis.ts        # parseAiAnalysisResponse() — validates AI scoring output
-    match.ts              # jobMatchesProfile() — in-process pool filtering
+    match.ts              # jobMatchesProfile() — in-process pool filtering (settings/onboarding)
+    match-sql.ts          # findMatchingPoolIds() — SQL-based pool matching (scrape route)
     normalize.ts          # Source raw data → JobPool schema (all scrapers)
     feed.ts               # groupJobsByDate() — date bucketing for feed display
     jobs.ts               # buildWhereClause(), buildOrderBy() — feed query helpers
@@ -101,8 +101,6 @@ src/
       usajobs.ts          # USAJobs federal jobs API scraper
       adzuna.ts           # Adzuna multi-country job search API scraper
       arbeitnow.ts        # Arbeitnow EU jobs public API scraper
-      linkedin.ts         # ⚠ NOT YET BUILT (Apify-backed)
-    salary.ts             # ⚠ NOT YET BUILT — formatSalary(amount, currency)
   config/
     app.ts                # APP_CONFIG — app name lives here ONLY
     companies.ts          # Company lists + search configs for all scrapers
@@ -166,7 +164,7 @@ if (!userId) return new Response("Unauthorized", { status: 401 });
 ```
 
 Clerk webhook at `/api/webhooks/clerk` to create `User` records is **⚠ not yet
-implemented — critical for production.** `svix` is installed for webhook signature
+implemented — critical for production.** Install `svix` for webhook signature
 verification when this is built.
 
 Middleware protects all `/dashboard` and `/api` routes. New users with no completed
@@ -213,9 +211,11 @@ After every call: increment token counts.
 **Layer 1 (global pool):** Scrape sources → write to `JobPool`. Deduplicated at
 `@@unique([source, externalId])` via `createMany({ skipDuplicates: true })`.
 
-**Layer 2 (profile matching):** Run `jobMatchesProfile()` in-process against the loaded
-pool (newest 2000 entries, loaded once, reused for all profiles). Insert matched jobs as
-`Job` junction rows. Same pool entry can appear in multiple profiles with different scores.
+**Layer 2 (profile matching):** The scrape route uses `findMatchingPoolIds()` from
+`match-sql.ts` to match entirely in SQL — only matched IDs are returned from the DB.
+Settings/onboarding use the in-process `jobMatchesProfile()` from `match.ts` (loads
+newest 2000 pool entries). Same pool entry can appear in multiple profiles with
+different scores.
 
 Pass `?skipPool=1` to skip layer 1 and match against existing pool.
 
@@ -302,9 +302,6 @@ never `process.env` directly. Validate all env vars at startup with `@t3-oss/env
 **SSR:** `@uiw/react-md-editor` and `@react-pdf/renderer` must be loaded with
 `dynamic(..., { ssr: false })`. Never render in Server Components.
 
-**Salary:** `formatSalary(amount, currency)` from `@/lib/salary.ts` — never hardcode
-currency symbols. ⚠ `salary.ts` not yet built.
-
 **Error resilience:** `fetchDashboardData` returns empty fallback on error instead of
 crashing the dashboard. Server actions should degrade gracefully.
 
@@ -350,9 +347,7 @@ DATABASE_URL                        # pooled (Prisma runtime)
 DIRECT_URL                          # direct (migrations only)
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 CLERK_SECRET_KEY
-CLERK_WEBHOOK_SECRET                # optional — webhook not yet built
 OPENROUTER_API_KEY
-APIFY_API_TOKEN                     # optional — LinkedIn scraper not yet built
 USAJOBS_API_KEY                     # optional — USAJobs scraper
 USAJOBS_EMAIL                       # optional — USAJobs scraper
 ADZUNA_APP_ID                       # optional — Adzuna scraper
