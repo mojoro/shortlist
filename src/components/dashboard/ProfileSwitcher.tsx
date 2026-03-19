@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { switchProfile } from "@/app/(dashboard)/settings/actions";
+import { fetchDashboardData } from "@/app/(dashboard)/actions-sync";
+import { useDashboardStore } from "@/lib/store";
 
 interface Profile {
   id: string;
@@ -17,6 +19,7 @@ interface ProfileSwitcherProps {
 
 export function ProfileSwitcher({ profiles, activeProfileId }: ProfileSwitcherProps) {
   const router = useRouter();
+  const hydrate = useDashboardStore((s) => s.hydrate);
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
@@ -41,6 +44,9 @@ export function ProfileSwitcher({ profiles, activeProfileId }: ProfileSwitcherPr
     setOpen(false);
     startTransition(async () => {
       await switchProfile({ profileId });
+      // Re-hydrate the store with the new profile's data
+      const data = await fetchDashboardData();
+      if (data) hydrate(data);
       router.refresh();
     });
   }
