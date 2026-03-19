@@ -153,11 +153,36 @@ export async function createProfile(data: unknown): Promise<{ profileId: string 
     update: {},
   });
 
+  // Copy personal info and resume data from the active profile (if one exists)
+  // Search criteria starts blank so the user configures it for the new context
+  const activeProfile = await prisma.profile.findFirst({
+    where: { userId, isActive: true },
+  });
+
   const profile = await prisma.profile.create({
     data: {
       userId,
       name:     parsed.data.name,
       isActive: false,
+      onboardingCompletedAt: new Date(),
+      ...(activeProfile && {
+        displayName:      activeProfile.displayName,
+        email:            activeProfile.email,
+        phone:            activeProfile.phone,
+        location:         activeProfile.location,
+        linkedinUrl:      activeProfile.linkedinUrl,
+        portfolioUrl:     activeProfile.portfolioUrl,
+        githubUrl:        activeProfile.githubUrl,
+        skills:           activeProfile.skills,
+        masterResume:     activeProfile.masterResume,
+        resumeLastEdited: activeProfile.resumeLastEdited,
+        curriculumVitae:  activeProfile.curriculumVitae,
+        protectedPhrases: activeProfile.protectedPhrases,
+        bannedPhrases:    activeProfile.bannedPhrases,
+        verifiedMetrics:  activeProfile.verifiedMetrics,
+        neverClaim:       activeProfile.neverClaim,
+        currency:         activeProfile.currency,
+      }),
     },
   });
 
