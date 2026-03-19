@@ -45,8 +45,10 @@ export function getDefaultFields(app: ApplicationWithJob): FieldOverrides {
 
 // ── Score pill ──────────────────────────────────────────────────────────────
 
-export function ScorePill({ score }: { score: number | null }) {
-  if (score === null) return <span className="text-[var(--text-muted)]">—</span>;
+export function ScorePill({ score, showEmpty = false }: { score: number | null; showEmpty?: boolean }) {
+  if (score === null) {
+    return showEmpty ? <span className="text-[var(--text-muted)]">—</span> : null;
+  }
   const color =
     score >= 90 ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" :
     score >= 75 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" :

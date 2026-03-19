@@ -404,7 +404,7 @@ export function PipelineTable({
                       {/* Score + PDF icon */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <ScorePill score={app.job.aiScore} />
+                          <ScorePill score={app.job.aiScore} showEmpty />
                           {app.exportedResumeMarkdown && (
                             <button
                               onClick={(e) => {

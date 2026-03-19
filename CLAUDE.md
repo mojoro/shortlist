@@ -28,6 +28,7 @@ project by John Moorman, will become multi-user SaaS.
 | Markdown editor | @uiw/react-md-editor |
 | HTML → Markdown | turndown |
 | Validation | Zod |
+| Webhooks | svix (signature verification) |
 | React Compiler | babel-plugin-react-compiler (enabled) |
 | Date formatting | date-fns |
 | Testing | Playwright (E2E), Vitest + React Testing Library (unit) |
@@ -347,6 +348,7 @@ DATABASE_URL                        # pooled (Prisma runtime)
 DIRECT_URL                          # direct (migrations only)
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 CLERK_SECRET_KEY
+CLERK_WEBHOOK_SECRET                # optional — webhook not yet built
 OPENROUTER_API_KEY
 USAJOBS_API_KEY                     # optional — USAJobs scraper
 USAJOBS_EMAIL                       # optional — USAJobs scraper
