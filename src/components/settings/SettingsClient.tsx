@@ -341,16 +341,15 @@ function SearchCriteriaSection({ profile }: { profile: Profile }) {
     niceToHaveSkills: joinTags(profile.niceToHaveSkills),
     excludedKeywords: joinTags(profile.excludedKeywords),
   });
-  const [isPending,   startTransition]   = useTransition();
-  const [rematching,  startRematch]      = useTransition();
-  const [saved,       setSaved]          = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [status, setStatus] = useState<"idle" | "saving" | "matching" | "done">("idle");
   const [rematchResult, setRematchResult] = useState<{ removed: number; added: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function handleChange(key: keyof typeof fields) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       setFields((prev) => ({ ...prev, [key]: e.target.value }));
-      setSaved(false);
+      if (status === "done") setStatus("idle");
       setRematchResult(null);
     };
   }
@@ -358,9 +357,11 @@ function SearchCriteriaSection({ profile }: { profile: Profile }) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setRematchResult(null);
     startTransition(async () => {
       try {
-        await updateSearchCriteria({
+        setStatus("saving");
+        const result = await updateSearchCriteria({
           profileId:        profile.id,
           targetRoles:      splitTags(fields.targetRoles),
           targetLocations:  splitTags(fields.targetLocations),
@@ -372,21 +373,11 @@ function SearchCriteriaSection({ profile }: { profile: Profile }) {
           niceToHaveSkills: splitTags(fields.niceToHaveSkills),
           excludedKeywords: splitTags(fields.excludedKeywords),
         });
-        setSaved(true);
+        setRematchResult(result);
+        setStatus("done");
       } catch {
         setError("Couldn't save. Please try again.");
-      }
-    });
-  }
-
-  function handleRematch() {
-    setRematchResult(null);
-    startRematch(async () => {
-      try {
-        const result = await rematchProfile(profile.id);
-        setRematchResult(result);
-      } catch {
-        setError("Couldn't refresh matches. Please try again.");
+        setStatus("idle");
       }
     });
   }
@@ -482,21 +473,17 @@ function SearchCriteriaSection({ profile }: { profile: Profile }) {
         </div>
         {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
         <div className="flex flex-wrap items-center gap-3">
-          <SaveButton isPending={isPending} saved={saved} />
-          {saved && (
-            <button
-              type="button"
-              onClick={handleRematch}
-              disabled={rematching}
-              className="inline-flex min-h-[36px] items-center rounded-lg border border-[var(--border)] px-4 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:cursor-wait disabled:opacity-60"
-            >
-              {rematching ? "Refreshing…" : "Refresh job matches"}
-            </button>
+          <SaveButton isPending={isPending} saved={status === "done"} />
+          {isPending && (
+            <span className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+              {status === "saving" ? "Saving criteria…" : "Updating your feed…"}
+            </span>
           )}
         </div>
-        {rematchResult && (
+        {rematchResult && status === "done" && (
           <p className="text-xs text-[var(--text-muted)]">
-            Done — {rematchResult.added} new{" "}
+            {rematchResult.added} new{" "}
             {rematchResult.added === 1 ? "match" : "matches"} added
             {rematchResult.removed > 0
               ? `, ${rematchResult.removed} stale ${rematchResult.removed === 1 ? "listing" : "listings"} removed`
