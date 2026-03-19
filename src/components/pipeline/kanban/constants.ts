@@ -1,5 +1,6 @@
 import type { ApplicationStatus } from "@prisma/client";
 import type { ApplicationWithJob } from "@/types";
+import { STATUS_LABELS } from "@/components/pipeline/shared";
 
 export const KANBAN_COLUMNS: {
   status: ApplicationStatus;
@@ -13,22 +14,8 @@ export const KANBAN_COLUMNS: {
   { status: "OFFER", label: "Offer", dotColor: "bg-green-500" },
 ];
 
-export const CLOSED_STATUSES: ApplicationStatus[] = [
-  "ACCEPTED",
-  "REJECTED",
-  "WITHDRAWN",
-  "GHOSTED",
-];
-
-const CLOSED_LABELS: Record<string, string> = {
-  ACCEPTED: "Accepted",
-  REJECTED: "Rejected",
-  WITHDRAWN: "Withdrawn",
-  GHOSTED: "Ghosted",
-};
-
 export function getClosedLabel(status: ApplicationStatus): string {
-  return CLOSED_LABELS[status] ?? status;
+  return STATUS_LABELS[status] ?? status;
 }
 
 export function groupByStatus(

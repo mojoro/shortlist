@@ -2,10 +2,10 @@ import { describe, it, expect } from "vitest";
 import type { ApplicationWithJob } from "@/types";
 import {
   KANBAN_COLUMNS,
-  CLOSED_STATUSES,
   getClosedLabel,
   groupByStatus,
 } from "@/components/pipeline/kanban/constants";
+import { TERMINAL_STATUSES } from "@/components/pipeline/shared";
 
 describe("kanban constants", () => {
   it("defines 5 active columns in pipeline order", () => {
@@ -19,12 +19,12 @@ describe("kanban constants", () => {
     ]);
   });
 
-  it("defines 4 closed statuses", () => {
-    expect(CLOSED_STATUSES).toHaveLength(4);
-    expect(CLOSED_STATUSES).toContain("ACCEPTED");
-    expect(CLOSED_STATUSES).toContain("REJECTED");
-    expect(CLOSED_STATUSES).toContain("WITHDRAWN");
-    expect(CLOSED_STATUSES).toContain("GHOSTED");
+  it("TERMINAL_STATUSES contains 4 closed statuses", () => {
+    expect(TERMINAL_STATUSES.size).toBe(4);
+    expect(TERMINAL_STATUSES.has("ACCEPTED")).toBe(true);
+    expect(TERMINAL_STATUSES.has("REJECTED")).toBe(true);
+    expect(TERMINAL_STATUSES.has("WITHDRAWN")).toBe(true);
+    expect(TERMINAL_STATUSES.has("GHOSTED")).toBe(true);
   });
 
   it("getClosedLabel returns human labels", () => {
