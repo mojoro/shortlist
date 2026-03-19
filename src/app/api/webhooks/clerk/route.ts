@@ -15,6 +15,22 @@ export async function POST(req: NextRequest) {
           (e) => e.id === evt.data.primary_email_address_id,
         )?.email_address ?? null;
 
+      // Check if a user with this email exists from a previous Clerk instance
+      // (e.g., dev → prod migration). If so, remap their account to the new ID
+      // so all their profiles, jobs, and applications transfer automatically.
+      if (email) {
+        const existing = await prisma.user.findFirst({
+          where: { email, id: { not: id } },
+        });
+        if (existing) {
+          await prisma.user.update({
+            where: { id: existing.id },
+            data: { id, email },
+          });
+          return new Response("OK", { status: 200 });
+        }
+      }
+
       await prisma.user.upsert({
         where: { id },
         create: { id, email },
