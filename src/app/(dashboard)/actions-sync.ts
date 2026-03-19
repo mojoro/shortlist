@@ -14,6 +14,7 @@ export async function fetchDashboardData() {
   const { userId } = await auth();
   if (!userId) return null;
 
+  try {
   const activeProfile = await getActiveProfile(userId);
   if (!activeProfile) {
     return {
@@ -54,7 +55,7 @@ export async function fetchDashboardData() {
           tailorCallCount: true,
           currentMonthResetsAt: true,
         },
-      }),
+      }).catch(() => null),
     ]);
 
   const usage = usageRecord
@@ -68,6 +69,10 @@ export async function fetchDashboardData() {
     : null;
 
   return { userId, activeProfile, profiles, jobs, applications, followUpCount, usage };
+  } catch (err) {
+    console.error("[fetchDashboardData] Failed:", err);
+    throw err;
+  }
 }
 
 export type HydrationPayload = Awaited<ReturnType<typeof fetchDashboardData>>;
