@@ -27,7 +27,8 @@ export async function GET() {
     await prisma.profile.deleteMany({ where: { userId } });
   }
 
-  // Clean up any orphaned seed pool records from a previous run
+  // Clean up any orphaned seed pool records from a previous run.
+  // Delete Job junction rows first (any user), then pool entries.
   const SEED_EXTERNAL_IDS = [
     "greenhouse-kombo-fe-001",    "lever-taktile-fe-001",
     "ashby-cogram-fe-001",        "greenhouse-personio-fe-001",
@@ -37,7 +38,15 @@ export async function GET() {
     "lever-sumup-fe-001",         "ashby-meister-fe-001",
     "greenhouse-contentful-fe-001", "lever-ecosia-fe-001",
   ];
-  await prisma.jobPool.deleteMany({ where: { externalId: { in: SEED_EXTERNAL_IDS } } });
+  const seedPoolIds = await prisma.jobPool.findMany({
+    where: { externalId: { in: SEED_EXTERNAL_IDS } },
+    select: { id: true },
+  });
+  if (seedPoolIds.length > 0) {
+    const ids = seedPoolIds.map((p) => p.id);
+    await prisma.job.deleteMany({ where: { jobPoolId: { in: ids } } });
+    await prisma.jobPool.deleteMany({ where: { id: { in: ids } } });
+  }
 
   const masterResume = `# John Moorman
 Software Engineer | Next.js & TypeScript Specialist
