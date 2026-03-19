@@ -71,7 +71,16 @@ export async function fetchDashboardData() {
   return { userId, activeProfile, profiles, jobs, applications, followUpCount, usage };
   } catch (err) {
     console.error("[fetchDashboardData] Failed:", err);
-    throw err;
+    // Return empty data rather than crashing the entire dashboard
+    return {
+      userId,
+      activeProfile: null,
+      profiles: [],
+      jobs: [],
+      applications: [],
+      followUpCount: 0,
+      usage: null,
+    };
   }
 }
 

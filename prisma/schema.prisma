@@ -392,6 +392,9 @@ enum ScraperSource {
   YC_JOBS
   NO_FLUFF_JOBS
   CUSTOM
+  USAJOBS
+  ADZUNA
+  ARBEITNOW
 }
 
 enum ScraperFrequency {
