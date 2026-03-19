@@ -1,6 +1,7 @@
 "use client";
 
 import type { ApplicationWithJob } from "@/types";
+import { ScorePill } from "@/components/pipeline/shared";
 import { CardNotes } from "./CardNotes";
 
 interface KanbanCardProps {
@@ -11,23 +12,6 @@ interface KanbanCardProps {
   onClick: () => void;
   onNotesChange: (notes: string) => void;
   onPdfPreview: () => void;
-}
-
-function ScorePill({ score }: { score: number | null }) {
-  if (score === null) return null;
-  const color =
-    score >= 90
-      ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
-      : score >= 75
-        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
-        : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400";
-  return (
-    <span
-      className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-semibold ${color}`}
-    >
-      {score}
-    </span>
-  );
 }
 
 function FollowUpBadge({ followUpAt }: { followUpAt: Date | null }) {

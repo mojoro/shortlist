@@ -2,11 +2,15 @@
 
 import { useState, useRef } from "react";
 import dynamic from "next/dynamic";
-import { format } from "date-fns";
 import type { ApplicationStatus } from "@prisma/client";
 import type { ApplicationWithJob, FieldOverrides } from "@/types";
 import { useDashboardStore } from "@/lib/store";
 import { ApplicationDrawer } from "@/components/pipeline/ApplicationDrawer";
+import {
+  TERMINAL_STATUSES,
+  STATUS_LABELS,
+  getDefaultFields,
+} from "@/components/pipeline/shared";
 import { useKanbanDnd } from "./use-kanban-dnd";
 import { KANBAN_COLUMNS, getClosedLabel, groupByStatus } from "./constants";
 import { KanbanColumn } from "./KanbanColumn";
@@ -22,39 +26,6 @@ const ResumePDFModal = dynamic(
 interface KanbanBoardProps {
   activeApplications: ApplicationWithJob[];
   closedApplications: ApplicationWithJob[];
-}
-
-const TERMINAL_STATUSES = new Set<ApplicationStatus>([
-  "ACCEPTED",
-  "REJECTED",
-  "WITHDRAWN",
-  "GHOSTED",
-]);
-
-const STATUS_LABELS: Record<ApplicationStatus, string> = {
-  INTERESTED: "Interested",
-  APPLIED: "Applied",
-  SCREENING: "Screening",
-  INTERVIEWING: "Interviewing",
-  OFFER: "Offer",
-  ACCEPTED: "Accepted",
-  REJECTED: "Rejected",
-  WITHDRAWN: "Withdrawn",
-  GHOSTED: "Ghosted",
-};
-
-function getDefaultFields(app: ApplicationWithJob): FieldOverrides {
-  return {
-    notes: app.notes ?? "",
-    appliedAt: app.appliedAt
-      ? format(new Date(app.appliedAt), "yyyy-MM-dd")
-      : "",
-    followUpAt: app.followUpAt
-      ? format(new Date(app.followUpAt), "yyyy-MM-dd")
-      : "",
-    recruiterName: app.recruiterName ?? "",
-    recruiterEmail: app.recruiterEmail ?? "",
-  };
 }
 
 export function KanbanBoard({

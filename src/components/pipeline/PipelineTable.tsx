@@ -7,6 +7,12 @@ import type { ApplicationStatus } from "@prisma/client";
 import type { ApplicationWithJob, FieldOverrides } from "@/types";
 import { StatusSelect } from "@/components/pipeline/StatusSelect";
 import { ApplicationDrawer } from "@/components/pipeline/ApplicationDrawer";
+import {
+  TERMINAL_STATUSES,
+  STATUS_LABELS,
+  getDefaultFields,
+  ScorePill,
+} from "@/components/pipeline/shared";
 import { useDashboardStore } from "@/lib/store";
 
 const ResumePDFModal = dynamic(
@@ -22,36 +28,6 @@ interface PipelineTableProps {
   closedApplications: ApplicationWithJob[];
 }
 
-const TERMINAL_STATUSES = new Set<ApplicationStatus>([
-  "ACCEPTED", "REJECTED", "WITHDRAWN", "GHOSTED",
-]);
-
-const STATUS_LABELS: Record<ApplicationStatus, string> = {
-  INTERESTED:   "Interested",
-  APPLIED:      "Applied",
-  SCREENING:    "Screening",
-  INTERVIEWING: "Interviewing",
-  OFFER:        "Offer",
-  ACCEPTED:     "Accepted",
-  REJECTED:     "Rejected",
-  WITHDRAWN:    "Withdrawn",
-  GHOSTED:      "Ghosted",
-};
-
-function getDefaultFields(app: ApplicationWithJob): FieldOverrides {
-  return {
-    notes:          app.notes ?? "",
-    appliedAt:      app.appliedAt
-      ? format(new Date(app.appliedAt), "yyyy-MM-dd")
-      : "",
-    followUpAt:     app.followUpAt
-      ? format(new Date(app.followUpAt), "yyyy-MM-dd")
-      : "",
-    recruiterName:  app.recruiterName ?? "",
-    recruiterEmail: app.recruiterEmail ?? "",
-  };
-}
-
 function getFollowUpClass(followUpStr: string, status: ApplicationStatus): string {
   if (!followUpStr || TERMINAL_STATUSES.has(status)) return "text-[var(--text-muted)]";
   const today = new Date();
@@ -60,19 +36,6 @@ function getFollowUpClass(followUpStr: string, status: ApplicationStatus): strin
   if (due < today) return "text-red-600 font-medium dark:text-red-400";
   if (due.getTime() === today.getTime()) return "text-amber-600 font-medium dark:text-amber-400";
   return "text-[var(--text)]";
-}
-
-function ScorePill({ score }: { score: number | null }) {
-  if (score === null) return <span className="text-[var(--text-muted)]">—</span>;
-  const color =
-    score >= 90 ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" :
-    score >= 75 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" :
-                  "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400";
-  return (
-    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-semibold ${color}`}>
-      {score}
-    </span>
-  );
 }
 
 export function PipelineTable({
