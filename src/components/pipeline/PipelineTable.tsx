@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { format } from "date-fns";
 import type { ApplicationStatus } from "@prisma/client";
 import type { ApplicationWithJob, FieldOverrides } from "@/types";
@@ -292,12 +293,18 @@ export function PipelineTable({
                     >
                       {/* Job — sticky left column */}
                       <td className="sticky left-0 z-10 bg-[var(--bg-card)] px-4 py-3 w-[140px] max-w-[140px]">
-                        <div className="truncate font-medium text-[var(--text)]">
-                          {app.job.jobPool.title}
-                        </div>
-                        <div className="mt-0.5 truncate text-xs text-[var(--text-muted)]">
-                          {app.job.jobPool.company}
-                        </div>
+                        <Link
+                          href={`/jobs/${app.job.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="group block truncate"
+                        >
+                          <span className="truncate font-medium text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">
+                            {app.job.jobPool.title}
+                          </span>
+                          <span className="mt-0.5 block truncate text-xs text-[var(--text-muted)]">
+                            {app.job.jobPool.company}
+                          </span>
+                        </Link>
                       </td>
 
                       {/* Status */}
