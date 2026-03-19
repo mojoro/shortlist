@@ -206,6 +206,17 @@ export function GeneratePane({
               Generate
             </button>
           </div>
+          {!markdown && (
+            <button
+              onClick={() => {
+                onMarkdownChange(masterResume || "");
+                setPaneState("editor");
+              }}
+              className="w-full text-center text-xs text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+            >
+              or write my own
+            </button>
+          )}
         </div>
       </div>
     );
