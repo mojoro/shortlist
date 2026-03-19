@@ -1,7 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { appendFileSync } from "fs";
 import { prisma } from "@/lib/prisma";
-import { openrouter, TAILOR_MODEL } from "@/lib/openrouter";
+import { openrouter } from "@/lib/openrouter";
+import { getModels } from "@/lib/models";
 import { tailorSchema } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -67,6 +68,9 @@ export async function POST(req: Request) {
             bannedPhrases: true,
             verifiedMetrics: true,
             neverClaim: true,
+            customTailorModel: true,
+            customAnalyzeModel: true,
+            customExtractModel: true,
           },
         },
       },
@@ -96,6 +100,7 @@ export async function POST(req: Request) {
     }
 
     const { profile } = job;
+    const models = getModels(profile);
 
     // Build contact header lines for the resume
     const contactLines: string[] = [];
@@ -247,7 +252,7 @@ identify what would make it a 9.5/10 and implement that adjustment, but never us
     }
 
     const stream = await openrouter.chat.completions.create({
-      model: TAILOR_MODEL,
+      model: models.tailor,
       stream: true,
       stream_options: { include_usage: true },
       messages: [

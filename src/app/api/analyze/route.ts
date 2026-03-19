@@ -1,6 +1,7 @@
 import { appendFileSync } from "fs";
 import { prisma } from "@/lib/prisma";
-import { openrouter, ANALYZE_MODEL } from "@/lib/openrouter";
+import { openrouter } from "@/lib/openrouter";
+import { getModels } from "@/lib/models";
 import { env } from "@/env";
 import { analyzeSchema } from "@/lib/validations";
 import { buildAnalysisSystemPrompt, parseAiAnalysisResponse } from "@/lib/ai-analysis";
@@ -40,6 +41,8 @@ export async function POST(req: Request) {
       include: { user: { include: { usage: true } } },
     });
     if (!profile) return new Response("Profile not found", { status: 404 });
+
+    const models = getModels(profile);
 
     // Usage limit check
     const usage = profile.user.usage;
@@ -90,7 +93,7 @@ export async function POST(req: Request) {
           aiScore:       0,
           aiSummary:     "Auto-rejected: matched an excluded keyword.",
           aiAnalyzedAt:  new Date(),
-          aiModel:       ANALYZE_MODEL,
+          aiModel:       models.analyze,
         },
       });
     }
@@ -123,7 +126,7 @@ export async function POST(req: Request) {
 
           try {
             const response = await openrouter.chat.completions.create({
-              model: ANALYZE_MODEL,
+              model: models.analyze,
               messages: [
                 { role: "system", content: systemPrompt },
                 {
@@ -161,7 +164,7 @@ export async function POST(req: Request) {
                 aiMatchPoints: result.matchPoints,
                 aiGapPoints:   result.gapPoints,
                 aiAnalyzedAt:  new Date(),
-                aiModel:       ANALYZE_MODEL,
+                aiModel:       models.analyze,
                 ...(result.status === "NO_GO" && job.jobPool.source !== "CUSTOM" ? { feedStatus: "HIDDEN" } : {}),
               },
             });

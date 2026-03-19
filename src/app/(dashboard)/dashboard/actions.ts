@@ -6,7 +6,8 @@ import { headers } from "next/headers";
 import { appendFileSync } from "fs";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { openrouter, ANALYZE_MODEL } from "@/lib/openrouter";
+import { openrouter } from "@/lib/openrouter";
+import { getModels } from "@/lib/models";
 import { buildWhereClause, buildOrderBy } from "@/lib/jobs";
 import { buildAnalysisSystemPrompt, parseAiAnalysisResponse } from "@/lib/ai-analysis";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -187,6 +188,8 @@ export async function analyzeJob(
   });
   if (!profile) throw new Error("Profile not found");
 
+  const models = getModels(profile);
+
   const { allowed } = checkRateLimit(userId, "analyze", 10);
   if (!allowed) return { error: "UNKNOWN" as const };
 
@@ -216,7 +219,7 @@ export async function analyzeJob(
 
   try {
     const response = await openrouter.chat.completions.create({
-      model: ANALYZE_MODEL,
+      model: models.analyze,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userMsg },
@@ -237,7 +240,7 @@ export async function analyzeJob(
         aiMatchPoints: result.matchPoints,
         aiGapPoints:   result.gapPoints,
         aiAnalyzedAt:  new Date(),
-        aiModel:       ANALYZE_MODEL,
+        aiModel:       models.analyze,
         ...(result.status === "NO_GO" && job.jobPool.source !== "CUSTOM"
           ? { feedStatus: "HIDDEN" }
           : {}),
