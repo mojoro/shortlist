@@ -672,44 +672,113 @@ function ResumeWritingRulesSection({ profile }: { profile: Profile }) {
 
 // ─── Root component ───────────────────────────────────────────────────────────
 
+const TAB_BASE = "rounded-md px-3 py-1.5 text-sm font-medium transition-all";
+const TAB_ACTIVE =
+  "bg-[var(--bg-card)] text-[var(--text)] shadow-sm ring-1 ring-inset ring-[var(--border)]";
+const TAB_INACTIVE = "text-[var(--text-muted)] hover:text-[var(--text)]";
+
 export function SettingsClient({ profile, allProfiles }: Props) {
+  // Auto-switch to Account tab when navigating via /settings#usage
+  const initialTab =
+    typeof window !== "undefined" && window.location.hash === "#usage"
+      ? "account"
+      : "profile";
+  const [tab, setTab] = useState<"profile" | "account">(initialTab);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
   return (
-    <div className="space-y-10">
-      <UsageSection />
-      <Divider />
-      <ProfilesSection profile={profile} allProfiles={allProfiles} />
-      <Divider />
-      <ProfileInfoSection profile={profile} />
-      <Divider />
-      <SearchCriteriaSection profile={profile} />
-      <Divider />
-      <ResumeSection profile={profile} />
-      <Divider />
-      <ResumeWritingRulesSection profile={profile} />
-      <Divider />
-      <AdvancedModelSettings profile={profile} />
-      <Divider />
-      <section>
-        <SectionHeading>Feedback</SectionHeading>
-        <p className="mt-1 mb-4 text-sm text-[var(--text-muted)]">
-          Let us know how we can improve.
-        </p>
-        <FeedbackForm />
-      </section>
-      <Divider />
-      <section>
-        <SectionHeading>Account</SectionHeading>
-        <p className="mt-1 mb-4 text-sm text-[var(--text-muted)]">
-          Sign out of your account on this device.
-        </p>
-        <SignOutButton redirectUrl="/">
-          <button className="inline-flex min-h-[36px] items-center rounded-lg border border-[var(--border)] px-4 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">
-            Sign out
-          </button>
-        </SignOutButton>
-      </section>
-      <Divider />
-      <DeleteAccountSection />
+    <div className="space-y-8">
+      {/* Tab bar */}
+      <nav
+        className="flex items-center gap-0.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-0.5 w-fit"
+        aria-label="Settings tabs"
+      >
+        <button
+          onClick={() => setTab("profile")}
+          className={`${TAB_BASE} ${tab === "profile" ? TAB_ACTIVE : TAB_INACTIVE}`}
+        >
+          Profile
+        </button>
+        <button
+          onClick={() => setTab("account")}
+          className={`${TAB_BASE} ${tab === "account" ? TAB_ACTIVE : TAB_INACTIVE}`}
+        >
+          Account
+        </button>
+      </nav>
+
+      {/* ── Profile tab ── */}
+      {tab === "profile" && (
+        <div className="space-y-10">
+          <ProfilesSection profile={profile} allProfiles={allProfiles} />
+          <Divider />
+          <ProfileInfoSection profile={profile} />
+          <Divider />
+          <SearchCriteriaSection profile={profile} />
+          <Divider />
+          <ResumeSection profile={profile} />
+          <Divider />
+          <ResumeWritingRulesSection profile={profile} />
+          <Divider />
+          {/* Advanced — collapsed by default */}
+          <section>
+            <button
+              onClick={() => setAdvancedOpen((o) => !o)}
+              className="flex items-center gap-2 text-sm font-semibold text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={`transition-transform ${advancedOpen ? "rotate-90" : ""}`}
+                aria-hidden="true"
+              >
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+              Advanced settings
+            </button>
+            {advancedOpen && (
+              <div className="mt-6">
+                <AdvancedModelSettings profile={profile} />
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
+      {/* ── Account tab ── */}
+      {tab === "account" && (
+        <div className="space-y-10">
+          <UsageSection />
+          <Divider />
+          <section>
+            <SectionHeading>Feedback</SectionHeading>
+            <p className="mt-1 mb-4 text-sm text-[var(--text-muted)]">
+              Let us know how we can improve.
+            </p>
+            <FeedbackForm />
+          </section>
+          <Divider />
+          <section>
+            <SectionHeading>Account</SectionHeading>
+            <p className="mt-1 mb-4 text-sm text-[var(--text-muted)]">
+              Sign out of your account on this device.
+            </p>
+            <SignOutButton redirectUrl="/">
+              <button className="inline-flex min-h-[36px] items-center rounded-lg border border-[var(--border)] px-4 py-1.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">
+                Sign out
+              </button>
+            </SignOutButton>
+          </section>
+          <Divider />
+          <DeleteAccountSection />
+        </div>
+      )}
     </div>
   );
 }
