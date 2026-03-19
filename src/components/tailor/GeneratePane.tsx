@@ -30,7 +30,7 @@ interface GeneratePaneProps {
 
 export function GeneratePane({
   jobId,
-  tailoredResumeId,
+  tailoredResumeId: _tailoredResumeId,
   onResumeIdChange,
   markdown,
   onMarkdownChange,

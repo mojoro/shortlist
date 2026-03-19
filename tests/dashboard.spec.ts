@@ -58,7 +58,6 @@ test.describe("Dashboard (authenticated)", () => {
     await page.goto("/dashboard");
     const cards = page.getByRole("article");
     await expect(cards.first()).toBeVisible({ timeout: 15_000 });
-    const initialCount = await cards.count();
 
     // Find a card with an ignore button
     const ignoreBtn = cards.first().getByRole("button", { name: "Ignore this job" });
