@@ -382,7 +382,3 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
   ),
 );
 
-/**
- * Non-React access to the store — same reference, works outside components.
- */
-export const getDashboardStore = useDashboardStore;
