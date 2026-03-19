@@ -45,11 +45,13 @@ export function PipelineTable({
 }: PipelineTableProps) {
   const storeUpdateAppStatus = useDashboardStore((s) => s.updateAppStatus);
   const storeUpdateAppDetail = useDashboardStore((s) => s.updateAppDetail);
+  const storeBulkRemove = useDashboardStore((s) => s.bulkRemoveApps);
 
   const [activeTab, setActiveTab] = useState<"active" | "closed">("active");
   const [openDrawerAppId, setOpenDrawerAppId] = useState<string | null>(null);
   const [pdfPreviewFor, setPdfPreviewFor] = useState<string | null>(null);
   const [editingNotesFor, setEditingNotesFor] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // Field overrides: display state for editable fields, keyed by appId
   const [fieldOverrides, setFieldOverrides] = useState<Map<string, FieldOverrides>>(new Map());
@@ -251,6 +253,21 @@ export function PipelineTable({
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)]">
+                  <th className="w-10 px-3 py-3">
+                    <input
+                      type="checkbox"
+                      checked={rows.length > 0 && selected.size === rows.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelected(new Set(rows.map((r) => r.id)));
+                        } else {
+                          setSelected(new Set());
+                        }
+                      }}
+                      className="accent-[var(--accent)]"
+                      aria-label="Select all"
+                    />
+                  </th>
                   <th className="sticky left-0 z-10 bg-[var(--bg-card)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] w-[140px] max-w-[140px]">
                     Job
                   </th>
@@ -291,6 +308,21 @@ export function PipelineTable({
                         "",
                       ].join(" ")}
                     >
+                      {/* Checkbox */}
+                      <td className="w-10 px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selected.has(app.id)}
+                          onChange={(e) => {
+                            const next = new Set(selected);
+                            if (e.target.checked) next.add(app.id);
+                            else next.delete(app.id);
+                            setSelected(next);
+                          }}
+                          className="accent-[var(--accent)]"
+                          aria-label={`Select ${app.job.jobPool.title}`}
+                        />
+                      </td>
                       {/* Job — sticky left column */}
                       <td className="sticky left-0 z-10 bg-[var(--bg-card)] px-4 py-3 w-[140px] max-w-[140px]">
                         <Link
@@ -472,6 +504,31 @@ export function PipelineTable({
             onClick={handleUndoDismiss}
             className="text-[var(--text-muted)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded"
             aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-2.5 text-sm shadow-lg">
+          <span className="text-[var(--text)]">
+            {selected.size} {selected.size === 1 ? "item" : "items"} selected
+          </span>
+          <button
+            onClick={() => {
+              storeBulkRemove(Array.from(selected));
+              setSelected(new Set());
+            }}
+            className="font-semibold text-red-600 hover:text-red-500 dark:text-red-400 dark:hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
+          >
+            Remove from pipeline
+          </button>
+          <button
+            onClick={() => setSelected(new Set())}
+            className="text-[var(--text-muted)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded"
+            aria-label="Clear selection"
           >
             ×
           </button>

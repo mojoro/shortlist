@@ -129,6 +129,45 @@ export async function createApplication(
 }
 
 /**
+ * Remove applications from the pipeline and hide their jobs so they
+ * won't be re-matched by the scrape pipeline. Deletes the Application
+ * row and sets the underlying Job to feedStatus HIDDEN.
+ */
+export async function bulkRemoveApplications(
+  applicationIds: string[],
+): Promise<number> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  if (applicationIds.length === 0) return 0;
+
+  // Verify all applications belong to this user and collect their jobIds
+  const apps = await prisma.application.findMany({
+    where: { id: { in: applicationIds }, profile: { userId } },
+    select: { id: true, jobId: true },
+  });
+
+  if (apps.length === 0) return 0;
+
+  const jobIds = apps.map((a) => a.jobId);
+
+  // Delete applications and hide jobs in a transaction
+  await prisma.$transaction([
+    prisma.application.deleteMany({
+      where: { id: { in: apps.map((a) => a.id) } },
+    }),
+    prisma.job.updateMany({
+      where: { id: { in: jobIds } },
+      data: { feedStatus: "HIDDEN" },
+    }),
+  ]);
+
+  revalidatePath("/pipeline");
+  revalidateTag("dashboard-stats");
+  return apps.length;
+}
+
+/**
  * Returns the count of applications with a follow-up date due today or earlier,
  * across all non-terminal applications for this user.
  * Called from the layout server component for the nav badge.
