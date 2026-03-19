@@ -32,6 +32,14 @@ setup("authenticate and save state", async ({ page }) => {
     },
   ]);
 
+  // Seed predictable test data so Playwright tests have known cards to click.
+  // The seed route deletes any existing data for this user and creates fresh
+  // jobs, applications, and a profile with realistic scores and statuses.
+  const seedResponse = await page.goto("/api/dev/seed");
+  if (!seedResponse || seedResponse.status() !== 200) {
+    console.warn("[global-setup] Seed route failed — tests may be flaky");
+  }
+
   // Verify we can reach the dashboard
   await page.goto("/dashboard");
   await page.waitForLoadState("networkidle", { timeout: 30_000 });

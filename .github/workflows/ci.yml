@@ -68,6 +68,7 @@ jobs:
       E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
       NEXT_PUBLIC_APP_URL: http://localhost:3001
       NEXT_PUBLIC_DEFAULT_THEME: system
+      E2E_SEED: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

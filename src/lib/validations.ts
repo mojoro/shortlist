@@ -156,7 +156,7 @@ export const updateApplicationDetailSchema = z.object({
   appliedAt:      z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   followUpAt:     z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   recruiterName:  z.string().max(200).nullable().optional(),
-  recruiterEmail: z.string().email().max(200).nullable().optional(),
+  recruiterEmail: z.union([z.string().email().max(200), z.literal("")]).nullable().optional(),
 });
 
 // ── Feedback submission ──────────────────────────────────────────────────

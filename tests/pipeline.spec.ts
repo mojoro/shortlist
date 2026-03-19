@@ -62,14 +62,13 @@ test.describe("Pipeline (authenticated)", () => {
     await page.getByTestId("view-toggle-board").click();
     await expect(page.getByTestId("kanban-board")).toBeVisible();
 
-    // Find and click a draggable card
+    // Find and click a draggable card (click the card body, not the title link)
     const card = page.locator("[draggable='true']").first();
-    if (await card.isVisible().catch(() => false)) {
-      await card.click();
-      await expect(
-        page.locator("aside[aria-label='Application details']")
-      ).toBeVisible({ timeout: 5_000 });
-    }
+    await expect(card).toBeVisible({ timeout: 10_000 });
+    await card.click({ position: { x: 10, y: 10 } });
+    await expect(
+      page.locator("aside[aria-label='Application details']")
+    ).toBeVisible({ timeout: 10_000 });
   });
 
   test("active/closed tab toggle works", async ({ page }) => {
