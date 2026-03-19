@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { openrouter, EXTRACT_MODEL } from "@/lib/openrouter";
+import { openrouter } from "@/lib/openrouter";
+import { getModels } from "@/lib/models";
 import { extractJobSchema } from "@/lib/validations";
 import TurndownService from "turndown";
 
@@ -79,6 +80,8 @@ export async function POST(req: Request) {
   const profile = await prisma.profile.findFirst({ where: { id: profileId, userId } });
   if (!profile) return new Response("Profile not found", { status: 404 });
 
+  const models = getModels(profile);
+
   // Resolve input to clean text
   let cleanedText: string;
   const isUrl = URL_RE.test(input.trim());
@@ -119,7 +122,7 @@ export async function POST(req: Request) {
   // AI extraction
   try {
     const response = await openrouter.chat.completions.create({
-      model: EXTRACT_MODEL,
+      model: models.extract,
       max_tokens: 250,
       messages: [
         { role: "system", content: EXTRACTION_SYSTEM_PROMPT },

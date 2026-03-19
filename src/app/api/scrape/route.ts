@@ -42,10 +42,10 @@ export async function POST(req: Request) {
 
   if (!skipPool) {
     const scraperCalls: Promise<unknown>[] = [
-      scrapeGreenhouse("_global"),
-      scrapeLever("_global"),
-      scrapeAshby("_global"),
-      scrapeArbeitnow("_global"),
+      scrapeGreenhouse(),
+      scrapeLever(),
+      scrapeAshby(),
+      scrapeArbeitnow(),
     ];
 
     const usajobsEnabled = !!(env.USAJOBS_API_KEY && env.USAJOBS_EMAIL);
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
 
     const adzunaEnabled = !!(env.ADZUNA_APP_ID && env.ADZUNA_APP_KEY);
     if (adzunaEnabled) {
-      scraperCalls.push(scrapeAdzuna("_global"));
+      scraperCalls.push(scrapeAdzuna());
     }
 
     const settled = await Promise.allSettled(scraperCalls);

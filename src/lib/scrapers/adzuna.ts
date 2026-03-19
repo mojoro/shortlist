@@ -101,11 +101,8 @@ const MAX_PAGES = 3; // 50 results/page * 3 = 150 max per search
 /**
  * Scrapes job listings from the Adzuna API for all configured searches.
  * Returns raw API results wrapped with search metadata.
- *
- * _profileId is unused — reserved for future per-profile search configs.
  */
 export async function scrapeAdzuna(
-  _profileId: string,
   searches: AdzunaSearchConfig[] = ADZUNA_SEARCHES,
 ): Promise<AdzunaRawJob[]> {
   const appId = env.ADZUNA_APP_ID;

@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { tailorSaveSchema } from "@/lib/validations";
-import { TAILOR_MODEL } from "@/lib/openrouter";
+import { getModels } from "@/lib/models";
 
 export async function POST(req: Request) {
   try {
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     const job = await prisma.job.findFirst({
       where: { id: jobId },
       include: {
-        profile: { select: { userId: true, id: true } },
+        profile: { select: { userId: true, id: true, customTailorModel: true, customAnalyzeModel: true, customExtractModel: true } },
         application: { select: { id: true, status: true } },
       },
     });
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
         data: {
           applicationId: application.id,
           markdown,
-          generatedBy: TAILOR_MODEL,
+          generatedBy: getModels(job.profile).tailor,
           wasExported: wasExported ?? false,
           ...(wasExported ? { exportedAt: new Date() } : {}),
         },

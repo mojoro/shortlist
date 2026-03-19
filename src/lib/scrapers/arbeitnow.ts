@@ -42,10 +42,8 @@ async function fetchPage(page: number): Promise<ArbeitnowJob[]> {
  * Scrapes recent job listings from the Arbeitnow public API.
  * No API key or company config needed — the API returns all recent jobs.
  * Fetches pages 1–3 (~60 listings) to avoid hammering the API.
- *
- * _profileId is unused; kept for signature parity with other scrapers.
  */
-export async function scrapeArbeitnow(_profileId: string): Promise<ArbeitnowRawJob[]> {
+export async function scrapeArbeitnow(): Promise<ArbeitnowRawJob[]> {
   const results: ArbeitnowRawJob[] = [];
   for (let page = 1; page <= MAX_PAGES; page++) {
     const jobs = await fetchPage(page);

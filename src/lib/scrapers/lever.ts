@@ -41,7 +41,7 @@ async function fetchCompany(company: (typeof LEVER_COMPANIES)[number]): Promise<
   }
 }
 
-export async function scrapeLever(_profileId: string): Promise<LeverRawJob[]> {
+export async function scrapeLever(): Promise<LeverRawJob[]> {
   const batches = await Promise.allSettled(LEVER_COMPANIES.map(fetchCompany));
   return batches.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
 }

@@ -41,7 +41,7 @@ async function fetchCompany(company: (typeof ASHBY_COMPANIES)[number]): Promise<
   }
 }
 
-export async function scrapeAshby(_profileId: string): Promise<AshbyRawJob[]> {
+export async function scrapeAshby(): Promise<AshbyRawJob[]> {
   const results: AshbyRawJob[] = [];
   const BATCH = 10;
   for (let i = 0; i < ASHBY_COMPANIES.length; i += BATCH) {
