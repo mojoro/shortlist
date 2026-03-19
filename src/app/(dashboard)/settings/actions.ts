@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { jobMatchesProfile } from "@/lib/match";
+import { findMatchingPoolIds, rematchProfileSql } from "@/lib/match-sql";
 import {
   updateProfileInfoSchema,
   updateSearchCriteriaSchema,
@@ -50,13 +50,11 @@ export async function updateProfileInfo(data: unknown): Promise<void> {
 
 // ─── Search criteria ─────────────────────────────────────────────────────────
 
-export async function updateSearchCriteria(data: unknown): Promise<void> {
+export async function updateSearchCriteria(
+  data: unknown,
+): Promise<{ removed: number; added: number }> {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
-
-  if (process.env.NODE_ENV === "development") {
-    console.log("[settings/actions] updateSearchCriteria entry — userId:", userId);
-  }
 
   const parsed = updateSearchCriteriaSchema.safeParse(data);
   if (!parsed.success) throw new Error("Invalid data");
@@ -67,16 +65,17 @@ export async function updateSearchCriteria(data: unknown): Promise<void> {
   if (!profile) throw new Error("Profile not found");
 
   const { profileId, ...fields } = parsed.data;
-  await prisma.profile.update({
+  const updated = await prisma.profile.update({
     where: { id: profileId },
     data:  fields,
   });
 
-  if (process.env.NODE_ENV === "development") {
-    console.log("[settings/actions] updateSearchCriteria success — profileId:", profileId);
-  }
+  // Auto-rematch against the pool with the new criteria — all in SQL
+  const result = await rematchProfileSql(profileId, updated);
 
   revalidatePath("/settings");
+  revalidatePath("/dashboard");
+  return result;
 }
 
 // ─── Resume ──────────────────────────────────────────────────────────────────
@@ -337,29 +336,20 @@ export async function completeOnboarding(
     },
   });
 
-  // Match new profile against the existing pool — no re-scrape needed
-  const pool = await prisma.jobPool.findMany({
-    orderBy: { postedAt: "desc" },
-    take:    2000,
-  });
-
-  const matches = pool.filter((p) => jobMatchesProfile(p, profile));
+  // Match new profile against the existing pool — all in SQL
+  const matchedIds = await findMatchingPoolIds(profile.id, profile);
 
   let jobsFound = 0;
-  if (matches.length > 0) {
+  if (matchedIds.length > 0) {
     const result = await prisma.job.createMany({
-      data: matches.map((c) => ({
+      data: matchedIds.map((poolId) => ({
         profileId:  profile.id,
-        jobPoolId:  c.id,
+        jobPoolId:  poolId,
         feedStatus: "NEW" as const,
       })),
       skipDuplicates: true,
     });
     jobsFound = result.count;
-  }
-
-  if (process.env.NODE_ENV === "development") {
-    console.log(`[settings/actions] completeOnboarding success — profileId: ${profile.id}, jobsFound: ${jobsFound}`);
   }
 
   revalidatePath("/dashboard");
@@ -374,69 +364,15 @@ export async function rematchProfile(
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
-  if (process.env.NODE_ENV === "development") {
-    console.log(`[settings/actions] rematchProfile entry — userId: ${userId}, profileId: ${profileId}`);
-  }
-
   const profile = await prisma.profile.findFirst({
     where: { id: profileId, userId },
   });
   if (!profile) throw new Error("Profile not found");
 
-  // Load pool (newest 2000 — same cap as the scrape route)
-  const pool = await prisma.jobPool.findMany({
-    orderBy: { postedAt: "desc" },
-    take:    2000,
-  });
-
-  // Load all jobs for this profile, including pool content for matching
-  const existingJobs = await prisma.job.findMany({
-    where:   { profileId },
-    include: { jobPool: true, application: { select: { id: true } } },
-  });
-
-  // Partition: only NEW jobs with no application are removable
-  const removable = existingJobs.filter(
-    (j) => j.feedStatus === "NEW" && !j.application,
-  );
-
-  // Hide jobs that no longer match the (now-saved) profile criteria
-  const toHide = removable.filter(
-    (j) => !jobMatchesProfile(j.jobPool, profile),
-  );
-
-  if (toHide.length > 0) {
-    await prisma.job.updateMany({
-      where: { id: { in: toHide.map((j) => j.id) } },
-      data:  { feedStatus: "HIDDEN" },
-    });
-  }
-
-  // Add new matches from pool not already present in the feed
-  const existingPoolIds = new Set(existingJobs.map((j) => j.jobPoolId));
-
-  const newCandidates = pool
-    .filter((p) => !existingPoolIds.has(p.id) && jobMatchesProfile(p, profile));
-
-  let added = 0;
-  if (newCandidates.length > 0) {
-    const result = await prisma.job.createMany({
-      data: newCandidates.map((c) => ({
-        profileId,
-        jobPoolId:  c.id,
-        feedStatus: "NEW" as const,
-      })),
-      skipDuplicates: true,
-    });
-    added = result.count;
-  }
-
-  if (process.env.NODE_ENV === "development") {
-    console.log(`[settings/actions] rematchProfile success — profileId: ${profileId}, removed: ${toHide.length}, added: ${added}`);
-  }
+  const result = await rematchProfileSql(profileId, profile);
 
   revalidatePath("/dashboard");
   revalidatePath("/settings");
 
-  return { removed: toHide.length, added };
+  return result;
 }

@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 
 /**
  * Stopwords stripped from target roles before generating ILIKE patterns.
- * Must stay in sync with the original match.ts list.
  */
 const ROLE_STOPWORDS = new Set([
   "engineer", "developer", "manager", "lead", "senior", "junior",
@@ -17,8 +16,6 @@ const MAX_CANDIDATES_PER_RUN = 30;
 
 /**
  * Build ILIKE patterns from a target role string, stripping stopwords.
- * "Frontend Engineer" → ["%frontend%"]
- * "Software Engineer" → ["%software engineer%"] (all tokens were stopwords → full phrase)
  */
 function roleToPatterns(role: string): string[] {
   const tokens = role
@@ -29,42 +26,24 @@ function roleToPatterns(role: string): string[] {
   if (tokens.length > 0) {
     return tokens.map((t) => `%${t}%`);
   }
-  // All tokens were stopwords — use the full phrase
   return [`%${role.toLowerCase()}%`];
 }
 
-/**
- * Matches jobs in the pool against a profile entirely in SQL.
- * Returns only the IDs of matched JobPool entries — no full rows transferred.
- *
- * Replicates the logic from match.ts:
- * 1. Exclude jobs already linked to this profile
- * 2. Hard exclude by excluded keywords in title
- * 3. Location filter (target locations OR remote signals)
- * 4. Role token match in title
- * 5. Skill fallback in title
- * 6. No criteria → everything passes
- */
-export async function findMatchingPoolIds(
-  profileId: string,
-  profile: {
-    targetRoles: string[];
-    requiredSkills: string[];
-    excludedKeywords: string[];
-    targetLocations: string[];
-    remotePreference: string;
-  },
-): Promise<string[]> {
-  // Build the WHERE clauses dynamically based on profile criteria
-  const conditions: Prisma.Sql[] = [];
+type ProfileCriteria = {
+  targetRoles: string[];
+  requiredSkills: string[];
+  excludedKeywords: string[];
+  targetLocations: string[];
+  remotePreference: string;
+};
 
-  // Only consider recent pool entries (last 2000 by posted date)
-  // and exclude jobs already matched to this profile
-  conditions.push(Prisma.sql`
-    jp.id NOT IN (
-      SELECT j."jobPoolId" FROM jobs j WHERE j."profileId" = ${profileId}
-    )
-  `);
+/**
+ * Build the matching WHERE conditions as Prisma.Sql fragments.
+ * Shared by both findMatchingPoolIds and findNonMatchingJobIds.
+ * These conditions apply to the job_pool table aliased as `jp`.
+ */
+function buildMatchConditions(profile: ProfileCriteria): Prisma.Sql[] {
+  const conditions: Prisma.Sql[] = [];
 
   // 1. Hard exclude — any excluded keyword in title
   if (profile.excludedKeywords.length > 0) {
@@ -84,12 +63,10 @@ export async function findMatchingPoolIds(
     const remotePatterns = REMOTE_SIGNALS.map((s) => `%${s}%`);
 
     if (profile.remotePreference === "REMOTE_ONLY") {
-      // Only accept remote-signalled locations
       conditions.push(Prisma.sql`
         LOWER(COALESCE(jp.location, '')) LIKE ANY(${remotePatterns})
       `);
     } else {
-      // Must match a target location OR be remote-friendly
       conditions.push(Prisma.sql`
         (LOWER(COALESCE(jp.location, '')) LIKE ANY(${locationPatterns})
          OR LOWER(COALESCE(jp.location, '')) LIKE ANY(${remotePatterns}))
@@ -120,12 +97,30 @@ export async function findMatchingPoolIds(
       `);
     }
 
-    // Role OR skill must match
     conditions.push(
       Prisma.sql`(${Prisma.join(titleConditions, " OR ")})`,
     );
   }
-  // If no roles and no skills → no title filter (everything passes)
+
+  return conditions;
+}
+
+/**
+ * Find pool entries that match a profile's criteria, excluding jobs
+ * already linked to this profile. Returns only IDs.
+ */
+export async function findMatchingPoolIds(
+  profileId: string,
+  profile: ProfileCriteria,
+): Promise<string[]> {
+  const conditions = buildMatchConditions(profile);
+
+  // Exclude jobs already matched to this profile
+  conditions.unshift(Prisma.sql`
+    jp.id NOT IN (
+      SELECT j."jobPoolId" FROM jobs j WHERE j."profileId" = ${profileId}
+    )
+  `);
 
   const whereClause =
     conditions.length > 0
@@ -141,4 +136,75 @@ export async function findMatchingPoolIds(
   `;
 
   return result.map((r) => r.id);
+}
+
+/**
+ * Find Job IDs in a profile's feed that NO LONGER match the profile's
+ * criteria. Only considers NEW jobs with no application (safe to hide).
+ * Used by rematch to clean up stale matches after criteria changes.
+ */
+export async function findStaleJobIds(
+  profileId: string,
+  profile: ProfileCriteria,
+): Promise<string[]> {
+  const matchConditions = buildMatchConditions(profile);
+
+  // Build the positive match clause — jobs that DO match
+  const matchWhere =
+    matchConditions.length > 0
+      ? Prisma.sql`AND ${Prisma.join(matchConditions, " AND ")}`
+      : Prisma.empty;
+
+  // Find NEW jobs with no application whose pool entry does NOT match
+  const result = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT j.id
+    FROM jobs j
+    JOIN job_pool jp ON jp.id = j."jobPoolId"
+    WHERE j."profileId" = ${profileId}
+      AND j."feedStatus" = 'NEW'
+      AND j.id NOT IN (SELECT "jobId" FROM applications WHERE "jobId" = j.id)
+      AND jp.id NOT IN (
+        SELECT jp2.id FROM job_pool jp2
+        WHERE jp2.id = jp.id ${matchWhere}
+      )
+  `;
+
+  return result.map((r) => r.id);
+}
+
+/**
+ * Full rematch: hide stale jobs + add new matches. Returns counts.
+ * All done in SQL — no pool data transferred over the network.
+ */
+export async function rematchProfileSql(
+  profileId: string,
+  profile: ProfileCriteria,
+): Promise<{ removed: number; added: number }> {
+  // Hide jobs that no longer match
+  const staleIds = await findStaleJobIds(profileId, profile);
+  let removed = 0;
+  if (staleIds.length > 0) {
+    const { count } = await prisma.job.updateMany({
+      where: { id: { in: staleIds } },
+      data: { feedStatus: "HIDDEN" },
+    });
+    removed = count;
+  }
+
+  // Add new matches from pool
+  const newIds = await findMatchingPoolIds(profileId, profile);
+  let added = 0;
+  if (newIds.length > 0) {
+    const { count } = await prisma.job.createMany({
+      data: newIds.map((poolId) => ({
+        profileId,
+        jobPoolId: poolId,
+        feedStatus: "NEW" as const,
+      })),
+      skipDuplicates: true,
+    });
+    added = count;
+  }
+
+  return { removed, added };
 }
