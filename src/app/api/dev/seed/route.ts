@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 import { ScraperSource, LocationType, JobType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
-// Only available in development
+// Only available when E2E_SEED is set (CI and local test runs)
 export async function GET() {
-  if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Not available in production" }, { status: 403 });
+  if (!process.env.E2E_SEED) {
+    return NextResponse.json({ error: "Seed not enabled" }, { status: 403 });
   }
 
   const { userId } = await auth();
