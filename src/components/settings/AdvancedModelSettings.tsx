@@ -17,6 +17,7 @@ const ANALYZE_PRESETS: Preset[] = [
 
 const TAILOR_PRESETS: Preset[] = [
   { value: TAILOR_MODEL, label: "Qwen 3.5 397B MoE", description: "Excellent writing quality (default)", url: "https://openrouter.ai/qwen/qwen3.5-397b-a17b" },
+  { value: "anthropic/claude-sonnet-4-6", label: "Claude Sonnet 4.6", description: "Latest Sonnet, strong writing and reasoning", url: "https://openrouter.ai/anthropic/claude-sonnet-4-6" },
   { value: "anthropic/claude-sonnet-4", label: "Claude Sonnet 4", description: "Strong writing, reliable formatting", url: "https://openrouter.ai/anthropic/claude-sonnet-4" },
   { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", description: "High quality, good at following instructions", url: "https://openrouter.ai/google/gemini-2.5-pro" },
 ];
