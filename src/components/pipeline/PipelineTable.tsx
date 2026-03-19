@@ -48,7 +48,6 @@ export function PipelineTable({
   const [activeTab, setActiveTab] = useState<"active" | "closed">("active");
   const [openDrawerAppId, setOpenDrawerAppId] = useState<string | null>(null);
   const [pdfPreviewFor, setPdfPreviewFor] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [editingNotesFor, setEditingNotesFor] = useState<string | null>(null);
 
   // Field overrides: display state for editable fields, keyed by appId
@@ -449,13 +448,6 @@ export function PipelineTable({
           </div>
         )}
       </div>
-
-      {/* Error toast */}
-      {errorMessage && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 shadow-lg dark:border-red-800/50 dark:bg-red-950/60 dark:text-red-300">
-          {errorMessage}
-        </div>
-      )}
 
       {/* Undo toast */}
       {undoState && (
