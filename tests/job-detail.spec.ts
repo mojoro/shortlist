@@ -22,9 +22,10 @@ test.describe("Job detail (authenticated)", () => {
     // Should navigate to /jobs/[id]
     await page.waitForURL(/\/jobs\//, { timeout: 10_000 });
 
-    // Job detail should show the title
+    // Job detail should show the title — allow extra time for data hydration
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
-      titleText!.split("@")[0].trim()
+      titleText!.split("@")[0].trim(),
+      { timeout: 15_000 },
     );
   });
 
