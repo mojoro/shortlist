@@ -16,7 +16,7 @@ const styles = StyleSheet.create({
   sectionHeader: {
     fontSize: 11,
     fontFamily: "Helvetica-Bold",
-    marginTop: 12,
+    marginTop: 6,
     marginBottom: 4,
     borderBottomWidth: 0.5,
     borderBottomColor: "#ccc",
