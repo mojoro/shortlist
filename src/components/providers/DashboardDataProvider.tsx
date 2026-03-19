@@ -49,9 +49,23 @@ export function DashboardDataProvider({ userId, children }: Props) {
 
     // Step 2: always fetch fresh data from the server in the background.
     // This updates the store (and re-persists to localStorage) silently.
-    fetchDashboardData().then((data) => {
-      if (data) hydrate(data);
-    });
+    // If the fetch fails, hydrate with empty data so the page isn't stuck
+    // on a skeleton forever.
+    fetchDashboardData()
+      .then((data) => {
+        if (data) hydrate(data);
+      })
+      .catch(() => {
+        hydrate({
+          userId,
+          activeProfile: null,
+          profiles: [],
+          jobs: [],
+          applications: [],
+          followUpCount: 0,
+          usage: null,
+        });
+      });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
