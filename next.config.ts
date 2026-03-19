@@ -4,12 +4,12 @@ import bundleAnalyzer from "@next/bundle-analyzer";
 // Content-Security-Policy — unsafe-eval required by @uiw/react-md-editor internals
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://challenges.cloudflare.com https://*.clerk.accounts.dev",
+  "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://challenges.cloudflare.com https://*.clerk.accounts.dev https://clerk.shortlist.johnmoorman.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https://logo.clearbit.com https://img.clerk.com",
   "font-src 'self'",
-  "connect-src 'self' https://api.clerk.com https://*.clerk.accounts.dev https://openrouter.ai",
-  "frame-src 'self' blob: https://challenges.cloudflare.com https://*.clerk.accounts.dev",
+  "connect-src 'self' https://api.clerk.com https://*.clerk.accounts.dev https://clerk.shortlist.johnmoorman.com https://openrouter.ai",
+  "frame-src 'self' blob: https://challenges.cloudflare.com https://*.clerk.accounts.dev https://clerk.shortlist.johnmoorman.com",
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",
