@@ -3,6 +3,17 @@ export type CompanyConfig = {
   name: string;
 };
 
+export type USAJobsSearchConfig = {
+  keyword: string;
+  location: string;
+};
+
+export type AdzunaSearchConfig = {
+  country: string;
+  keyword: string;
+  location: string;
+};
+
 // ── Greenhouse ────────────────────────────────────────────────────────────────
 // boards-api.greenhouse.io/v1/boards/{slug}/jobs
 
@@ -142,4 +153,29 @@ export const ASHBY_COMPANIES: CompanyConfig[] = [
 
 export const LEVER_COMPANIES: CompanyConfig[] = [
   // Add companies here — find slugs at jobs.lever.co/{slug}
+];
+
+// ── USAJobs ──────────────────────────────────────────────────────────────────
+// data.usajobs.gov/api/search — requires API key + registered email
+
+export const USAJOBS_SEARCHES: USAJobsSearchConfig[] = [
+  { keyword: "Software Engineer", location: "Washington, DC" },
+  { keyword: "IT Specialist", location: "" },
+  { keyword: "Human Resources", location: "" },
+  { keyword: "Administrative", location: "" },
+  { keyword: "Banking", location: "" },
+];
+
+// ── Adzuna ────────────────────────────────────────────────────────────────────
+// api.adzuna.com/v1/api/jobs/{country}/search/{page}
+// Requires ADZUNA_APP_ID and ADZUNA_APP_KEY env vars
+
+export const ADZUNA_SEARCHES: AdzunaSearchConfig[] = [
+  { country: "us", keyword: "Software Engineer",        location: "" },
+  { country: "us", keyword: "Human Resources",          location: "" },
+  { country: "us", keyword: "IT Specialist",            location: "" },
+  { country: "us", keyword: "Bank Teller",              location: "" },
+  { country: "us", keyword: "Administrative Assistant", location: "" },
+  { country: "de", keyword: "Software Engineer",        location: "Berlin" },
+  { country: "gb", keyword: "Software Engineer",        location: "London" },
 ];
