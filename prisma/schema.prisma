@@ -23,6 +23,7 @@ datasource db {
 
 model User {
   id        String   @id // Clerk user ID (e.g. "user_2abc...")
+  email     String?  // Synced from Clerk via webhook
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

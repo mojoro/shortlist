@@ -8,6 +8,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/webhooks/clerk",
   "/api/scrape",           // protected by CRON_SECRET instead
   "/api/analyze",          // protected by CRON_SECRET instead
+  "/api/dev/(.*)",         // dev routes — protected by CRON_SECRET
   "/api/check-onboarding", // internal — called by this middleware; Clerk validates session
 ]);
 
