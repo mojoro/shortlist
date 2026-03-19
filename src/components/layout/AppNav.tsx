@@ -10,6 +10,8 @@ import { BrandMark } from "@/components/ui/BrandMark";
 import { UsageWheel } from "@/components/ui/UsageWheel";
 import { NavFeedbackPopover } from "@/components/layout/NavFeedbackPopover";
 import { useDashboardStore } from "@/lib/store";
+import { switchProfile } from "@/app/(dashboard)/settings/actions";
+import { fetchDashboardData } from "@/app/(dashboard)/actions-sync";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -98,6 +100,9 @@ const LABEL =
 
 export function AppNav() {
   const followUpCount = useDashboardStore((s) => s.followUpCount);
+  const profiles = useDashboardStore((s) => s.profiles);
+  const activeProfile = useDashboardStore((s) => s.activeProfile);
+  const hydrate = useDashboardStore((s) => s.hydrate);
   const usage = useDashboardStore((s) => s.usage);
   const usageRemaining = usage
     ? Math.max(0, Math.round(100 - (usage.currentMonthInputTokens / usage.monthlyLimitInputTokens) * 100))
@@ -107,6 +112,7 @@ export function AppNav() {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setMounted(true), []);
@@ -258,6 +264,43 @@ export function AppNav() {
                     {user?.primaryEmailAddress?.emailAddress}
                   </p>
                 </div>
+                {/* Profile switcher */}
+                {profiles.length > 1 && (
+                  <div className="border-b border-[var(--border)] py-1">
+                    <p className="px-4 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                      Profiles
+                    </p>
+                    {profiles.map((p) => (
+                      <button
+                        key={p.id}
+                        role="menuitem"
+                        disabled={switching}
+                        onClick={async () => {
+                          if (p.id === activeProfile?.id) return;
+                          setSwitching(true);
+                          await switchProfile({ profileId: p.id });
+                          const data = await fetchDashboardData();
+                          if (data) hydrate(data);
+                          setSwitching(false);
+                          setMenuOpen(false);
+                        }}
+                        className={[
+                          "flex w-full items-center gap-2 px-4 py-1.5 text-sm transition-colors",
+                          "hover:bg-[var(--bg-subtle)] disabled:opacity-50",
+                          p.id === activeProfile?.id
+                            ? "font-semibold text-[var(--text)]"
+                            : "text-[var(--text-muted)]",
+                        ].join(" ")}
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 shrink-0 rounded-full ${p.id === activeProfile?.id ? "bg-[var(--accent)]" : "bg-transparent"}`}
+                        />
+                        <span className="truncate">{p.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <div className="py-1">
                   <Link
                     href="/settings"
