@@ -1,5 +1,4 @@
 import { Prisma } from "@prisma/client";
-import type { Application } from "@prisma/client";
 
 /**
  * A job from the feed query — includes the pool entry (content) and application status.
@@ -32,6 +31,3 @@ export type ApplicationWithJob = Prisma.ApplicationGetPayload<{
     };
   };
 }>;
-
-// Re-export Application for convenience
-export type { Application };
