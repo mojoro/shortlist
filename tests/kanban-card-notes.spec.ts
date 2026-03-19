@@ -80,10 +80,11 @@ test.describe("Kanban CardNotes (authenticated)", () => {
     await page.keyboard.press("Escape");
     await expect(editor).toBeHidden();
 
-    // The notes preview should now show the typed text
-    const preview = page.getByTestId("card-notes-preview").first();
+    // The notes preview containing our text should now be visible
+    const preview = page.getByTestId("card-notes-preview").filter({
+      hasText: "Test note from Playwright",
+    });
     await expect(preview).toBeVisible();
-    await expect(preview).toContainText("Test note from Playwright");
   });
 
   test("clicking preview expands to show full notes then editing works", async ({

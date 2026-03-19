@@ -70,8 +70,11 @@ export function CardNotes({ notes, onNotesChange }: CardNotesProps) {
     setMode("collapsed");
   }
 
+  // Show the latest value — draft if user just edited, otherwise the prop
+  const displayText = draft || notes;
+
   // Empty state
-  if (!notes && mode === "collapsed") {
+  if (!displayText && mode === "collapsed") {
     return (
       <button
         data-testid="card-notes-empty"
@@ -92,7 +95,7 @@ export function CardNotes({ notes, onNotesChange }: CardNotesProps) {
           onClick={handlePreviewClick}
           className="w-full text-left text-xs leading-relaxed text-[var(--text-muted)] line-clamp-2 hover:text-[var(--text)] transition-colors"
         >
-          {notes}
+          {displayText}
         </button>
       )}
 
