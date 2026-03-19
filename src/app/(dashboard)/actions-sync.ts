@@ -33,7 +33,7 @@ export async function fetchDashboardData() {
       prisma.profile.findMany({
         where: { userId },
         select: { id: true, name: true, isActive: true },
-        orderBy: { createdAt: "asc" },
+        orderBy: [{ isActive: "desc" }, { name: "asc" }],
       }),
       prisma.job.findMany({
         where: { profileId: activeProfile.id },

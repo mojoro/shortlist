@@ -159,11 +159,17 @@ export async function createProfile(data: unknown): Promise<{ profileId: string 
     where: { userId, isActive: true },
   });
 
+  // Deactivate all existing profiles before creating the new one as active
+  await prisma.profile.updateMany({
+    where: { userId },
+    data: { isActive: false },
+  });
+
   const profile = await prisma.profile.create({
     data: {
       userId,
       name:     parsed.data.name,
-      isActive: false,
+      isActive: true,
       onboardingCompletedAt: new Date(),
       ...(activeProfile && {
         displayName:      activeProfile.displayName,

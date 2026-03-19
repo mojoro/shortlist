@@ -15,7 +15,7 @@ export default async function SettingsPage() {
     getActiveProfile(userId),
     prisma.profile.findMany({
       where:   { userId },
-      orderBy: [{ isActive: "desc" }, { createdAt: "asc" }],
+      orderBy: [{ isActive: "desc" }, { name: "asc" }],
     }),
   ]);
 
