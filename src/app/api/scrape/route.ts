@@ -15,7 +15,7 @@ import {
   normalizeAdzunaForPool,
   normalizeArbeitnowForPool,
 } from "@/lib/normalize";
-import { jobMatchesProfile } from "@/lib/match";
+import { findMatchingPoolIds } from "@/lib/match-sql";
 import type { ScraperSource } from "@prisma/client";
 
 export const maxDuration = 60;
@@ -178,14 +178,11 @@ export async function POST(req: Request) {
   }
 
   // ── MATCH LAYER ───────────────────────────────────────────────────────────
+  // Profile matching now runs entirely in SQL — only matched IDs are
+  // returned from the database, eliminating the 2000-row data transfer.
 
   const profiles = await prisma.profile.findMany({
     where: { scraperEnabled: true },
-  });
-
-  const pool = await prisma.jobPool.findMany({
-    orderBy: { postedAt: "desc" },
-    take:    2000,
   });
 
   const results: { profileId: string; jobsNew: number; status: string }[] = [];
@@ -196,29 +193,14 @@ export async function POST(req: Request) {
     let profileStatus: "SUCCESS" | "FAILED" = "SUCCESS";
     let profileError: string | undefined;
 
-    if (process.env.NODE_ENV === "development") {
-      console.log(`[/api/scrape] Match start — profileId: ${profile.id}`);
-    }
-
     try {
-      const existing = await prisma.job.findMany({
-        where:  { profileId: profile.id },
-        select: { jobPoolId: true },
-      });
-      const existingIds = new Set(existing.map((j) => j.jobPoolId));
+      const matchedIds = await findMatchingPoolIds(profile.id, profile);
 
-      const candidates = pool
-        .filter((p) => !existingIds.has(p.id) && jobMatchesProfile(p, profile));
-
-      if (process.env.NODE_ENV === "development") {
-        console.log(`[/api/scrape] Match result — profileId: ${profile.id}, candidates: ${candidates.length}`);
-      }
-
-      if (candidates.length > 0) {
+      if (matchedIds.length > 0) {
         const { count } = await prisma.job.createMany({
-          data: candidates.map((c) => ({
+          data: matchedIds.map((poolId) => ({
             profileId: profile.id,
-            jobPoolId: c.id,
+            jobPoolId: poolId,
             feedStatus: "NEW" as const,
           })),
           skipDuplicates: true,
