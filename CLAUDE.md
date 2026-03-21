@@ -28,7 +28,7 @@ project by John Moorman, will become multi-user SaaS.
 | Markdown editor | @uiw/react-md-editor |
 | HTML → Markdown | turndown |
 | Validation | Zod |
-| Webhooks | svix (signature verification) |
+| Webhooks | @clerk/nextjs/webhooks (signature verification) |
 | React Compiler | babel-plugin-react-compiler (enabled) |
 | Date formatting | date-fns |
 | Testing | Playwright (E2E), Vitest + React Testing Library (unit) |
@@ -45,10 +45,17 @@ src/
     (auth)/               # Clerk sign-in / sign-up pages
     (dashboard)/
       dashboard/          # Job feed — default view
+        _components/      #   DashboardClient
       jobs/[id]/          # Job detail + match analysis
+        _components/      #   JobDetailClient
       tailor/[jobId]/     # Resume tailor — JD vs resume, streaming, editor, export
       pipeline/           # Application tracker (table + Kanban board views)
-      settings/           # Profile settings, usage, feedback, model config, account
+        _components/      #   PipelineClient
+      settings/           # Profile + Account tabs (split via SettingsClient)
+        actions.ts        #   Profile CRUD, search criteria, rematch
+        feedback-actions.ts
+        model-actions.ts
+        delete-account-actions.ts
       actions-sync.ts     # Shared server actions across dashboard routes
       layout.tsx          # Dashboard shell — AppNav, max-width wrapper
     api/
@@ -60,6 +67,7 @@ src/
       jobs/import/        # POST — custom job import into pool
       check-onboarding/   # GET — checks onboarding state (called by middleware)
       dev/seed/           # POST — dev-only seed route (not production)
+      webhooks/clerk/     # POST — Clerk webhook (user.created/updated/deleted)
     onboarding/           # Onboarding wizard for new users
     page.tsx              # Marketing / landing page
   components/
@@ -68,10 +76,11 @@ src/
                           #   JobDescription, AnalyzeButton, ReanalyzeButton, ImportJobModal
     tailor/               # TailorPanel, GeneratePane, JobDescriptionPane,
                           #   ResumePDFDocument, PDFPreview, AutoSaveIndicator, MobileTabBar
-    pipeline/             # PipelineTable, ApplicationDrawer, StatusSelect,
+    pipeline/             # PipelineTable, ApplicationDrawer, StatusSelect, ViewToggle,
                           #   FollowUpBanner, PipelineStats, PipelineSortBar, ResumePDFModal,
                           #   shared (ScorePill, TERMINAL_STATUSES, STATUS_LABELS, getDefaultFields)
-      kanban/             # KanbanBoard, KanbanColumn, KanbanCard, CardNotes, ViewToggle
+      kanban/             # KanbanBoard, KanbanColumn, KanbanCard, CardNotes,
+                          #   constants, use-kanban-dnd, index (barrel)
     landing/              # LandingNav, AuthAwareCTA, HeroDemoPreview, FeatureRow
     onboarding/           # OnboardingWizard
     settings/             # SettingsClient, UsageSection, FeedbackForm, DeleteAccountSection,
@@ -84,8 +93,7 @@ src/
     openrouter.ts         # OpenRouter client (server-only — imports env vars)
     models.ts             # Model constants + getModels() helper (client-safe)
     ai-analysis.ts        # parseAiAnalysisResponse() — validates AI scoring output
-    match.ts              # jobMatchesProfile() — in-process pool filtering (settings/onboarding)
-    match-sql.ts          # findMatchingPoolIds() — SQL-based pool matching (scrape route)
+    match-sql.ts          # SQL-based pool matching + rematch (scrape route, settings)
     normalize.ts          # Source raw data → JobPool schema (all scrapers)
     feed.ts               # groupJobsByDate() — date bucketing for feed display
     jobs.ts               # buildWhereClause(), buildOrderBy() — feed query helpers
@@ -112,8 +120,8 @@ src/
   middleware.ts           # Clerk auth + public route exemptions
 prisma/
   schema.prisma           # Source of truth for DB schema
-  seed.ts                 # Realistic mock data seed for development
 tests/
+  global-setup.ts         # Playwright global setup — seeds test data via /api/dev/seed
   unit/                   # Vitest unit tests (components, helpers)
   *.spec.ts               # Playwright E2E tests
 .github/
@@ -164,9 +172,10 @@ const { userId } = await auth();
 if (!userId) return new Response("Unauthorized", { status: 401 });
 ```
 
-Clerk webhook at `/api/webhooks/clerk` to create `User` records is **⚠ not yet
-implemented — critical for production.** Install `svix` for webhook signature
-verification when this is built.
+Clerk webhook at `/api/webhooks/clerk` handles `user.created`, `user.updated`, and
+`user.deleted` events. Uses `verifyWebhook` from `@clerk/nextjs/webhooks` for
+signature verification (not svix). On `user.created`, it also handles dev→prod
+migration by remapping existing users matched by email.
 
 Middleware protects all `/dashboard` and `/api` routes. New users with no completed
 profile are redirected to `/onboarding`. Onboarding state is tracked via a cookie
@@ -199,8 +208,8 @@ in `src/lib/openrouter.ts` (server-only — re-exports from models.ts). Client c
 must import from `@/lib/models`, never `@/lib/openrouter`.
 
 Users can override models per-profile via Advanced Settings. Use `getModels(profile)` from
-`@/lib/models` to resolve overrides with fallback to defaults. **⚠ API routes not yet
-wired to use `getModels()` — they still use hardcoded constants.**
+`@/lib/models` to resolve overrides with fallback to defaults. All API routes (analyze,
+tailor, tailor/save, jobs/extract) use `getModels(profile)` to resolve the active model.
 
 Before every AI call: check `Usage.currentMonthInputTokens < Usage.monthlyLimitInputTokens`.
 After every call: increment token counts.
@@ -214,9 +223,9 @@ After every call: increment token counts.
 
 **Layer 2 (profile matching):** The scrape route uses `findMatchingPoolIds()` from
 `match-sql.ts` to match entirely in SQL — only matched IDs are returned from the DB.
-Settings/onboarding use the in-process `jobMatchesProfile()` from `match.ts` (loads
-newest 2000 pool entries). Same pool entry can appear in multiple profiles with
-different scores.
+Settings uses `rematchProfileSql()` (also in `match-sql.ts`) to hide stale jobs and
+add new matches in one operation when search criteria change. Same pool entry can
+appear in multiple profiles with different scores.
 
 Pass `?skipPool=1` to skip layer 1 and match against existing pool.
 
@@ -226,17 +235,17 @@ Pass `?skipPool=1` to skip layer 1 and match against existing pool.
 |---|---|---|
 | Greenhouse | None | `GREENHOUSE_COMPANIES` in companies.ts |
 | Ashby | None | `ASHBY_COMPANIES` in companies.ts |
-| Lever | None | `LEVER_COMPANIES` in companies.ts |
+| Lever | None | `LEVER_COMPANIES` in companies.ts (currently empty) |
 | USAJobs | `USAJOBS_API_KEY` + `USAJOBS_EMAIL` | `USAJOBS_SEARCHES` in companies.ts |
 | Adzuna | `ADZUNA_APP_ID` + `ADZUNA_APP_KEY` | `ADZUNA_SEARCHES` in companies.ts |
 | Arbeitnow | None (public API) | Always runs, no config needed |
 
 USAJobs and Adzuna only run when their API credentials are set. Arbeitnow always runs.
 
-**Matching logic** (`src/lib/match.ts`, short-circuit order):
+**Matching logic** (`src/lib/match-sql.ts`, short-circuit order):
 1. Hard exclude — `excludedKeyword` in title → reject
 2. Location filter — must match `targetLocations` or be remote-friendly
-3. Role token match — tokenize `targetRole`, strip stopwords, match against title
+3. Role token match — tokenize `targetRoles`, strip stopwords, match against title
 4. Skill fallback — any `requiredSkill` in title → match
 5. No criteria → everything passes
 
@@ -348,7 +357,7 @@ DATABASE_URL                        # pooled (Prisma runtime)
 DIRECT_URL                          # direct (migrations only)
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 CLERK_SECRET_KEY
-CLERK_WEBHOOK_SECRET                # optional — webhook not yet built
+CLERK_WEBHOOK_SECRET                # optional — used by @clerk/nextjs/webhooks
 OPENROUTER_API_KEY
 USAJOBS_API_KEY                     # optional — USAJobs scraper
 USAJOBS_EMAIL                       # optional — USAJobs scraper
@@ -383,17 +392,20 @@ Vercel auto-deploys `main` to production and PR branches to preview URLs.
 
 ## Settings Page Architecture
 
-The settings page mixes profile-specific and account-level concerns. **Planned refactor**
-to separate these into distinct sections or tabs.
+The settings page is split into **Profile** and **Account** tabs via `SettingsClient`.
 
-**Profile-specific** (changes per profile):
+**Profile tab** (changes per profile):
 - Profile info, search criteria, resume, CV, writing rules
 - AI model overrides (`customTailorModel`, `customAnalyzeModel`, `customExtractModel`)
+- Collapsible advanced sections
 
-**Account-level** (shared across profiles):
+**Account tab** (shared across profiles):
 - Usage monitor (token counts, call stats, reset date)
 - Feedback form (also accessible via sidebar nav popover)
 - Delete account (danger zone — preserves hashed usage by email)
+
+Server actions are modularized: `actions.ts` (profile CRUD, rematch), `feedback-actions.ts`,
+`model-actions.ts`, `delete-account-actions.ts`.
 
 ---
 
