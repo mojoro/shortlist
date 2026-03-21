@@ -36,25 +36,32 @@ Pool → Tier 1 (SQL pre-filter) → Tier 2 (Heuristic) → Tier 3 (AI triage) �
          ~seconds                  ~seconds               ~seconds (batched)
 ```
 
-Each tier is a filter: it receives candidates from the previous tier and either
-accepts, rejects, or (in tier 2's case) flags as borderline for AI triage.
+All Tier 1 output goes to Tier 2 — Tier 1 never directly admits jobs to the
+feed. Tier 2 classifies candidates as ACCEPT (enters feed), BORDERLINE (sent to
+Tier 3), or REJECT (dropped). Tier 3 makes a final MATCH/REJECT decision on
+borderlines only.
 
 ### Pipeline separation
 
-The match step decouples from the scrape cron. The pipeline becomes:
+The match step becomes its own route, decoupled from scrape:
 
-| Step | Trigger | Route | Purpose |
+| Step | Trigger | Route | Duration budget |
 |---|---|---|---|
-| Scrape | Cron (7am UTC) | `POST /api/scrape` | Populate pool only |
-| Match | Called by scrape after pool is populated, or standalone | `POST /api/match` | Three-tier matching for all enabled profiles |
-| Analyze | Separate cron | `POST /api/analyze` | AI scoring of matched but unanalyzed jobs |
+| Scrape | Cron (7am UTC) | `POST /api/scrape` | 60s (existing) |
+| Match | Fire-and-forget from scrape, or standalone | `POST /api/match` | 120s (`maxDuration = 120`) |
+| Analyze | Separate cron | `POST /api/analyze` | existing |
 
-`/api/scrape` calls `/api/match` internally after the pool layer completes (or
-the match route can be triggered independently via `?standalone=1`). This keeps
-the existing single-cron schedule while giving match its own time budget and
-making it independently callable (useful for rematch-on-criteria-change).
+`/api/scrape` finishes pool population, then fires an HTTP call to `/api/match`
+without awaiting the response (fire-and-forget via `fetch` with no `await` on
+the response body, or `waitUntil` if available). This keeps the scrape route
+within its 60s budget while giving match its own independent execution window.
 
-Both `/api/scrape` and `/api/match` are protected by `CRON_SECRET`.
+`/api/match` can also be triggered independently via the same `CRON_SECRET`
+auth (useful for rematch-on-criteria-change from settings).
+
+**Estimated time budget per profile:** Tier 1 ~2s, Tier 2 ~1s, Tier 3 ~3-5s
+(1-3 parallel AI calls). With 120s budget, the route comfortably handles 10+
+profiles.
 
 ## Schema Changes
 
@@ -63,7 +70,7 @@ Both `/api/scrape` and `/api/match` are protected by `CRON_SECRET`.
 ```prisma
 model JobPool {
   // ... existing fields ...
-  country     String?   // ISO 3166-1 alpha-2 (e.g. "US", "DE", "GB")
+  country     String?   // ISO 3166-1 alpha-2 uppercase (e.g. "US", "DE", "GB")
   region      String?   // Sub-country region (e.g. "California", "Berlin")
 }
 ```
@@ -77,6 +84,10 @@ Add index for country-based queries:
 @@index([country])
 ```
 
+All country values must be stored as uppercase ISO 3166-1 alpha-2 codes.
+Normalizers that already know the country (Adzuna, USAJobs) should set it
+directly with `.toUpperCase()` rather than waiting for the location parser.
+
 ### Job — new columns
 
 ```prisma
@@ -86,6 +97,19 @@ model Job {
   matchConfidence Float?       // 0.0–1.0 confidence from admitting tier
 }
 ```
+
+`matchTier` records which tier admitted the job: `HEURISTIC` for tier 2 accepts,
+`AI_TRIAGE` for tier 3 accepts. Existing jobs pre-dating this migration will
+have `matchTier: null` and `matchConfidence: null` — all code must treat null
+as "legacy match, tier unknown."
+
+`matchConfidence` semantics by tier:
+- `HEURISTIC`: the 0.0–1.0 composite score from tier 2 (>= 0.6)
+- `AI_TRIAGE`: fixed value of 0.5 for all AI-admitted jobs (the AI returns
+  yes/no, not a score — 0.5 indicates "borderline, AI-approved")
+
+This field is for observability, not sorting. The existing `aiScore` from
+`/api/analyze` remains the primary sort signal.
 
 ### Profile — new columns
 
@@ -99,15 +123,54 @@ model Profile {
 Separates "where I can legally work" from `targetLocations` ("where I want to
 work"). Populated during onboarding and editable in settings.
 
+### Usage — new columns
+
+```prisma
+model Usage {
+  // ... existing fields ...
+  triageCallCount    Int @default(0)
+  triageInputTokens  Int @default(0)
+  triageOutputTokens Int @default(0)
+}
+```
+
 ### New enum
 
 ```prisma
 enum MatchTier {
-  SQL
   HEURISTIC
   AI_TRIAGE
 }
 ```
+
+### New model: MatchRun
+
+Replace the current `ScrapeRun` hack (where per-profile match runs are logged
+with `source: "GREENHOUSE"`) with a dedicated model:
+
+```prisma
+model MatchRun {
+  id        String   @id @default(cuid())
+  profileId String
+  createdAt DateTime @default(now())
+
+  candidatesFromSql    Int @default(0)
+  acceptedByHeuristic  Int @default(0)
+  borderlineToAi       Int @default(0)
+  acceptedByAi         Int @default(0)
+  rejectedTotal        Int @default(0)
+  aiTokensUsed         Int @default(0)
+  durationMs           Int?
+  errorMessage         String?
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, createdAt(sort: Desc)])
+  @@map("match_runs")
+}
+```
+
+Add `matchRuns MatchRun[]` relation to Profile.
 
 ## Tier 1: SQL Pre-filter
 
@@ -115,7 +178,8 @@ enum MatchTier {
 
 The SQL tier's job is to fetch a broad set of plausible candidates quickly. It
 should be loose enough to not miss good matches, but smart enough to kill
-obvious garbage.
+obvious garbage. Returns only IDs — full pool data is fetched separately by the
+orchestrator before passing to Tier 2 (see Data Handoff section).
 
 ### Fixes to current logic
 
@@ -129,8 +193,12 @@ compound phrase pattern AND individual token patterns:
 - "AI Engineer" → `%ai engineer%` (compound, primary) + `%engineer%` (token, if
   length >= 3)
 - "Frontend Developer" → `%frontend developer%` + `%frontend%`
-- "QA" → `%qa%` is under threshold, fall back to `%qa engineer%` or `%qa %` with
-  word boundary approximation
+
+**Short-token fallback (under 3 chars):** For roles that are entirely short
+tokens (e.g. "QA"), use PostgreSQL regex matching (`~*`) with word boundaries
+instead of ILIKE: `jp.title ~* '\mqa\M'`. This matches "QA" as a whole word
+but not "qa" embedded in other words. The regex fallback is only used when all
+tokens are under the 3-character threshold.
 
 The compound phrase pattern is the primary match. Token patterns serve as
 fallback for title variations ("Engineer, AI" vs "AI Engineer").
@@ -147,15 +215,18 @@ tiers). Remote jobs with a known country are filtered by eligibility.
 - Remote job from Bangladesh → rejected (not eligible)
 - Remote job with unknown country → passes (benefit of doubt, tier 2 checks)
 
-**Remove the 30-job cap.** The cap was a safeguard for the old system where
-every matched job immediately entered the feed. With three tiers, the later
-tiers handle volume control. If SQL returns 200 candidates, that's fine — most
-will be filtered by tier 2.
+**Soft cap at 500.** The old hard cap of 30 is removed, but a generous soft
+cap of `LIMIT 500` prevents degenerate queries (e.g. a profile targeting
+"Engineer" with no location constraints). 500 is high enough that legitimate
+searches are never truncated, while preventing unbounded memory usage when
+loading full pool rows for tier 2.
 
 **Skills in description (SQL-level):** Add an optional SQL check: if
 `requiredSkills` are set, prefer candidates where at least one skill appears in
 the description text (ILIKE). This is a soft signal, not a hard filter — jobs
-without skill mentions still pass if the title matches.
+without skill mentions still pass if the title matches. The description ILIKE
+is implemented as a separate scoring subquery, not as a WHERE clause filter, to
+avoid forcing a sequential scan on the description column.
 
 ### Updated matching order
 
@@ -165,13 +236,35 @@ without skill mentions still pass if the title matches.
 4. Role: compound phrase + token matching with min-length threshold
 5. Skills: title match OR description mention (soft boost, not hard filter)
 
+### ProfileCriteria type update
+
+The `ProfileCriteria` type in `match-sql.ts` must be extended to include
+`workEligibility: string[]`. Since callers already pass full Prisma `Profile`
+objects, this is a type-only change — no call-site modifications needed.
+
+## Data Handoff: Tier 1 → Tier 2
+
+Tier 1 returns only IDs (keeping the SQL query lean). The match route
+orchestrator then fetches full JobPool rows for all Tier 1 candidate IDs in a
+single Prisma query:
+
+```ts
+const poolEntries = await prisma.jobPool.findMany({
+  where: { id: { in: tier1Ids } },
+});
+```
+
+This batch fetch provides the `title`, `description`, `skills[]`, `location`,
+`country`, `salaryMin`, `salaryMax`, `jobType`, and `companySize` data that
+Tier 2 needs for scoring. One query, no N+1 problem.
+
 ## Tier 2: Heuristic Scoring
 
 **File:** `src/lib/match-heuristic.ts` (new)
 
-Receives the candidate set from tier 1 (pool entry IDs with their JobPool data).
-Runs in-process — no AI calls, no network. Assigns a confidence score and
-classifies each candidate as `ACCEPT`, `REJECT`, or `BORDERLINE`.
+Receives the full JobPool entries from the orchestrator. Runs in-process — no
+AI calls, no network. Assigns a confidence score and classifies each candidate
+as `ACCEPT`, `REJECT`, or `BORDERLINE`.
 
 ### Scoring signals
 
@@ -182,7 +275,7 @@ Each signal contributes to a 0.0–1.0 composite score:
 | Title relevance | 0.35 | Full phrase match > token overlap > partial token |
 | Skill overlap | 0.25 | Count of `requiredSkills` found in title + description + `skills[]` |
 | Location quality | 0.15 | Exact location match > country match > remote-eligible > unknown |
-| Description relevance | 0.15 | Density of role/skill keywords in first 500 chars of description |
+| Description relevance | 0.15 | Density of role/skill keywords in first 1000 chars of description (skip common boilerplate prefixes like "About us", "Our mission") |
 | Metadata signals | 0.10 | Job type match, salary in range, company size match (when available) |
 
 ### Classification thresholds
@@ -199,25 +292,26 @@ matches.
 
 ### Implementation notes
 
-- Query pool entries in a single batch (IDs from tier 1)
-- Score each in a loop — pure computation, no I/O
-- Return three arrays: accepted IDs + scores, borderline IDs + pool data, rejected IDs
+- Score each entry in a loop — pure computation, no I/O
+- Return three arrays: accepted (IDs + scores), borderline (IDs + pool data for
+  AI prompt construction), rejected (IDs)
 - Log counts at each classification level for observability
 
 ## Tier 3: AI Triage
 
 **File:** `src/lib/match-ai-triage.ts` (new)
 
-Receives borderline candidates from tier 2. Uses a cheap, fast model to make a
-yes/no relevance decision with minimal token usage.
+Receives borderline candidates from tier 2 (IDs + pool data). Uses a cheap,
+fast model to make a yes/no relevance decision with minimal token usage.
 
 ### Model and cost
 
 - Model: `anthropic/claude-haiku-4.5` (same as analyze — fast, cheap)
-- Input: ~200 tokens per job (profile summary + job title + first 200 chars of
-  description)
-- Output: ~20 tokens (yes/no + one-sentence reason)
 - Batching: up to 10 jobs per prompt to amortize system prompt overhead
+- Per-call estimate: ~2100 input tokens (system prompt ~100 + 10 jobs × ~200
+  each), ~200 output tokens (10 decisions × ~20 each)
+- At Haiku 4.5 pricing (~$0.80/M input, ~$4/M output): ~$0.002 per batch call,
+  ~$0.01-0.03 per profile per run (8-15 calls for a broad search)
 
 ### Prompt design
 
@@ -228,10 +322,13 @@ listings, decide if each job is a plausible match.
 Profile:
 - Target roles: {targetRoles}
 - Required skills: {requiredSkills}
-- Locations: {targetLocations}
+- Preferred locations: {targetLocations}
 - Work eligibility: {workEligibility countries}
 
 For each job, respond with MATCH or REJECT and a brief reason (one sentence).
+
+Respond in JSON format:
+{"results": [{"index": 1, "decision": "MATCH", "reason": "..."}, ...]}
 
 Jobs:
 1. Title: {title} | Company: {company} | Location: {location}
@@ -240,17 +337,37 @@ Jobs:
 2. ...
 ```
 
-### Response parsing
+### Response schema
 
-Expect structured output. Use Zod schema validation on the response. If parsing
-fails for a job, default to REJECT (conservative — better to miss a borderline
-job than add noise).
+```ts
+const triageResponseSchema = z.object({
+  results: z.array(z.object({
+    index: z.number(),
+    decision: z.enum(["MATCH", "REJECT"]),
+    reason: z.string(),
+  })),
+});
+```
+
+If parsing fails for the entire response, default all jobs in that batch to
+REJECT. If individual entries are missing from the response, default those to
+REJECT. Conservative — better to miss a borderline job than add noise.
+
+Use OpenRouter's JSON mode (`response_format: { type: "json_object" }`) if
+available for the selected model, otherwise rely on the prompt instruction.
 
 ### Cost controls
 
 - Only borderline jobs reach this tier (typically 10-30% of SQL candidates)
 - Batch up to 10 per call to minimize overhead
-- Track token usage on the `Usage` model (new field: `triageCallCount`)
+- AI triage batches for a single profile run in parallel (`Promise.all`) to
+  minimize latency. Profiles are processed sequentially to avoid overwhelming
+  the API.
+- Track token usage on the `Usage` model via `triageCallCount`,
+  `triageInputTokens`, `triageOutputTokens`
+- The match pipeline resolves the user via `profile.userId` and checks
+  `Usage.currentMonthInputTokens` before invoking AI triage. No Clerk auth is
+  needed — the cron secret protects the route.
 - If the user's monthly token limit is exceeded, skip AI triage and treat all
   borderline candidates as REJECT (conservative degradation)
 - Log per-run stats: borderline count, AI calls made, tokens used, match/reject
@@ -260,7 +377,7 @@ job than add noise).
 
 | AI response | Action |
 |---|---|
-| MATCH | Admitted to feed, `matchTier: AI_TRIAGE`, confidence from AI |
+| MATCH | Admitted to feed, `matchTier: AI_TRIAGE`, `matchConfidence: 0.5` |
 | REJECT | Dropped |
 | Parse failure | Dropped (conservative) |
 
@@ -281,6 +398,18 @@ A lookup-based parser, not NLP. Build a mapping of:
 - Common patterns: `"Remote (US)"` → country `"US"`, `"Remote - Europe"` →
   region `"Europe"`
 
+All country codes stored as uppercase ISO 3166-1 alpha-2.
+
+### Scrapers with known countries
+
+Some scrapers already know the country without needing the parser:
+- **Adzuna:** `country` parameter in API call (lowercase — `.toUpperCase()`)
+- **USAJobs:** Always `"US"`
+
+These normalizers should set `country` directly, bypassing the parser. The
+parser is for scrapers that only have free-text location strings (Greenhouse,
+Ashby, Lever, Arbeitnow).
+
 ### Edge cases
 
 - `"Remote"` with no qualifier → country: null, region: null
@@ -289,6 +418,9 @@ A lookup-based parser, not NLP. Build a mapping of:
 - `"Remote (US only)"` → country: "US"
 - `"Multiple locations"` → country: null
 - `"New York, NY or Remote"` → country: "US", region: "New York"
+- `"Remote - Europe"` → country: null, region: null (region-level values like
+  "Europe" are not useful for eligibility filtering and are treated the same as
+  unknown)
 
 ### Coverage
 
@@ -297,40 +429,41 @@ covers the realistic set for the active scrapers (Greenhouse/Ashby/Lever are
 mostly US/EU tech companies, USAJobs is US-only, Adzuna is multi-country with
 known country from search config, Arbeitnow is EU-focused).
 
-Adzuna is special: the scraper already knows the country from the search
-configuration (`country` parameter in API call). Pass this through to
-normalization so the parser has a strong hint.
-
 ### Backfill
 
 After deploying the migration, run a one-time backfill that parses `location`
 for all existing JobPool entries and populates `country`/`region`. This can be
 a dev route or a script.
 
+## Stale Job Detection
+
+When a user changes their search criteria, `rematchProfileSql()` currently
+removes stale jobs and adds new matches. The new system updates this:
+
+**Adding new matches:** Use the full three-tier pipeline (SQL → Heuristic → AI
+triage) to find and add new matches. Call into the same orchestrator function
+used by `/api/match`.
+
+**Removing stale jobs:** Keep SQL-only stale detection, but update
+`findStaleJobIds` to use the improved SQL conditions (compound phrases, min
+token length, eligibility filtering). This is intentionally asymmetric — removal
+uses stricter SQL-only logic, so a job is only removed if it clearly no longer
+matches the criteria. A job that would score BORDERLINE in the heuristic tier
+stays in the feed rather than being silently removed. This conservative approach
+prevents confusing "jobs disappearing" behavior.
+
 ## Observability
 
 ### Match run logging
 
-Extend `ScrapeRun` or create a new `MatchRun` model to log per-profile match
-execution:
-
-```
-- candidatesFromSql: number
-- acceptedByHeuristic: number
-- borderlineToAi: number
-- acceptedByAi: number
-- rejectedTotal: number
-- aiTokensUsed: number
-- durationMs: number
-```
-
-This gives you real numbers on each tier's contribution and lets you tune
-thresholds with data.
+Use the new `MatchRun` model (see Schema Changes) to log per-profile match
+execution with full tier-by-tier counts. This gives real numbers on each tier's
+contribution and lets you tune thresholds with data.
 
 ### Usage tracking
 
-Add `triageCallCount` and `triageTokens` to the `Usage` model to track AI
-triage cost separately from analysis/tailor costs.
+Track AI triage cost separately via `triageCallCount`, `triageInputTokens`,
+`triageOutputTokens` on the Usage model.
 
 ## Onboarding and Settings Integration
 
@@ -350,23 +483,24 @@ Locations" to make the difference clear.
 
 ### Rematch
 
-When `workEligibility` changes, trigger `rematchProfileSql()` (already exists)
-to re-evaluate the feed. The rematch function needs to be updated to use the
-new three-tier pipeline instead of just SQL matching.
+When `workEligibility` or search criteria change, trigger the updated rematch
+function (see Stale Job Detection section).
 
 ## Migration Path
 
-1. Add schema columns and enum (migration)
-2. Build location parser
+1. Add schema columns, enum, and MatchRun model (migration)
+2. Build location parser + update Adzuna/USAJobs normalizers to set country
+   directly
 3. Backfill `country`/`region` on existing pool entries
 4. Build tier 1 improvements (in existing `match-sql.ts`)
 5. Build tier 2 (`match-heuristic.ts`)
 6. Build tier 3 (`match-ai-triage.ts`)
 7. Build `/api/match` route that orchestrates all three tiers
-8. Update `/api/scrape` to call `/api/match` after pool layer
-9. Update `rematchProfileSql` to use three-tier pipeline
+8. Update `/api/scrape` to fire-and-forget call to `/api/match` after pool layer
+9. Update `rematchProfileSql` to use three-tier pipeline for adds, improved SQL
+   for stale detection
 10. Add `workEligibility` to onboarding and settings UI
-11. Add observability logging
+11. Add observability logging (MatchRun creation)
 12. Backfill existing feeds (optional — new matches will naturally improve)
 
 ## Out of Scope
