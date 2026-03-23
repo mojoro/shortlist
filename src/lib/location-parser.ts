@@ -246,6 +246,172 @@ const DE_STATES: Record<string, string> = {
   thuringia: "Thüringen",
 };
 
+/** Major tech-hub cities → { country, region } */
+const CITY_TO_COUNTRY: Record<string, ParsedLocation> = {
+  // United States
+  "san francisco": { country: "US", region: "San Francisco" },
+  "new york": { country: "US", region: "New York" },
+  "new york city": { country: "US", region: "New York" },
+  nyc: { country: "US", region: "New York" },
+  austin: { country: "US", region: "Austin" },
+  seattle: { country: "US", region: "Seattle" },
+  chicago: { country: "US", region: "Chicago" },
+  boston: { country: "US", region: "Boston" },
+  denver: { country: "US", region: "Denver" },
+  "los angeles": { country: "US", region: "Los Angeles" },
+  la: { country: "US", region: "Los Angeles" },
+  miami: { country: "US", region: "Miami" },
+  portland: { country: "US", region: "Portland" },
+  atlanta: { country: "US", region: "Atlanta" },
+  "washington dc": { country: "US", region: "Washington DC" },
+  "washington d.c.": { country: "US", region: "Washington DC" },
+  "washington, d.c.": { country: "US", region: "Washington DC" },
+  raleigh: { country: "US", region: "Raleigh" },
+  nashville: { country: "US", region: "Nashville" },
+  "salt lake city": { country: "US", region: "Salt Lake City" },
+  minneapolis: { country: "US", region: "Minneapolis" },
+  pittsburgh: { country: "US", region: "Pittsburgh" },
+  philadelphia: { country: "US", region: "Philadelphia" },
+  "san diego": { country: "US", region: "San Diego" },
+  dallas: { country: "US", region: "Dallas" },
+  houston: { country: "US", region: "Houston" },
+  phoenix: { country: "US", region: "Phoenix" },
+  // Germany
+  berlin: { country: "DE", region: "Berlin" },
+  munich: { country: "DE", region: "Munich" },
+  münchen: { country: "DE", region: "Munich" },
+  hamburg: { country: "DE", region: "Hamburg" },
+  frankfurt: { country: "DE", region: "Frankfurt" },
+  cologne: { country: "DE", region: "Cologne" },
+  köln: { country: "DE", region: "Cologne" },
+  düsseldorf: { country: "DE", region: "Düsseldorf" },
+  dusseldorf: { country: "DE", region: "Düsseldorf" },
+  stuttgart: { country: "DE", region: "Stuttgart" },
+  bonn: { country: "DE", region: "Bonn" },
+  // United Kingdom
+  london: { country: "GB", region: "London" },
+  manchester: { country: "GB", region: "Manchester" },
+  edinburgh: { country: "GB", region: "Edinburgh" },
+  bristol: { country: "GB", region: "Bristol" },
+  cambridge: { country: "GB", region: "Cambridge" },
+  oxford: { country: "GB", region: "Oxford" },
+  birmingham: { country: "GB", region: "Birmingham" },
+  // Netherlands
+  amsterdam: { country: "NL", region: "Amsterdam" },
+  rotterdam: { country: "NL", region: "Rotterdam" },
+  "the hague": { country: "NL", region: "The Hague" },
+  "den haag": { country: "NL", region: "The Hague" },
+  utrecht: { country: "NL", region: "Utrecht" },
+  eindhoven: { country: "NL", region: "Eindhoven" },
+  // France
+  paris: { country: "FR", region: "Paris" },
+  lyon: { country: "FR", region: "Lyon" },
+  marseille: { country: "FR", region: "Marseille" },
+  toulouse: { country: "FR", region: "Toulouse" },
+  bordeaux: { country: "FR", region: "Bordeaux" },
+  // Canada
+  toronto: { country: "CA", region: "Toronto" },
+  vancouver: { country: "CA", region: "Vancouver" },
+  montreal: { country: "CA", region: "Montreal" },
+  montréal: { country: "CA", region: "Montreal" },
+  ottawa: { country: "CA", region: "Ottawa" },
+  calgary: { country: "CA", region: "Calgary" },
+  // Australia
+  sydney: { country: "AU", region: "Sydney" },
+  melbourne: { country: "AU", region: "Melbourne" },
+  brisbane: { country: "AU", region: "Brisbane" },
+  perth: { country: "AU", region: "Perth" },
+  // Ireland
+  dublin: { country: "IE", region: "Dublin" },
+  cork: { country: "IE", region: "Cork" },
+  // Switzerland
+  zurich: { country: "CH", region: "Zurich" },
+  zürich: { country: "CH", region: "Zurich" },
+  geneva: { country: "CH", region: "Geneva" },
+  genève: { country: "CH", region: "Geneva" },
+  basel: { country: "CH", region: "Basel" },
+  bern: { country: "CH", region: "Bern" },
+  // Austria
+  vienna: { country: "AT", region: "Vienna" },
+  wien: { country: "AT", region: "Vienna" },
+  graz: { country: "AT", region: "Graz" },
+  linz: { country: "AT", region: "Linz" },
+  // Sweden
+  stockholm: { country: "SE", region: "Stockholm" },
+  gothenburg: { country: "SE", region: "Gothenburg" },
+  göteborg: { country: "SE", region: "Gothenburg" },
+  malmö: { country: "SE", region: "Malmö" },
+  malmo: { country: "SE", region: "Malmö" },
+  // Denmark
+  copenhagen: { country: "DK", region: "Copenhagen" },
+  københavn: { country: "DK", region: "Copenhagen" },
+  // Norway
+  oslo: { country: "NO", region: "Oslo" },
+  // Finland
+  helsinki: { country: "FI", region: "Helsinki" },
+  // Spain
+  madrid: { country: "ES", region: "Madrid" },
+  barcelona: { country: "ES", region: "Barcelona" },
+  valencia: { country: "ES", region: "Valencia" },
+  // Italy
+  milan: { country: "IT", region: "Milan" },
+  milano: { country: "IT", region: "Milan" },
+  rome: { country: "IT", region: "Rome" },
+  roma: { country: "IT", region: "Rome" },
+  turin: { country: "IT", region: "Turin" },
+  torino: { country: "IT", region: "Turin" },
+  // Portugal
+  lisbon: { country: "PT", region: "Lisbon" },
+  lisboa: { country: "PT", region: "Lisbon" },
+  porto: { country: "PT", region: "Porto" },
+  // Poland
+  warsaw: { country: "PL", region: "Warsaw" },
+  warszawa: { country: "PL", region: "Warsaw" },
+  kraków: { country: "PL", region: "Kraków" },
+  krakow: { country: "PL", region: "Kraków" },
+  wrocław: { country: "PL", region: "Wrocław" },
+  wroclaw: { country: "PL", region: "Wrocław" },
+  gdańsk: { country: "PL", region: "Gdańsk" },
+  gdansk: { country: "PL", region: "Gdańsk" },
+  poznań: { country: "PL", region: "Poznań" },
+  poznan: { country: "PL", region: "Poznań" },
+  // Israel
+  "tel aviv": { country: "IL", region: "Tel Aviv" },
+  jerusalem: { country: "IL", region: "Jerusalem" },
+  haifa: { country: "IL", region: "Haifa" },
+  // Singapore
+  singapore: { country: "SG", region: "Singapore" },
+  // Japan
+  tokyo: { country: "JP", region: "Tokyo" },
+  osaka: { country: "JP", region: "Osaka" },
+  // India
+  bangalore: { country: "IN", region: "Bangalore" },
+  bengaluru: { country: "IN", region: "Bangalore" },
+  mumbai: { country: "IN", region: "Mumbai" },
+  delhi: { country: "IN", region: "Delhi" },
+  "new delhi": { country: "IN", region: "Delhi" },
+  hyderabad: { country: "IN", region: "Hyderabad" },
+  pune: { country: "IN", region: "Pune" },
+  // Belgium
+  brussels: { country: "BE", region: "Brussels" },
+  bruxelles: { country: "BE", region: "Brussels" },
+  antwerp: { country: "BE", region: "Antwerp" },
+  antwerpen: { country: "BE", region: "Antwerp" },
+  // Czech Republic
+  prague: { country: "CZ", region: "Prague" },
+  praha: { country: "CZ", region: "Prague" },
+  brno: { country: "CZ", region: "Brno" },
+  // South Korea
+  seoul: { country: "KR", region: "Seoul" },
+  // New Zealand
+  auckland: { country: "NZ", region: "Auckland" },
+  wellington: { country: "NZ", region: "Wellington" },
+  // Brazil
+  "são paulo": { country: "BR", region: "São Paulo" },
+  "sao paulo": { country: "BR", region: "São Paulo" },
+  "rio de janeiro": { country: "BR", region: "Rio de Janeiro" },
+};
+
 export function parseLocation(location: string | null): ParsedLocation {
   return { country: null, region: null };
 }
