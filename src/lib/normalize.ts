@@ -7,6 +7,7 @@ import type { AdzunaApiJob } from "@/lib/scrapers/adzuna";
 import { currencyForCountry } from "@/lib/scrapers/adzuna";
 import type { ArbeitnowJob } from "@/lib/scrapers/arbeitnow";
 import TurndownService from "turndown";
+import { parseLocation } from "@/lib/location-parser";
 
 const td = new TurndownService({ headingStyle: "atx", bulletListMarker: "-" });
 
@@ -24,6 +25,7 @@ export function normalizeGreenhouseForPool(
   // Exclude HTML content from rawData — it's already stored as markdown in description
   // and the full HTML can be 50–100KB per job, making bulk inserts impractical.
   const { content: _content, ...rawMeta } = raw;
+  const { country, region } = parseLocation(raw.location?.name ?? null);
   return {
     externalId:  `greenhouse-${slug}-${raw.id}`,
     source:      "GREENHOUSE",
@@ -34,6 +36,8 @@ export function normalizeGreenhouseForPool(
     description: raw.content ? htmlToMarkdown(raw.content) : "",
     postedAt:    raw.updated_at ? new Date(raw.updated_at) : null,
     rawData:     rawMeta as unknown as Prisma.InputJsonValue,
+    country,
+    region,
   };
 }
 
@@ -71,6 +75,7 @@ export function normalizeLeverForPool(
 ): Prisma.JobPoolUncheckedCreateInput {
   const commitment = raw.categories?.commitment?.toLowerCase() ?? "";
   const workplace  = raw.workplaceType?.toLowerCase() ?? "";
+  const { country, region } = parseLocation(raw.categories?.location ?? null);
 
   return {
     externalId:   `lever-${slug}-${raw.id}`,
@@ -84,6 +89,8 @@ export function normalizeLeverForPool(
     jobType:      LEVER_JOB_TYPE[commitment] ?? null,
     postedAt:     raw.createdAt ? new Date(raw.createdAt) : null,
     rawData:      raw as unknown as Prisma.InputJsonValue,
+    country,
+    region,
   };
 }
 
@@ -117,6 +124,7 @@ export function normalizeAshbyForPool(
 
   // Exclude large HTML/text description fields from rawData
   const { descriptionHtml: _html, descriptionPlain: _plain, ...rawMeta } = raw;
+  const { country, region } = parseLocation(raw.location ?? null);
 
   return {
     externalId:   `ashby-${slug}-${raw.id}`,
@@ -130,6 +138,8 @@ export function normalizeAshbyForPool(
     jobType:      ASHBY_JOB_TYPE[empType] ?? null,
     postedAt:     raw.publishedAt ? new Date(raw.publishedAt) : null,
     rawData:      rawMeta as unknown as Prisma.InputJsonValue,
+    country,
+    region,
   };
 }
 
@@ -214,6 +224,10 @@ export function normalizeUSAJobsForPool(
     salaryMax,
     currency:     "USD",
     rawData:      rawMeta as unknown as Prisma.InputJsonValue,
+    country:      "US",
+    region:       raw.PositionLocation?.[0]?.LocationName
+      ? parseLocation(raw.PositionLocation[0].LocationName).region
+      : null,
   };
 }
 
@@ -233,6 +247,7 @@ export function normalizeAdzunaForPool(
 
   // Exclude description from rawData — already stored as top-level field
   const { description: _desc, ...rawMeta } = raw;
+  const { region } = parseLocation(raw.location?.display_name ?? null);
 
   return {
     externalId:  `adzuna-${raw.id}`,
@@ -248,6 +263,8 @@ export function normalizeAdzunaForPool(
     salaryMax:   raw.salary_max ? Math.round(raw.salary_max) : null,
     currency:    currencyForCountry(country),
     jobType:     ADZUNA_JOB_TYPE[contractTime] ?? null,
+    country:     country.toUpperCase(),
+    region,
   };
 }
 
@@ -276,6 +293,7 @@ export function normalizeArbeitnowForPool(
   const { description: _desc, ...rawMeta } = raw;
 
   const locationType: LocationType | null = raw.remote ? "REMOTE" : null;
+  const { country, region } = parseLocation(raw.location || null);
 
   return {
     externalId:   `arbeitnow-${raw.slug}`,
@@ -290,5 +308,7 @@ export function normalizeArbeitnowForPool(
     skills:       raw.tags,
     postedAt:     raw.created_at ? new Date(raw.created_at * 1000) : null,
     rawData:      rawMeta as unknown as Prisma.InputJsonValue,
+    country,
+    region,
   };
 }
