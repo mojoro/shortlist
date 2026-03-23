@@ -245,18 +245,40 @@ objects, this is a type-only change — no call-site modifications needed.
 ## Data Handoff: Tier 1 → Tier 2
 
 Tier 1 returns only IDs (keeping the SQL query lean). The match route
-orchestrator then fetches full JobPool rows for all Tier 1 candidate IDs in a
-single Prisma query:
+orchestrator then fetches the **minimum columns needed** for tier 2 scoring in
+a single query — critically, it does NOT fetch full descriptions:
 
 ```ts
-const poolEntries = await prisma.jobPool.findMany({
-  where: { id: { in: tier1Ids } },
-});
+const poolEntries = await prisma.$queryRaw<PoolCandidate[]>`
+  SELECT id, title, company, location, country, region,
+         LEFT(description, 1000) AS "descriptionExcerpt",
+         skills, "salaryMin", "salaryMax", "jobType",
+         "companySize", "locationType"
+  FROM job_pool
+  WHERE id = ANY(${tier1Ids})
+`;
 ```
 
-This batch fetch provides the `title`, `description`, `skills[]`, `location`,
-`country`, `salaryMin`, `salaryMax`, `jobType`, and `companySize` data that
-Tier 2 needs for scoring. One query, no N+1 problem.
+**Why `LEFT(description, 1000)` instead of the full column:** Job descriptions
+average 5–50KB of markdown each. At 500 candidates, full descriptions would
+transfer 2.5–25MB from Neon on every run. Truncating to 1000 chars at the
+database level keeps the transfer to ~1KB per row (~500KB total). Tier 2 only
+scans the first 1000 chars anyway (see Description Relevance signal), and
+Tier 3 only uses the first 200 chars for its AI prompt.
+
+**Network budget per run:**
+- Tier 1 SQL query: ~500 IDs returned (~4KB)
+- Data handoff query: ~500 rows × ~1KB each (~500KB)
+- Tier 3 AI calls: outbound to OpenRouter, not Neon
+- Job creation: `createMany` with IDs only (~minimal)
+
+Total Neon transfer: **under 1MB per profile per run.** The old system that
+loaded 2000 full pool entries transferred 10–100MB — this is a 10–100x
+reduction.
+
+No full `findMany` with implicit `select: *` — every Neon query in the match
+pipeline must use explicit column selection or raw SQL with `LEFT()` on
+description.
 
 ## Tier 2: Heuristic Scoring
 
@@ -275,7 +297,7 @@ Each signal contributes to a 0.0–1.0 composite score:
 | Title relevance | 0.35 | Full phrase match > token overlap > partial token |
 | Skill overlap | 0.25 | Count of `requiredSkills` found in title + description + `skills[]` |
 | Location quality | 0.15 | Exact location match > country match > remote-eligible > unknown |
-| Description relevance | 0.15 | Density of role/skill keywords in first 1000 chars of description (skip common boilerplate prefixes like "About us", "Our mission") |
+| Description relevance | 0.15 | Density of role/skill keywords in `descriptionExcerpt` (first 1000 chars, truncated at DB level — skip common boilerplate prefixes like "About us", "Our mission") |
 | Metadata signals | 0.10 | Job type match, salary in range, company size match (when available) |
 
 ### Classification thresholds
