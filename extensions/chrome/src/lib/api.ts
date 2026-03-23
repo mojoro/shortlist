@@ -119,10 +119,14 @@ export function importJob(payload: {
   salaryMax?: number | null;
   currency?: string | null;
   skills?: string[];
+  source?: string;
+  externalId?: string | null;
 }) {
+  const { externalId, ...rest } = payload;
+  const body = externalId != null ? { ...rest, externalId } : rest;
   return apiCall<ImportResponse>("/api/jobs/import", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   });
 }
 

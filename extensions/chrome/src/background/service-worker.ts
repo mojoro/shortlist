@@ -104,6 +104,8 @@ async function handleImportJob(
     salaryMax: job.salaryMax,
     currency: job.currency,
     skills: job.skills,
+    source: job.source,
+    externalId: job.externalId,
   });
 
   sendResponse({
