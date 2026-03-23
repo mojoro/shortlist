@@ -223,6 +223,47 @@ export function scoreLocationQuality(
   return 0.0;
 }
 
+// ── Signal 4: Description relevance ─────────────────────────────────────────
+
+export function scoreDescriptionRelevance(
+  excerpt: string,
+  targetRoles: string[],
+  requiredSkills: string[],
+): number {
+  if (!excerpt || excerpt.trim().length === 0) return 0.3;
+
+  // Skip boilerplate header by finding the first marker and advancing past it
+  let workingExcerpt = excerpt;
+  const lowerExcerpt = excerpt.toLowerCase();
+  for (const marker of BOILERPLATE_MARKERS) {
+    const idx = lowerExcerpt.indexOf(marker);
+    if (idx !== -1) {
+      // Advance past this section — skip to end of line containing marker
+      const afterMarker = idx + marker.length;
+      const nextNewline = excerpt.indexOf("\n", afterMarker);
+      workingExcerpt =
+        nextNewline !== -1 ? excerpt.slice(nextNewline + 1) : excerpt.slice(afterMarker);
+      break;
+    }
+  }
+
+  if (workingExcerpt.trim().length === 0) return 0.3;
+
+  // Build keyword set: role tokens (no stopwords, min 3 chars) + all required skills
+  const roleTokens = tokenizeRoles(targetRoles);
+  const skillKeywords = requiredSkills.map((s) => s.toLowerCase());
+  const allKeywords = Array.from(new Set([...roleTokens, ...skillKeywords]));
+
+  if (allKeywords.length === 0) return 0.3;
+
+  const lowerWorking = workingExcerpt.toLowerCase();
+  const foundCount = allKeywords.filter((kw) => lowerWorking.includes(kw)).length;
+
+  const density = foundCount / allKeywords.length;
+  // Scale: 50% keyword coverage → 1.0
+  return Math.min(density * 2, 1.0);
+}
+
 // ── Main export ──────────────────────────────────────────────────────────────
 
 /**
