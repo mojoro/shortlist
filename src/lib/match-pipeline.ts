@@ -1,9 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { findMatchingPoolIds } from "@/lib/match-sql";
-import { scoreAndClassify } from "@/lib/match-heuristic";
+import { scoreAndClassify, ACCEPT_THRESHOLD } from "@/lib/match-heuristic";
 import type { PoolCandidate } from "@/lib/match-heuristic";
 import { triageBorderline } from "@/lib/match-ai-triage";
 import type { Profile } from "@prisma/client";
+
+/** Max candidates that proceed past Tier 2 into AI triage + Job creation. */
+const MAX_CANDIDATES_PER_RUN = 50;
 
 export type MatchPipelineResult = {
   candidatesFromSql: number;
@@ -13,6 +16,8 @@ export type MatchPipelineResult = {
   rejectedTotal: number;
   aiTokensUsed: number;
   jobsCreated: number;
+  /** Total candidates that passed heuristic scoring (before cap). */
+  totalQualified: number;
 };
 
 export async function runMatchPipelineForProfile(
@@ -24,9 +29,14 @@ export async function runMatchPipelineForProfile(
   const tier1Ids = await findMatchingPoolIds(profileId, profile);
 
   if (tier1Ids.length === 0) {
+    await prisma.profile.update({
+      where: { id: profileId },
+      data: { pendingMatchCount: 0 },
+    });
     return {
       candidatesFromSql: 0, acceptedByHeuristic: 0, borderlineToAi: 0,
       acceptedByAi: 0, rejectedTotal: 0, aiTokensUsed: 0, jobsCreated: 0,
+      totalQualified: 0,
     };
   }
 
@@ -55,14 +65,38 @@ export async function runMatchPipelineForProfile(
     companySize: profile.companySize,
   });
 
-  // ── Tier 3: AI triage on borderlines ──
+  // ── Cap: merge accepted + borderline, take top N by confidence ──
+  // This limits how many candidates reach AI (Tier 3 triage + downstream analysis).
+  type QualifiedEntry = {
+    id: string;
+    confidence: number;
+    candidate?: PoolCandidate; // present for borderline entries
+  };
+
+  const allQualified: QualifiedEntry[] = [
+    ...heuristicResult.accepted,
+    ...heuristicResult.borderline,
+  ];
+  allQualified.sort((a, b) => b.confidence - a.confidence);
+
+  const totalQualified = allQualified.length;
+  const capped = allQualified.slice(0, MAX_CANDIDATES_PER_RUN);
+
+  // Split back into accepted vs. borderline based on threshold
+  const cappedAccepted = capped.filter(e => e.confidence >= ACCEPT_THRESHOLD);
+  const cappedBorderline = capped.filter(
+    (e): e is QualifiedEntry & { candidate: PoolCandidate } =>
+      e.confidence < ACCEPT_THRESHOLD && e.candidate !== undefined,
+  );
+
+  // ── Tier 3: AI triage on capped borderlines ──
   let aiAccepted: string[] = [];
   let aiRejected: string[] = [];
   let aiTokensUsed = 0;
 
-  if (heuristicResult.borderline.length > 0) {
+  if (cappedBorderline.length > 0) {
     const triageResult = await triageBorderline(
-      heuristicResult.borderline.map(b => ({
+      cappedBorderline.map(b => ({
         id: b.candidate.id,
         title: b.candidate.title,
         company: b.candidate.company,
@@ -82,9 +116,9 @@ export async function runMatchPipelineForProfile(
     aiTokensUsed = triageResult.tokensUsed.input + triageResult.tokensUsed.output;
   }
 
-  // ── Create Job rows for all accepted candidates ──
+  // ── Create Job rows for capped accepted + AI-approved candidates ──
   const jobsToCreate = [
-    ...heuristicResult.accepted.map(a => ({
+    ...cappedAccepted.map(a => ({
       profileId,
       jobPoolId: a.id,
       feedStatus: "NEW" as const,
@@ -109,13 +143,21 @@ export async function runMatchPipelineForProfile(
     jobsCreated = result.count;
   }
 
+  // ── Persist surplus for "load more" UI ──
+  const pendingMatchCount = Math.max(0, totalQualified - jobsCreated);
+  await prisma.profile.update({
+    where: { id: profileId },
+    data: { pendingMatchCount },
+  });
+
   return {
     candidatesFromSql: tier1Ids.length,
     acceptedByHeuristic: heuristicResult.accepted.length,
-    borderlineToAi: heuristicResult.borderline.length,
+    borderlineToAi: cappedBorderline.length,
     acceptedByAi: aiAccepted.length,
     rejectedTotal: heuristicResult.rejected.length + aiRejected.length,
     aiTokensUsed,
     jobsCreated,
+    totalQualified,
   };
 }
