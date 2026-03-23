@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import type { ApplicationStatus } from "@prisma/client";
 import type { ApplicationWithJob, FieldOverrides } from "@/types";
 import { StatusSelect } from "@/components/pipeline/StatusSelect";
+import { ScorePill } from "@/components/pipeline/shared";
 
 interface ApplicationDrawerProps {
   application: ApplicationWithJob;
@@ -104,6 +105,47 @@ export function ApplicationDrawer({
             onChange={(s) => onStatusChange(application.id, s)}
           />
         </div>
+
+        {/* Match analysis */}
+        {application.job.aiScore !== null && (
+          <div className="shrink-0 border-b border-[var(--border)] px-5 py-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              Match analysis
+            </p>
+            <div className="mb-2 flex items-center gap-2">
+              <ScorePill score={application.job.aiScore} />
+              <span className="text-xs text-[var(--text-muted)]">
+                {application.job.aiScore >= 90 ? "Strong match" :
+                 application.job.aiScore >= 75 ? "Good match" : "Weak match"}
+              </span>
+            </div>
+            {application.job.aiSummary && (
+              <p className="mb-2 text-sm text-[var(--text-muted)]">
+                {application.job.aiSummary}
+              </p>
+            )}
+            {application.job.aiMatchPoints.length > 0 && (
+              <ul className="mb-2 space-y-1">
+                {application.job.aiMatchPoints.map((point, i) => (
+                  <li key={i} className="flex items-start gap-1.5 text-xs text-[var(--text)]">
+                    <span className="mt-0.5 shrink-0 text-green-600 dark:text-green-400">+</span>
+                    {point}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {application.job.aiGapPoints.length > 0 && (
+              <ul className="space-y-1">
+                {application.job.aiGapPoints.map((point, i) => (
+                  <li key={i} className="flex items-start gap-1.5 text-xs text-[var(--text)]">
+                    <span className="mt-0.5 shrink-0 text-red-500 dark:text-red-400">&minus;</span>
+                    {point}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {/* Scrollable body */}
         <div className="flex-1 space-y-5 overflow-y-auto p-5">
