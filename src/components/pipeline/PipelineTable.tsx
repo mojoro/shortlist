@@ -116,12 +116,20 @@ export function PipelineTable({
       saveTimers.current.delete(appId);
       const fields = pendingSaves.current.get(appId);
       if (!fields) return;
+      pendingSaves.current.delete(appId);
       storeUpdateAppDetail(appId, {
         notes:          fields.notes,
         appliedAt:      fields.appliedAt,
         followUpAt:     fields.followUpAt,
         recruiterName:  fields.recruiterName,
         recruiterEmail: fields.recruiterEmail,
+      });
+      // Clear override — store now holds the optimistic value.
+      // If a server revert happens later, the UI will reflect it.
+      setFieldOverrides((prev) => {
+        const next = new Map(prev);
+        next.delete(appId);
+        return next;
       });
     }, 1500);
 
@@ -325,18 +333,36 @@ export function PipelineTable({
                       </td>
                       {/* Job — sticky left column */}
                       <td className="sticky left-0 z-10 bg-[var(--bg-card)] px-4 py-3 w-[180px] max-w-[180px]">
-                        <Link
-                          href={`/jobs/${app.job.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="group block truncate"
-                        >
-                          <span className="truncate font-medium text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">
-                            {app.job.jobPool.title}
-                          </span>
-                          <span className="mt-0.5 block truncate text-xs text-[var(--text-muted)]">
-                            {app.job.jobPool.company}
-                          </span>
-                        </Link>
+                        <div className="flex items-start gap-1">
+                          <Link
+                            href={`/jobs/${app.job.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="group block min-w-0 flex-1 truncate"
+                          >
+                            <span title={app.job.jobPool.title} className="truncate font-medium text-[var(--text)] group-hover:text-[var(--accent)] transition-colors">
+                              {app.job.jobPool.title}
+                            </span>
+                            <span className="mt-0.5 block truncate text-xs text-[var(--text-muted)]">
+                              {app.job.jobPool.company}
+                            </span>
+                          </Link>
+                          {app.job.jobPool.url && (
+                            <a
+                              href={app.job.jobPool.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              title="Open original listing"
+                              className="mt-0.5 shrink-0 text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                <polyline points="15 3 21 3 21 9" />
+                                <line x1="10" y1="14" x2="21" y2="3" />
+                              </svg>
+                            </a>
+                          )}
+                        </div>
                       </td>
 
                       {/* Status */}
