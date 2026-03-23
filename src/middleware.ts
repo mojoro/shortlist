@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 const isPublicRoute = createRouteMatcher([
   "/",
@@ -15,15 +16,45 @@ const isPublicRoute = createRouteMatcher([
   "/disabled",
 ]);
 
+const EXTENSION_CORS_PATHS = ["/api/extension/", "/api/jobs/"];
+
+function needsExtensionCors(req: NextRequest): string | null {
+  const origin = req.headers.get("origin");
+  if (!origin?.startsWith("chrome-extension://")) return null;
+  const path = req.nextUrl.pathname;
+  if (EXTENSION_CORS_PATHS.some((p) => path.startsWith(p))) return origin;
+  return null;
+}
+
+function withCorsHeaders(response: NextResponse, origin: string): NextResponse {
+  response.headers.set("Access-Control-Allow-Origin", origin);
+  response.headers.set("Access-Control-Allow-Credentials", "true");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type");
+  response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  return response;
+}
+
 export default clerkMiddleware(async (auth, req) => {
   if (process.env.NODE_ENV === "development") {
     console.log(`[middleware] ${req.method} ${req.nextUrl.pathname}`);
+  }
+
+  const corsOrigin = needsExtensionCors(req);
+
+  if (corsOrigin && req.method === "OPTIONS") {
+    return withCorsHeaders(new NextResponse(null, { status: 204 }), corsOrigin);
   }
 
   if (isPublicRoute(req)) return NextResponse.next();
 
   const { userId } = await auth();
   if (!userId) {
+    if (corsOrigin) {
+      return withCorsHeaders(
+        NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+        corsOrigin,
+      );
+    }
     if (process.env.NODE_ENV === "development") {
       console.log(`[middleware] Unauthenticated — redirecting to sign-in from: ${req.nextUrl.pathname}`);
     }
@@ -128,6 +159,7 @@ export default clerkMiddleware(async (auth, req) => {
       headers: { cookie: req.headers.get("cookie") ?? "" },
     }).catch(() => {});
   }
+  if (corsOrigin) withCorsHeaders(response, corsOrigin);
   return response;
 });
 
