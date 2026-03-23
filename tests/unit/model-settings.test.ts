@@ -4,6 +4,7 @@ import {
   TAILOR_MODEL,
   ANALYZE_MODEL,
   EXTRACT_MODEL,
+  TRIAGE_MODEL,
 } from "@/lib/models";
 
 describe("getModels", () => {
@@ -18,6 +19,7 @@ describe("getModels", () => {
       tailor: TAILOR_MODEL,
       analyze: ANALYZE_MODEL,
       extract: EXTRACT_MODEL,
+      triage: TRIAGE_MODEL,
     });
   });
 
@@ -68,6 +70,7 @@ describe("getModels", () => {
       tailor: TAILOR_MODEL,
       analyze: ANALYZE_MODEL,
       extract: EXTRACT_MODEL,
+      triage: TRIAGE_MODEL,
     });
   });
 });
