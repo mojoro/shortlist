@@ -4,7 +4,7 @@ import { z } from "zod";
 export const env = createEnv({
   server: {
     DATABASE_URL:         z.string().url(),
-    DIRECT_URL:           z.string().url(),
+    DATABASE_URL_UNPOOLED: z.string().url(),
     CLERK_SECRET_KEY:     z.string().min(1),
     CLERK_WEBHOOK_SECRET: z.string().min(1).optional(),
     OPENROUTER_API_KEY:   z.string().min(1),
@@ -21,7 +21,7 @@ export const env = createEnv({
   },
   runtimeEnv: {
     DATABASE_URL:                      process.env.DATABASE_URL,
-    DIRECT_URL:                        process.env.DIRECT_URL,
+    DATABASE_URL_UNPOOLED:             process.env.DATABASE_URL_UNPOOLED,
     CLERK_SECRET_KEY:                  process.env.CLERK_SECRET_KEY,
     CLERK_WEBHOOK_SECRET:              process.env.CLERK_WEBHOOK_SECRET,
     OPENROUTER_API_KEY:                process.env.OPENROUTER_API_KEY,
