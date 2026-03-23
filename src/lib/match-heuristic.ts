@@ -176,6 +176,53 @@ export function scoreSkillOverlap(
   return Math.min(base + bonus, 1.0);
 }
 
+// ── Signal 3: Location quality ───────────────────────────────────────────────
+
+export function scoreLocationQuality(
+  candidate: PoolCandidate,
+  profile: HeuristicProfile,
+): number {
+  const lowerLocation = (candidate.location ?? "").toLowerCase();
+
+  const isRemote =
+    candidate.locationType === "REMOTE" ||
+    REMOTE_SIGNALS.some((sig) => lowerLocation.includes(sig));
+
+  // Exact location match
+  if (profile.targetLocations.length > 0) {
+    for (const loc of profile.targetLocations) {
+      if (lowerLocation.includes(loc.toLowerCase())) return 1.0;
+    }
+  }
+
+  // Country match via workEligibility
+  if (
+    candidate.country !== null &&
+    profile.workEligibility.length > 0 &&
+    profile.workEligibility.includes(candidate.country)
+  ) {
+    if (!isRemote) return 0.7;
+  }
+
+  if (isRemote) {
+    const noEligibilitySet = profile.workEligibility.length === 0;
+    const countryNullOrEligible =
+      candidate.country === null ||
+      profile.workEligibility.includes(candidate.country ?? "");
+
+    if (noEligibilitySet || countryNullOrEligible) return 0.6;
+
+    // Remote but country not in workEligibility
+    return 0.1;
+  }
+
+  // Unknown location
+  if (candidate.location === null) return 0.3;
+
+  // No match at all
+  return 0.0;
+}
+
 // ── Main export ──────────────────────────────────────────────────────────────
 
 /**
