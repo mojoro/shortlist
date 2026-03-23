@@ -264,6 +264,53 @@ export function scoreDescriptionRelevance(
   return Math.min(density * 2, 1.0);
 }
 
+// ── Signal 5: Metadata signals ───────────────────────────────────────────────
+
+export function scoreMetadata(
+  candidate: PoolCandidate,
+  profile: HeuristicProfile,
+): number {
+  let score = 0.5;
+
+  // Job type: full-time preference for remote-only seekers
+  if (candidate.jobType === "FULL_TIME" && profile.remotePreference === "REMOTE_ONLY") {
+    score += 0.2;
+  }
+
+  // Salary: check overlap and penalise way-below-minimum
+  if (
+    candidate.salaryMin !== null &&
+    candidate.salaryMax !== null &&
+    (profile.targetSalaryMin !== null || profile.targetSalaryMax !== null)
+  ) {
+    const profileMin = profile.targetSalaryMin ?? 0;
+    const profileMax = profile.targetSalaryMax ?? Infinity;
+
+    const overlaps =
+      candidate.salaryMax >= profileMin && candidate.salaryMin <= profileMax;
+
+    if (overlaps) {
+      score += 0.15;
+    } else if (
+      profile.targetSalaryMin !== null &&
+      candidate.salaryMax < profile.targetSalaryMin * 0.7
+    ) {
+      score -= 0.2;
+    }
+  }
+
+  // Company size: match any preferred size
+  if (
+    candidate.companySize !== null &&
+    profile.companySize.length > 0 &&
+    profile.companySize.includes(candidate.companySize)
+  ) {
+    score += 0.15;
+  }
+
+  return Math.max(0.0, Math.min(score, 1.0));
+}
+
 // ── Main export ──────────────────────────────────────────────────────────────
 
 /**
