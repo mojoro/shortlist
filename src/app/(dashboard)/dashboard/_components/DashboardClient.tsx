@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useShallow } from "zustand/react/shallow";
 import { formatDistanceToNow } from "date-fns";
@@ -11,6 +11,7 @@ import { FeedToolbar } from "@/components/dashboard/FeedToolbar";
 import { JobFeed } from "@/components/jobs/JobFeed";
 import { ImportJobButton } from "@/components/jobs/ImportJobModal";
 import { APP_CONFIG } from "@/config/app";
+import { loadMoreMatches } from "@/app/(dashboard)/dashboard/actions";
 
 interface DashboardClientProps {
   initialFilter: string;
@@ -33,6 +34,35 @@ export function DashboardClient({
   const activeProfile = useDashboardStore((s) => s.activeProfile);
   const profiles = useDashboardStore(useShallow((s) => s.profiles));
   const allJobs = useDashboardStore((s) => s.jobs);
+  const pendingMatchCount = useDashboardStore((s) => s.pendingMatchCount);
+  const sync = useDashboardStore((s) => s.sync);
+
+  // First-run detection: if profile has 0 jobs and was created recently, auto-trigger pipeline
+  const [isLoadingMatches, setIsLoadingMatches] = useState(false);
+  const firstRunTriggered = useRef(false);
+
+  useEffect(() => {
+    if (!activeProfile || firstRunTriggered.current) return;
+    if (allJobs.length > 0) return; // Already has jobs
+    const created = activeProfile.onboardingCompletedAt;
+    if (!created) return;
+    const age = Date.now() - new Date(created).getTime();
+    if (age > 120_000) return; // Only auto-trigger within 2 minutes of creation
+    firstRunTriggered.current = true;
+    setIsLoadingMatches(true);
+    loadMoreMatches(activeProfile.id)
+      .then(() => sync())
+      .finally(() => setIsLoadingMatches(false));
+  }, [activeProfile, allJobs.length, sync]);
+
+  // Manual "load more" handler
+  function handleLoadMore() {
+    if (!activeProfile || isLoadingMatches) return;
+    setIsLoadingMatches(true);
+    loadMoreMatches(activeProfile.id)
+      .then(() => sync())
+      .finally(() => setIsLoadingMatches(false));
+  }
 
   // Derive stats and filtered jobs from the raw jobs array (stable reference from store)
   const stats = computeStats(allJobs);
@@ -151,6 +181,37 @@ export function DashboardClient({
         onFilterChange={handleFilterChange}
         onSortChange={handleSortChange}
       />
+
+      {/* First-run loading state */}
+      {isLoadingMatches && allJobs.length === 0 && (
+        <div className="flex items-center justify-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-4">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--accent)]" />
+          <p className="text-sm text-[var(--text-muted)]">Finding your matches…</p>
+        </div>
+      )}
+
+      {/* Load more banner */}
+      {pendingMatchCount > 0 && !isLoadingMatches && (
+        <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3">
+          <p className="text-sm text-[var(--text-muted)]">
+            ~{pendingMatchCount} more matches available
+          </p>
+          <button
+            onClick={handleLoadMore}
+            className="cursor-pointer rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+          >
+            Load more
+          </button>
+        </div>
+      )}
+
+      {/* Loading indicator when loading more (but already have jobs) */}
+      {isLoadingMatches && allJobs.length > 0 && (
+        <div className="flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-3">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--accent)]" />
+          <p className="text-xs text-[var(--text-muted)]">Loading more matches…</p>
+        </div>
+      )}
 
       <JobFeed
         jobs={jobs}
