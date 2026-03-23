@@ -46,6 +46,8 @@ export function JobDetailClient({ jobId }: JobDetailClientProps) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const sync = useDashboardStore((s) => s.sync);
+  const storeUpdateJobAiFields = useDashboardStore((s) => s.updateJobAiFields);
+  const storeClearJobAiFields = useDashboardStore((s) => s.clearJobAiFields);
 
   // Store not yet hydrated — show skeleton while data loads
   if (!hydrated) {
@@ -280,7 +282,12 @@ export function JobDetailClient({ jobId }: JobDetailClientProps) {
                     </ul>
                   </div>
                 )}
-                <ReanalyzeButton jobId={job.id} profileId={job.profileId} />
+                <ReanalyzeButton
+                  jobId={job.id}
+                  profileId={job.profileId}
+                  onCleared={() => storeClearJobAiFields(job.id)}
+                  onAnalyzed={(result) => storeUpdateJobAiFields(job.id, result)}
+                />
               </>
             ) : (
               <div className="space-y-3 py-2">
@@ -292,7 +299,11 @@ export function JobDetailClient({ jobId }: JobDetailClientProps) {
                     Get an AI-powered match score for this listing.
                   </p>
                 </div>
-                <AnalyzeButton jobId={job.id} profileId={job.profileId} />
+                <AnalyzeButton
+                  jobId={job.id}
+                  profileId={job.profileId}
+                  onAnalyzed={(result) => storeUpdateJobAiFields(job.id, result)}
+                />
               </div>
             )}
           </div>

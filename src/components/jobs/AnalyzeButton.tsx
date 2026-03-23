@@ -1,11 +1,22 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { analyzeJob } from "@/app/(dashboard)/dashboard/actions";
 
-export function AnalyzeButton({ jobId, profileId }: { jobId: string; profileId: string }) {
-  const router = useRouter();
+interface AnalyzeButtonProps {
+  jobId: string;
+  profileId: string;
+  onAnalyzed?: (result: {
+    score: number;
+    status: string;
+    summary: string;
+    matchPoints: string[];
+    gapPoints: string[];
+    hidden: boolean;
+  }) => void;
+}
+
+export function AnalyzeButton({ jobId, profileId, onAnalyzed }: AnalyzeButtonProps) {
   const [state, setState] = useState<"idle" | "pending" | "credits" | "error">("idle");
   const [isPending, startTransition] = useTransition();
 
@@ -17,7 +28,8 @@ export function AnalyzeButton({ jobId, profileId }: { jobId: string; profileId: 
         setState(result.error === "CREDITS" ? "credits" : "error");
         return;
       }
-      router.refresh();
+      setState("idle");
+      onAnalyzed?.(result);
     });
   }
 
