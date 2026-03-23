@@ -140,6 +140,42 @@ export function scoreTitleRelevance(
   return 0.3 + ratio * 0.6;
 }
 
+// ── Signal 2: Skill overlap ──────────────────────────────────────────────────
+
+export function scoreSkillOverlap(
+  candidate: PoolCandidate,
+  requiredSkills: string[],
+  niceToHaveSkills: string[],
+): number {
+  if (requiredSkills.length === 0) return 0.5;
+
+  const haystack = [
+    candidate.title,
+    candidate.descriptionExcerpt,
+    ...candidate.skills,
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  const matchedRequired = requiredSkills.filter((s) =>
+    haystack.includes(s.toLowerCase()),
+  ).length;
+
+  const base = matchedRequired / requiredSkills.length;
+
+  const matchedNice =
+    niceToHaveSkills.length > 0
+      ? niceToHaveSkills.filter((s) => haystack.includes(s.toLowerCase())).length
+      : 0;
+
+  const bonus =
+    niceToHaveSkills.length > 0
+      ? (matchedNice / niceToHaveSkills.length) * 0.2
+      : 0;
+
+  return Math.min(base + bonus, 1.0);
+}
+
 // ── Main export ──────────────────────────────────────────────────────────────
 
 /**
