@@ -385,3 +385,32 @@ export async function updateJobNotes(
     data: { userNotes: notes.trim() || null },
   });
 }
+
+// ─── Load more matches ────────────────────────────────────────────────────────
+
+export async function loadMoreMatches(
+  profileId: string,
+): Promise<{ added: number; remaining: number }> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const profile = await prisma.profile.findFirst({
+    where: { id: profileId, userId },
+  });
+  if (!profile) throw new Error("Profile not found");
+
+  const { runMatchPipelineForProfile } = await import("@/lib/match-pipeline");
+  const result = await runMatchPipelineForProfile(profileId, profile);
+
+  // Re-read the updated count (pipeline persists it)
+  const updated = await prisma.profile.findUnique({
+    where: { id: profileId },
+    select: { pendingMatchCount: true },
+  });
+
+  revalidatePath("/dashboard");
+  return {
+    added: result.jobsCreated,
+    remaining: updated?.pendingMatchCount ?? 0,
+  };
+}
