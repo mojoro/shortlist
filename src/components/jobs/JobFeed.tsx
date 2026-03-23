@@ -483,7 +483,7 @@ function VirtualizedJobList({
       {/* Virtualized scroll container */}
       <div
         ref={parentRef}
-        className="h-[calc(100vh-200px)] overflow-y-auto"
+        className="h-[calc(100vh-200px)] overflow-y-auto overscroll-contain"
       >
         <div
           className="relative w-full"
