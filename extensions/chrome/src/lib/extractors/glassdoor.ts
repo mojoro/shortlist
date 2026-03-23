@@ -51,6 +51,7 @@ export const glassdoorExtractor: Extractor = {
       salaryMax: salary.salaryMax,
       currency: salary.currency,
       skills: [],
+      externalId: null,
       source: "CUSTOM",
     };
   },

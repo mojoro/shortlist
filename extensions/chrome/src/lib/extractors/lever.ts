@@ -41,6 +41,10 @@ export const leverExtractor: Extractor = {
     );
     const description = descEl?.innerHTML ?? "";
 
+    const uuidMatch = window.location.pathname.match(
+      /\/([a-f0-9-]{36})/,
+    );
+
     return {
       title,
       company,
@@ -54,6 +58,7 @@ export const leverExtractor: Extractor = {
       salaryMax: null,
       currency: null,
       skills: [],
+      externalId: uuidMatch?.[1] ?? null,
       source: "LEVER",
     };
   },

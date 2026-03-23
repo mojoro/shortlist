@@ -19,12 +19,14 @@ export interface ExtractedJob {
   salaryMax: number | null;
   currency: string | null;
   skills: string[];
+  externalId: string | null;
   source:
     | "LINKEDIN"
     | "GREENHOUSE"
     | "LEVER"
     | "ASHBY"
     | "INDEED"
+    | "USAJOBS"
     | "CUSTOM";
 }
 

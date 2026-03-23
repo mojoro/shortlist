@@ -66,6 +66,8 @@ export const indeedExtractor: Extractor = {
         .querySelector(".jobsearch-JobMetadataHeader-item")
         ?.textContent?.trim() ?? null;
 
+    const jk = new URL(window.location.href).searchParams.get("jk");
+
     return {
       title,
       company,
@@ -79,6 +81,7 @@ export const indeedExtractor: Extractor = {
       salaryMax: salary.salaryMax,
       currency: salary.currency,
       skills: [],
+      externalId: jk ?? null,
       source: "INDEED",
     };
   },

@@ -50,6 +50,10 @@ export const ashbyExtractor: Extractor = {
       document.querySelector("[data-testid='job-description']");
     const description = descEl?.innerHTML ?? "";
 
+    const uuidMatch = window.location.pathname.match(
+      /\/([a-f0-9-]{36})/,
+    );
+
     return {
       title,
       company,
@@ -63,6 +67,7 @@ export const ashbyExtractor: Extractor = {
       salaryMax: salary.salaryMax,
       currency: salary.currency,
       skills: [],
+      externalId: uuidMatch?.[1] ?? null,
       source: "ASHBY",
     };
   },

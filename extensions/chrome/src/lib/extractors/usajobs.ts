@@ -124,6 +124,8 @@ export const usajobsExtractor: Extractor = {
 
     const skills = extractUsajobsSkills();
 
+    const idMatch = window.location.pathname.match(/\/job\/(\d+)/);
+
     return {
       title,
       company,
@@ -137,7 +139,8 @@ export const usajobsExtractor: Extractor = {
       salaryMax: salary.salaryMax,
       currency: "USD",
       skills,
-      source: "CUSTOM",
+      externalId: idMatch?.[1] ?? null,
+      source: "USAJOBS",
     };
   },
 };

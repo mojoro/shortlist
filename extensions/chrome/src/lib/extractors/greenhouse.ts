@@ -31,6 +31,8 @@ export const greenhouseExtractor: Extractor = {
     const descEl = document.querySelector("#content, .body--content");
     const description = descEl?.innerHTML ?? "";
 
+    const idMatch = window.location.pathname.match(/\/jobs\/(\d+)/);
+
     return {
       title,
       company,
@@ -44,6 +46,7 @@ export const greenhouseExtractor: Extractor = {
       salaryMax: null,
       currency: null,
       skills: [],
+      externalId: idMatch?.[1] ?? null,
       source: "GREENHOUSE",
     };
   },

@@ -144,6 +144,7 @@ export const linkedinExtractor: Extractor = {
       salaryMax: salary.salaryMax,
       currency: salary.currency,
       skills,
+      externalId: idMatch?.[1] ?? null,
       source: "LINKEDIN",
     };
   },
