@@ -42,6 +42,7 @@ export type HydrationPayload = {
   applications: ApplicationWithJob[];
   followUpCount: number;
   usage: UsageSummary | null;
+  pendingMatchCount: number;
 };
 
 export interface DashboardState {
@@ -53,6 +54,7 @@ export interface DashboardState {
   applications: ApplicationWithJob[];
   followUpCount: number;
   usage: UsageSummary | null;
+  pendingMatchCount: number;
 
   // Sync state
   hydrated: boolean;
@@ -149,6 +151,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
       applications: [],
       followUpCount: 0,
       usage: null,
+      pendingMatchCount: 0,
       hydrated: false,
       lastSyncedAt: 0,
       isSyncing: false,
@@ -165,6 +168,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           applications: data.applications,
           followUpCount: data.followUpCount,
           usage: data.usage,
+          pendingMatchCount: data.pendingMatchCount,
           hydrated: true,
           lastSyncedAt: Date.now(),
         });
@@ -189,6 +193,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
             applications: data.applications,
             followUpCount: data.followUpCount,
             usage: data.usage,
+            pendingMatchCount: data.pendingMatchCount,
             lastSyncedAt: Date.now(),
           });
         } catch (err) {
@@ -541,6 +546,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
         applications: state.applications,
         followUpCount: state.followUpCount,
         usage: state.usage,
+        pendingMatchCount: state.pendingMatchCount,
         lastSyncedAt: state.lastSyncedAt,
         // hydrated / isSyncing intentionally excluded
       }),
