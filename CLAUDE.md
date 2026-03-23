@@ -144,8 +144,15 @@ to the authenticated Clerk user. Never trust a client-supplied `profileId` witho
 **Never discard raw scraper output.** Store verbatim in `JobPool.rawData: Json`. If
 normalization logic changes, re-process from `rawData` rather than re-scraping.
 
-**⚠ Dev and prod share the same Neon database.** Separation is planned. Never run
-destructive migrations (reset, drop) without checking which environment you're targeting.
+**Neon branching — dev and prod are separate databases:**
+- **`main` branch** = production database (Vercel production deployment)
+- **`dev` branch** = development + CI database (local dev, GitHub Actions, Vercel previews)
+- The Neon Vercel integration auto-provisions `DATABASE_URL` and `DATABASE_URL_UNPOOLED`
+  per environment. Never manually set these for preview deployments.
+- **Migration flow:** run `prisma migrate dev` against the dev branch locally → verify in
+  CI and preview deployments → only reaches prod when merged to `main` and Vercel deploys.
+- Never run `prisma migrate deploy` directly against the production branch. Never run
+  destructive operations (reset, drop) without confirming which branch you're targeting.
 
 Schema relationships:
 ```
@@ -353,8 +360,8 @@ No `Co-Authored-By` footer.
 ## Environment Variables
 
 ```
-DATABASE_URL                        # pooled (Prisma runtime)
-DIRECT_URL                          # direct (migrations only)
+DATABASE_URL                        # pooled (Prisma runtime) — auto-provisioned by Neon integration
+DATABASE_URL_UNPOOLED               # direct (migrations only) — auto-provisioned by Neon integration
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 CLERK_SECRET_KEY
 CLERK_WEBHOOK_SECRET                # optional — used by @clerk/nextjs/webhooks
@@ -384,9 +391,19 @@ GitHub Actions CI runs on every push to `main` and every PR:
 | Type check | — | `pnpm tsc --noEmit` |
 | Lint | — | `pnpm lint` (eslint) |
 | Unit tests | — | `pnpm test:unit` (Vitest) |
-| Playwright | typecheck + lint + unit | `pnpm test` (E2E, only if fast checks pass) |
+| Playwright | typecheck + lint + unit | `prisma migrate deploy` then `pnpm test` (E2E) |
 
-Vercel auto-deploys `main` to production and PR branches to preview URLs.
+**Database in CI:** The Playwright job targets the **Neon `dev` branch** via the
+`DATABASE_URL` and `DATABASE_URL_UNPOOLED` GitHub Actions secrets. These must always
+point to the dev branch — never production. Update them from the Neon dashboard if the
+dev branch connection strings change.
+
+**Migration in CI:** `prisma migrate deploy` runs before Playwright to ensure the dev
+branch schema is up to date. If tests fail with a missing column, the GitHub secrets
+are likely stale or pointing to the wrong branch.
+
+Vercel auto-deploys `main` to production and PR branches to preview URLs. Preview
+deployments use Neon branch databases auto-provisioned by the Neon Vercel integration.
 
 ---
 
