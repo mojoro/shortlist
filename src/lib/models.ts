@@ -12,6 +12,9 @@ export const ANALYZE_MODEL = "anthropic/claude-haiku-4.5";
 /** Job listing extraction — simple structured extraction from pasted text */
 export const EXTRACT_MODEL = "anthropic/claude-haiku-4.5";
 
+/** Borderline candidate triage — fast multimodal model for batch classification */
+export const TRIAGE_MODEL = "google/gemini-2.5-flash";
+
 /**
  * Resolve which models to use for AI tasks, preferring profile overrides
  * when set and falling back to the defaults above.
@@ -25,5 +28,6 @@ export function getModels(profile: {
     tailor: profile.customTailorModel || TAILOR_MODEL,
     analyze: profile.customAnalyzeModel || ANALYZE_MODEL,
     extract: profile.customExtractModel || EXTRACT_MODEL,
+    triage: TRIAGE_MODEL,
   };
 }
