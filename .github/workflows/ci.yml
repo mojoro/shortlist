@@ -78,6 +78,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: npx playwright install --with-deps chromium
+      - run: pnpm prisma migrate deploy
       - run: pnpm test
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
