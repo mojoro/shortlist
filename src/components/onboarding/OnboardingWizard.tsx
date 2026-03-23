@@ -29,9 +29,11 @@ type WizardData = {
   curriculumVitae: string;
   // Excluded keywords (step 5)
   excludedKeywords: string[];
+  // Work eligibility (step 3)
+  workEligibility: string[];
 };
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 
 const REMOTE_OPTIONS = [
   { value: "ANY",         label: "Anywhere — remote, hybrid, or on-site" },
@@ -72,10 +74,12 @@ export function OnboardingWizard() {
     githubUrl:        "",
     curriculumVitae:  "",
     excludedKeywords: [],
+    workEligibility:  [],
   });
 
   // Keyword chip input state
   const [keywordInput, setKeywordInput] = useState("");
+  const [eligibilityInput, setEligibilityInput] = useState("");
 
   function update(field: keyof WizardData) {
     return (
@@ -101,6 +105,25 @@ export function OnboardingWizard() {
     setData((prev) => ({
       ...prev,
       excludedKeywords: prev.excludedKeywords.filter((k) => k !== kw),
+    }));
+  }
+
+  function addEligibility(raw: string) {
+    const code = raw.trim().toUpperCase();
+    if (!code || code.length > 5) return;
+    setData((prev) => ({
+      ...prev,
+      workEligibility: prev.workEligibility.includes(code)
+        ? prev.workEligibility
+        : [...prev.workEligibility, code],
+    }));
+    setEligibilityInput("");
+  }
+
+  function removeEligibility(code: string) {
+    setData((prev) => ({
+      ...prev,
+      workEligibility: prev.workEligibility.filter((c) => c !== code),
     }));
   }
 
@@ -166,6 +189,9 @@ export function OnboardingWizard() {
           curriculumVitae:  data.curriculumVitae.trim() || undefined,
           excludedKeywords: data.excludedKeywords.length > 0
             ? data.excludedKeywords
+            : undefined,
+          workEligibility: data.workEligibility.length > 0
+            ? data.workEligibility
             : undefined,
         });
         if (process.env.NODE_ENV === "development") {
@@ -393,8 +419,93 @@ export function OnboardingWizard() {
             </>
           )}
 
-          {/* ── Step 3: Contact details (NEW) ─────────────────── */}
+          {/* ── Step 3: Work authorization ────────────────────── */}
           {step === 3 && (
+            <>
+              <div>
+                <p className="text-lg font-semibold text-[var(--text)]">
+                  Where are you authorized to work?
+                </p>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">
+                  This helps us filter out jobs that require work permits you
+                  don&apos;t have. You can always change this in settings.
+                </p>
+              </div>
+              <div>
+                <label className={LABEL_CLS} htmlFor="eligibilityInput">
+                  Country codes{" "}
+                  <span className="font-normal text-[var(--text-muted)]">(optional)</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="eligibilityInput"
+                    type="text"
+                    className={INPUT_CLS}
+                    placeholder="e.g. US, DE, GB"
+                    value={eligibilityInput}
+                    onChange={(e) => setEligibilityInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === ",") {
+                        e.preventDefault();
+                        addEligibility(eligibilityInput);
+                      }
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addEligibility(eligibilityInput)}
+                    className="cursor-pointer rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm font-medium text-[var(--text-muted)] whitespace-nowrap transition-colors hover:text-[var(--text)]"
+                  >
+                    Add
+                  </button>
+                </div>
+                <p className={HINT_CLS}>Press Enter or comma to add. Use ISO country codes.</p>
+              </div>
+              {/* Quick-select common countries */}
+              <div className="flex flex-wrap gap-2">
+                {["US", "GB", "DE", "CA", "AU", "FR", "NL", "IE", "CH", "PL"].map((code) => (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => addEligibility(code)}
+                    disabled={data.workEligibility.includes(code)}
+                    className="cursor-pointer rounded-full border border-[var(--border)] bg-[var(--bg-subtle)] px-3 py-1 text-xs font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text)] disabled:opacity-40 disabled:cursor-default"
+                  >
+                    {code}
+                  </button>
+                ))}
+              </div>
+              {data.workEligibility.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {data.workEligibility.map((code) => (
+                    <span
+                      key={code}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--bg-subtle)] px-3 py-1 text-xs font-medium text-[var(--text)]"
+                    >
+                      {code}
+                      <button
+                        type="button"
+                        onClick={() => removeEligibility(code)}
+                        aria-label={`Remove ${code}`}
+                        className="cursor-pointer leading-none text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {data.workEligibility.length === 0 && (
+                <p className="text-sm text-[var(--text-muted)]">
+                  No countries added yet. You can skip this step and set it later in Settings.
+                </p>
+              )}
+            </>
+          )}
+
+          {/* ── Step 4: Contact details ────────────────────────── */}
+          {step === 4 && (
             <>
               <div>
                 <p className="text-lg font-semibold text-[var(--text)]">
@@ -508,8 +619,8 @@ export function OnboardingWizard() {
             </>
           )}
 
-          {/* ── Step 4: Full CV (NEW) ─────────────────────────── */}
-          {step === 4 && (
+          {/* ── Step 5: Full CV ───────────────────────────────── */}
+          {step === 5 && (
             <>
               <div>
                 <p className="text-lg font-semibold text-[var(--text)]">
@@ -547,8 +658,8 @@ export function OnboardingWizard() {
             </>
           )}
 
-          {/* ── Step 5: Excluded keywords (NEW) ──────────────── */}
-          {step === 5 && (
+          {/* ── Step 6: Excluded keywords ─────────────────────── */}
+          {step === 6 && (
             <>
               <div>
                 <p className="text-lg font-semibold text-[var(--text)]">
@@ -619,8 +730,8 @@ export function OnboardingWizard() {
             </>
           )}
 
-          {/* ── Step 6: Master resume ─────────────────────────── */}
-          {step === 6 && (
+          {/* ── Step 7: Master resume ─────────────────────────── */}
+          {step === 7 && (
             <>
               <div>
                 <p className="text-lg font-semibold text-[var(--text)]">
@@ -657,8 +768,8 @@ export function OnboardingWizard() {
             </>
           )}
 
-          {/* ── Step 7: Salary ────────────────────────────────── */}
-          {step === 7 && (
+          {/* ── Step 8: Salary ────────────────────────────────── */}
+          {step === 8 && (
             <>
               <div>
                 <p className="text-lg font-semibold text-[var(--text)]">
@@ -744,13 +855,14 @@ export function OnboardingWizard() {
               disabled={!canAdvance()}
               className="cursor-pointer rounded-lg bg-[var(--accent)] px-6 py-2 text-sm font-semibold text-[var(--accent-fg)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {/* Steps 3–6 are all optional; show "Skip" when empty, "Next" when filled */}
-              {step >= 3 && step <= 6
+              {/* Steps 3–7 are all optional; show "Skip" when empty, "Next" when filled */}
+              {step >= 3 && step <= 7
                 ? (
-                    (step === 3 && !data.displayName.trim() && !data.email.trim() && !data.contactLocation.trim() && !data.phone.trim() && !data.linkedinUrl.trim() && !data.portfolioUrl.trim() && !data.githubUrl.trim()) ||
-                    (step === 4 && !data.curriculumVitae.trim()) ||
-                    (step === 5 && data.excludedKeywords.length === 0) ||
-                    (step === 6 && !data.masterResume.trim())
+                    (step === 3 && data.workEligibility.length === 0) ||
+                    (step === 4 && !data.displayName.trim() && !data.email.trim() && !data.contactLocation.trim() && !data.phone.trim() && !data.linkedinUrl.trim() && !data.portfolioUrl.trim() && !data.githubUrl.trim()) ||
+                    (step === 5 && !data.curriculumVitae.trim()) ||
+                    (step === 6 && data.excludedKeywords.length === 0) ||
+                    (step === 7 && !data.masterResume.trim())
                       ? "Skip"
                       : "Next"
                   )

@@ -29,6 +29,11 @@ export const analyzeSchema = z.object({
   profileId: z.string().min(1),
 });
 
+// ── Match route ────────────────────────────────────────────────────────────
+export const matchSchema = z.object({
+  profileId: z.string().cuid().optional(),
+});
+
 // ── Settings: profile info ─────────────────────────────────────────────────
 export const updateProfileInfoSchema = z.object({
   profileId:    z.string().cuid(),
@@ -54,6 +59,7 @@ export const updateSearchCriteriaSchema = z.object({
   requiredSkills:   z.array(z.string()),
   niceToHaveSkills: z.array(z.string()),
   excludedKeywords: z.array(z.string()),
+  workEligibility:  z.array(z.string().max(5)).optional(),
 });
 
 // ── Settings: resume ───────────────────────────────────────────────────────
@@ -107,6 +113,7 @@ export const completeOnboardingSchema = z.object({
   curriculumVitae:  z.string().optional(),
   // Excluded keywords (step 5)
   excludedKeywords: z.array(z.string()).optional(),
+  workEligibility:  z.array(z.string().max(5)).optional(),
 });
 
 // ── Job import ─────────────────────────────────────────────────────────────

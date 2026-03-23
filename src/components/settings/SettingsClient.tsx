@@ -340,6 +340,7 @@ function SearchCriteriaSection({ profile }: { profile: Profile }) {
     requiredSkills:   joinTags(profile.requiredSkills),
     niceToHaveSkills: joinTags(profile.niceToHaveSkills),
     excludedKeywords: joinTags(profile.excludedKeywords),
+    workEligibility:  joinTags(profile.workEligibility),
   });
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState<"idle" | "saving" | "matching" | "done">("idle");
@@ -372,6 +373,7 @@ function SearchCriteriaSection({ profile }: { profile: Profile }) {
           requiredSkills:   splitTags(fields.requiredSkills),
           niceToHaveSkills: splitTags(fields.niceToHaveSkills),
           excludedKeywords: splitTags(fields.excludedKeywords),
+          workEligibility:  splitTags(fields.workEligibility).map(s => s.toUpperCase()),
         });
         setRematchResult(result);
         setStatus("done");
@@ -445,6 +447,15 @@ function SearchCriteriaSection({ profile }: { profile: Profile }) {
               maxLength={5}
             />
           </div>
+        </div>
+        <div>
+          <Label>Work authorization</Label>
+          <Input
+            value={fields.workEligibility}
+            onChange={handleChange("workEligibility")}
+            placeholder="US, DE, GB"
+          />
+          <Hint>Countries where you can legally work (ISO codes). Filters out remote jobs requiring permits you don&apos;t have.</Hint>
         </div>
         <div>
           <Label>Required skills</Label>

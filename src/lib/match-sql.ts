@@ -12,21 +12,41 @@ const ROLE_STOPWORDS = new Set([
 
 const REMOTE_SIGNALS = ["remote", "anywhere", "worldwide", "distributed"];
 
-const MAX_CANDIDATES_PER_RUN = 30;
+const MAX_SQL_CANDIDATES = 500;
+
+type RolePatternResult =
+  | { patterns: string[]; regexFallback: null }
+  | { patterns: string[]; regexFallback: string };
 
 /**
  * Build ILIKE patterns from a target role string, stripping stopwords.
+ * Always includes the full compound phrase. Discards tokens under 3 chars.
+ * Returns a regex fallback pattern when all tokens were too short (e.g. "QA").
  */
-function roleToPatterns(role: string): string[] {
-  const tokens = role
-    .toLowerCase()
+function roleToPatterns(role: string): RolePatternResult {
+  const lower = role.toLowerCase();
+
+  // Always include the full compound phrase pattern
+  const compoundPattern = `%${lower}%`;
+
+  // Tokenize, strip stopwords, discard tokens under 3 chars
+  const tokens = lower
     .split(/[\s/\-&]+/)
-    .filter((t) => t.length > 1 && !ROLE_STOPWORDS.has(t));
+    .filter((t) => t.length >= 3 && !ROLE_STOPWORDS.has(t));
 
   if (tokens.length > 0) {
-    return tokens.map((t) => `%${t}%`);
+    // Normal case: compound phrase + individual token patterns
+    const patterns = [compoundPattern, ...tokens.map((t) => `%${t}%`)];
+    return { patterns, regexFallback: null };
   }
-  return [`%${role.toLowerCase()}%`];
+
+  // All tokens were discarded (all < 3 chars or all stopwords).
+  // The compound phrase alone would be too broad for short roles like "QA".
+  // Use a PostgreSQL word-boundary regex instead.
+  return {
+    patterns: [],
+    regexFallback: `\\m${lower}\\M`,
+  };
 }
 
 type ProfileCriteria = {
@@ -35,6 +55,7 @@ type ProfileCriteria = {
   excludedKeywords: string[];
   targetLocations: string[];
   remotePreference: string;
+  workEligibility: string[];
 };
 
 /**
@@ -55,7 +76,14 @@ function buildMatchConditions(profile: ProfileCriteria): Prisma.Sql[] {
     `);
   }
 
-  // 2. Location filter
+  // 2. Eligibility — pass jobs with unknown country; reject known-ineligible
+  if (profile.workEligibility.length > 0) {
+    conditions.push(Prisma.sql`
+      (jp.country IS NULL OR jp.country = ANY(${profile.workEligibility}))
+    `);
+  }
+
+  // 3. Location filter
   if (profile.targetLocations.length > 0) {
     const locationPatterns = profile.targetLocations.map(
       (loc) => `%${loc.toLowerCase()}%`,
@@ -74,7 +102,7 @@ function buildMatchConditions(profile: ProfileCriteria): Prisma.Sql[] {
     }
   }
 
-  // 3 + 4. Role match OR skill fallback
+  // 4 + 5. Role match OR skill fallback
   const hasRoles = profile.targetRoles.length > 0;
   const hasSkills = profile.requiredSkills.length > 0;
 
@@ -82,10 +110,32 @@ function buildMatchConditions(profile: ProfileCriteria): Prisma.Sql[] {
     const titleConditions: Prisma.Sql[] = [];
 
     if (hasRoles) {
-      const rolePatterns = profile.targetRoles.flatMap(roleToPatterns);
-      titleConditions.push(Prisma.sql`
-        LOWER(jp.title) LIKE ANY(${rolePatterns})
-      `);
+      // Collect ILIKE patterns and regex fallbacks separately
+      const allIlikePatterns: string[] = [];
+      const regexPatterns: string[] = [];
+
+      for (const role of profile.targetRoles) {
+        const result = roleToPatterns(role);
+        if (result.patterns.length > 0) {
+          allIlikePatterns.push(...result.patterns);
+        }
+        if (result.regexFallback !== null) {
+          regexPatterns.push(result.regexFallback);
+        }
+      }
+
+      if (allIlikePatterns.length > 0) {
+        titleConditions.push(Prisma.sql`
+          LOWER(jp.title) LIKE ANY(${allIlikePatterns})
+        `);
+      }
+
+      // Regex fallback for short-token roles (e.g. "QA", "IT") — word boundary match
+      for (const pattern of regexPatterns) {
+        titleConditions.push(Prisma.sql`
+          jp.title ~* ${pattern}
+        `);
+      }
     }
 
     if (hasSkills) {
@@ -127,13 +177,33 @@ export async function findMatchingPoolIds(
       ? Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}`
       : Prisma.empty;
 
-  const result = await prisma.$queryRaw<{ id: string }[]>`
-    SELECT jp.id
-    FROM job_pool jp
-    ${whereClause}
-    ORDER BY jp."postedAt" DESC NULLS LAST
-    LIMIT ${MAX_CANDIDATES_PER_RUN}
-  `;
+  // Soft-rank: jobs with required skills in description come first
+  const hasSkills = profile.requiredSkills.length > 0;
+
+  let result: { id: string }[];
+
+  if (hasSkills) {
+    const skillPatterns = profile.requiredSkills.map(
+      (s) => `%${s.toLowerCase()}%`,
+    );
+    result = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT jp.id
+      FROM job_pool jp
+      ${whereClause}
+      ORDER BY
+        CASE WHEN LOWER(jp.description) LIKE ANY(${skillPatterns}) THEN 0 ELSE 1 END,
+        jp."postedAt" DESC NULLS LAST
+      LIMIT ${MAX_SQL_CANDIDATES}
+    `;
+  } else {
+    result = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT jp.id
+      FROM job_pool jp
+      ${whereClause}
+      ORDER BY jp."postedAt" DESC NULLS LAST
+      LIMIT ${MAX_SQL_CANDIDATES}
+    `;
+  }
 
   return result.map((r) => r.id);
 }

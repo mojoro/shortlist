@@ -5,7 +5,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { findMatchingPoolIds, rematchProfileSql } from "@/lib/match-sql";
+import { findStaleJobIds } from "@/lib/match-sql";
+import { runMatchPipelineForProfile } from "@/lib/match-pipeline";
 import {
   updateProfileInfoSchema,
   updateSearchCriteriaSchema,
@@ -70,12 +71,23 @@ export async function updateSearchCriteria(
     data:  fields,
   });
 
-  // Auto-rematch against the pool with the new criteria — all in SQL
-  const result = await rematchProfileSql(profileId, updated);
+  // Remove stale jobs (SQL-only — conservative, keeps borderline jobs)
+  const staleIds = await findStaleJobIds(profileId, updated);
+  let removed = 0;
+  if (staleIds.length > 0) {
+    const { count } = await prisma.job.updateMany({
+      where: { id: { in: staleIds } },
+      data: { feedStatus: "HIDDEN" },
+    });
+    removed = count;
+  }
+
+  // Add new matches using the three-tier pipeline
+  const pipelineResult = await runMatchPipelineForProfile(profileId, updated);
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");
-  return result;
+  return { removed, added: pipelineResult.jobsCreated };
 }
 
 // ─── Resume ──────────────────────────────────────────────────────────────────
@@ -336,21 +348,9 @@ export async function completeOnboarding(
     },
   });
 
-  // Match new profile against the existing pool — all in SQL
-  const matchedIds = await findMatchingPoolIds(profile.id, profile);
-
-  let jobsFound = 0;
-  if (matchedIds.length > 0) {
-    const result = await prisma.job.createMany({
-      data: matchedIds.map((poolId) => ({
-        profileId:  profile.id,
-        jobPoolId:  poolId,
-        feedStatus: "NEW" as const,
-      })),
-      skipDuplicates: true,
-    });
-    jobsFound = result.count;
-  }
+  // Match new profile using three-tier pipeline
+  const pipelineResult = await runMatchPipelineForProfile(profile.id, profile);
+  const jobsFound = pipelineResult.jobsCreated;
 
   revalidatePath("/dashboard");
   return { profileId: profile.id, jobsFound };
@@ -369,10 +369,21 @@ export async function rematchProfile(
   });
   if (!profile) throw new Error("Profile not found");
 
-  const result = await rematchProfileSql(profileId, profile);
+  // Remove stale jobs
+  const staleIds = await findStaleJobIds(profileId, profile);
+  let removed = 0;
+  if (staleIds.length > 0) {
+    const { count } = await prisma.job.updateMany({
+      where: { id: { in: staleIds } },
+      data: { feedStatus: "HIDDEN" },
+    });
+    removed = count;
+  }
+
+  // Add new matches
+  const pipelineResult = await runMatchPipelineForProfile(profileId, profile);
 
   revalidatePath("/dashboard");
   revalidatePath("/settings");
-
-  return result;
+  return { removed, added: pipelineResult.jobsCreated };
 }

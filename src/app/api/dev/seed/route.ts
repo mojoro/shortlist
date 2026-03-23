@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { ScraperSource, LocationType, JobType } from "@prisma/client";
+import { ScraperSource, LocationType, JobType, MatchTier } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 // Only available when E2E_SEED is set (CI and local test runs)
@@ -126,6 +126,7 @@ English (C2), German (B2)`;
       niceToHaveSkills: ["PostgreSQL", "Python", "AI/ML tooling"],
       excludedKeywords: ["10+ years", "C++", "COBOL", "Java"],
       remotePreference: "HYBRID_OK",
+      workEligibility: ["DE", "EU"],
       scraperSources: ["GREENHOUSE", "LEVER", "ASHBY"],
     },
   });
@@ -147,6 +148,8 @@ English (C2), German (B2)`;
         aiGapPoints: ["GraphQL listed as strong plus — brush up on mutations"],
         aiAnalyzedAt: daysAgo(1),
         aiModel: "anthropic/claude-3-haiku",
+        matchTier: MatchTier.HEURISTIC,
+        matchConfidence: 0.95,
         jobPool: {
           create: {
             externalId: "greenhouse-kombo-fe-001",
@@ -183,6 +186,8 @@ English (C2), German (B2)`;
         aiGapPoints: ["Python backend expected — you'll need basic familiarity", "Fintech domain knowledge a plus"],
         aiAnalyzedAt: daysAgo(2),
         aiModel: "anthropic/claude-3-haiku",
+        matchTier: MatchTier.HEURISTIC,
+        matchConfidence: 0.91,
         jobPool: {
           create: {
             externalId: "lever-taktile-fe-001",
@@ -219,6 +224,8 @@ English (C2), German (B2)`;
         aiGapPoints: ["Browser extension experience not on your resume", "Startup stage means broad scope"],
         aiAnalyzedAt: daysAgo(3),
         aiModel: "anthropic/claude-3-haiku",
+        matchTier: MatchTier.HEURISTIC,
+        matchConfidence: 0.87,
         jobPool: {
           create: {
             externalId: "ashby-cogram-fe-001",
@@ -256,6 +263,8 @@ English (C2), German (B2)`;
         aiGapPoints: ["Angular primary codebase — not your specialty", "Large enterprise culture", "Strong testing culture expected"],
         aiAnalyzedAt: daysAgo(4),
         aiModel: "anthropic/claude-3-haiku",
+        matchTier: MatchTier.HEURISTIC,
+        matchConfidence: 0.68,
         jobPool: {
           create: {
             externalId: "greenhouse-personio-fe-001",
@@ -292,6 +301,8 @@ English (C2), German (B2)`;
         aiGapPoints: ["Fully onsite — conflicts with your hybrid preference", "€70–85k at the low end of your target", "Logistics domain may not excite"],
         aiAnalyzedAt: daysAgo(5),
         aiModel: "anthropic/claude-3-haiku",
+        matchTier: MatchTier.HEURISTIC,
+        matchConfidence: 0.62,
         jobPool: {
           create: {
             externalId: "lever-forto-fe-001",
@@ -328,6 +339,8 @@ English (C2), German (B2)`;
         aiGapPoints: ["€65–80k below your minimum", "React Native web not on your resume", "Quick commerce may not align with interests"],
         aiAnalyzedAt: daysAgo(6),
         aiModel: "anthropic/claude-3-haiku",
+        matchTier: MatchTier.HEURISTIC,
+        matchConfidence: 0.55,
         jobPool: {
           create: {
             externalId: "ashby-gorillas-fe-001",
@@ -365,6 +378,8 @@ English (C2), German (B2)`;
         aiGapPoints: ["Java — not your stack", "No frontend component", "Large enterprise culture", "SAP ecosystem knowledge required"],
         aiAnalyzedAt: daysAgo(7),
         aiModel: "anthropic/claude-3-haiku",
+        matchTier: MatchTier.HEURISTIC,
+        matchConfidence: 0.22,
         jobPool: {
           create: {
             externalId: "greenhouse-sap-java-001",
@@ -401,6 +416,8 @@ English (C2), German (B2)`;
         aiGapPoints: ["Swift/iOS — not your stack", "No web frontend component"],
         aiAnalyzedAt: daysAgo(8),
         aiModel: "anthropic/claude-3-haiku",
+        matchTier: MatchTier.HEURISTIC,
+        matchConfidence: 0.15,
         jobPool: {
           create: {
             externalId: "lever-zalando-ios-001",
@@ -431,6 +448,8 @@ English (C2), German (B2)`;
       data: {
         profile: { connect: { id: profile.id } },
         feedStatus: "NEW",
+        matchTier: MatchTier.HEURISTIC,
+        matchConfidence: 0.88,
         jobPool: {
           create: {
             externalId: "ashby-moonfare-fe-001",
@@ -460,6 +479,8 @@ English (C2), German (B2)`;
       data: {
         profile: { connect: { id: profile.id } },
         feedStatus: "NEW",
+        matchTier: MatchTier.HEURISTIC,
+        matchConfidence: 0.90,
         jobPool: {
           create: {
             externalId: "greenhouse-pitch-fe-001",
@@ -489,6 +510,8 @@ English (C2), German (B2)`;
       data: {
         profile: { connect: { id: profile.id } },
         feedStatus: "NEW",
+        matchTier: MatchTier.HEURISTIC,
+        matchConfidence: 0.82,
         jobPool: {
           create: {
             externalId: "lever-sumup-fe-001",
@@ -518,6 +541,8 @@ English (C2), German (B2)`;
       data: {
         profile: { connect: { id: profile.id } },
         feedStatus: "NEW",
+        matchTier: MatchTier.HEURISTIC,
+        matchConfidence: 0.75,
         jobPool: {
           create: {
             externalId: "ashby-meister-fe-001",
@@ -547,6 +572,8 @@ English (C2), German (B2)`;
       data: {
         profile: { connect: { id: profile.id } },
         feedStatus: "NEW",
+        matchTier: MatchTier.HEURISTIC,
+        matchConfidence: 0.86,
         jobPool: {
           create: {
             externalId: "greenhouse-contentful-fe-001",
@@ -576,6 +603,8 @@ English (C2), German (B2)`;
       data: {
         profile: { connect: { id: profile.id } },
         feedStatus: "NEW",
+        matchTier: MatchTier.HEURISTIC,
+        matchConfidence: 0.79,
         jobPool: {
           create: {
             externalId: "lever-ecosia-fe-001",

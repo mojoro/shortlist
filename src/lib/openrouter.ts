@@ -12,4 +12,4 @@ export const openrouter = new OpenAI({
 });
 
 // Re-export model constants so existing server-side imports keep working
-export { TAILOR_MODEL, ANALYZE_MODEL, EXTRACT_MODEL, getModels } from "@/lib/models";
+export { TAILOR_MODEL, ANALYZE_MODEL, EXTRACT_MODEL, TRIAGE_MODEL, getModels } from "@/lib/models";
