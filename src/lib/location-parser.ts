@@ -412,6 +412,94 @@ const CITY_TO_COUNTRY: Record<string, ParsedLocation> = {
   "rio de janeiro": { country: "BR", region: "Rio de Janeiro" },
 };
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const NULL_RESULT: ParsedLocation = { country: null, region: null };
+
+/** Words/phrases that indicate an unparseable or deliberately vague location */
+const UNPARSEABLE_PATTERNS = [
+  /^remote$/i,
+  /^anywhere$/i,
+  /^multiple locations?$/i,
+  /^worldwide$/i,
+  /^global$/i,
+  /^various$/i,
+];
+
+/** Strip "Remote" prefix variants and return the qualifier, or null if none */
+function extractRemoteQualifier(raw: string): string | null {
+  // "Remote (XX only)" → "XX only" → "XX"
+  const parens = raw.match(/^remote\s*\(([^)]+)\)/i);
+  if (parens) return parens[1].replace(/\s+only$/i, "").trim();
+
+  // "Remote - XX" or "Remote — XX"
+  const dash = raw.match(/^remote\s*[-–—]\s*(.+)$/i);
+  if (dash) return dash[1].trim();
+
+  // "Remote / XX" (less common)
+  const slash = raw.match(/^remote\s*\/\s*(.+)$/i);
+  if (slash) return slash[1].trim();
+
+  return null;
+}
+
+/** Try to match a single normalised token against all lookup tables.
+ *  Returns a ParsedLocation or null if no match found.
+ *  Priority: US states → DE states → cities → country names.
+ */
+function matchToken(token: string): ParsedLocation | null {
+  const lower = token.trim().toLowerCase();
+  if (!lower) return null;
+
+  // 1. US state (abbreviation or full name)
+  if (US_STATES[lower]) {
+    return { country: "US", region: US_STATES[lower] };
+  }
+
+  // 2. German state
+  if (DE_STATES[lower]) {
+    return { country: "DE", region: DE_STATES[lower] };
+  }
+
+  // 3. City
+  if (CITY_TO_COUNTRY[lower]) {
+    return CITY_TO_COUNTRY[lower];
+  }
+
+  // 4. Country name/alias
+  if (COUNTRY_NAMES[lower]) {
+    return { country: COUNTRY_NAMES[lower], region: null };
+  }
+
+  return null;
+}
+
+/** Match a remote qualifier token — country names/ISO codes take priority over
+ *  state abbreviations so that "DE" means Germany, not Delaware. */
+function matchRemoteQualifier(token: string): ParsedLocation | null {
+  const lower = token.trim().toLowerCase();
+  if (!lower) return null;
+
+  // Country names and ISO codes take precedence in qualifier context
+  if (COUNTRY_NAMES[lower]) {
+    return { country: COUNTRY_NAMES[lower], region: null };
+  }
+
+  // Fall back to state/city matching
+  return matchToken(token);
+}
+
+/** Split input into parts for multi-stage matching. */
+function splitParts(input: string): string[] {
+  return input.split(/,\s*|\s+or\s+/i).map((p) => p.trim()).filter(Boolean);
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
 export function parseLocation(location: string | null): ParsedLocation {
   return { country: null, region: null };
 }
