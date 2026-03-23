@@ -83,6 +83,63 @@ const BOILERPLATE_MARKERS = [
   "company description",
 ];
 
+// ── Tokenisation helpers ─────────────────────────────────────────────────────
+
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[\s/\-&,.()\[\]|:;!?]+/)
+    .filter((t) => t.length > 0);
+}
+
+function tokenizeRoles(roles: string[]): string[] {
+  return roles
+    .flatMap((r) => tokenize(r))
+    .filter((t) => t.length >= 3 && !ROLE_STOPWORDS.has(t));
+}
+
+// ── Signal 1: Title relevance ────────────────────────────────────────────────
+
+export function scoreTitleRelevance(
+  title: string,
+  targetRoles: string[],
+): number {
+  if (targetRoles.length === 0) return 0.5;
+
+  const lowerTitle = title.toLowerCase();
+
+  // Full phrase match — any target role appears verbatim as a substring
+  for (const role of targetRoles) {
+    if (lowerTitle.includes(role.toLowerCase())) return 1.0;
+  }
+
+  // Token overlap — tokenize all roles together, count matches against title tokens
+  const roleTokens = tokenizeRoles(targetRoles);
+
+  if (roleTokens.length === 0) {
+    // All tokens were stopwords — fall back to raw phrase search
+    for (const role of targetRoles) {
+      if (lowerTitle.includes(role.toLowerCase())) return 0.5;
+    }
+    return 0.0;
+  }
+
+  const titleTokens = new Set(tokenize(lowerTitle));
+  const matched = roleTokens.filter((t) => titleTokens.has(t)).length;
+  const ratio = matched / roleTokens.length;
+
+  if (ratio === 0) {
+    // Check for any single raw-role substring (partial phrase hit)
+    for (const role of targetRoles) {
+      if (lowerTitle.includes(role.toLowerCase())) return 0.3;
+    }
+    return 0.0;
+  }
+
+  // Map 0 < ratio <= 1 to 0.3–0.9 proportionally, 1.0 already handled above
+  return 0.3 + ratio * 0.6;
+}
+
 // ── Main export ──────────────────────────────────────────────────────────────
 
 /**
