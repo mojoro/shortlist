@@ -15,7 +15,6 @@ import {
   normalizeAdzunaForPool,
   normalizeArbeitnowForPool,
 } from "@/lib/normalize";
-import { findMatchingPoolIds } from "@/lib/match-sql";
 import type { ScraperSource } from "@prisma/client";
 
 export const maxDuration = 60;
@@ -177,68 +176,25 @@ export async function POST(req: Request) {
     }
   }
 
-  // ── MATCH LAYER ───────────────────────────────────────────────────────────
-  // Profile matching now runs entirely in SQL — only matched IDs are
-  // returned from the database, eliminating the 2000-row data transfer.
-
-  const profiles = await prisma.profile.findMany({
-    where: { scraperEnabled: true },
+  // Fire-and-forget call to /api/match — don't await the response
+  const matchUrl = new URL("/api/match", env.NEXT_PUBLIC_APP_URL);
+  fetch(matchUrl.toString(), {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${env.CRON_SECRET}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({}),
+  }).catch((err) => {
+    console.error("[/api/scrape] Failed to trigger match:", err);
   });
 
-  const results: { profileId: string; jobsNew: number; status: string }[] = [];
-
-  for (const profile of profiles) {
-    const profileStart = Date.now();
-    let jobsNew = 0;
-    let profileStatus: "SUCCESS" | "FAILED" = "SUCCESS";
-    let profileError: string | undefined;
-
-    try {
-      const matchedIds = await findMatchingPoolIds(profile.id, profile);
-
-      if (matchedIds.length > 0) {
-        const { count } = await prisma.job.createMany({
-          data: matchedIds.map((poolId) => ({
-            profileId: profile.id,
-            jobPoolId: poolId,
-            feedStatus: "NEW" as const,
-          })),
-          skipDuplicates: true,
-        });
-        jobsNew = count;
-      }
-
-      await prisma.profile.update({
-        where: { id: profile.id },
-        data:  { lastScrapedAt: new Date() },
-      });
-    } catch (err) {
-      console.error(`[/api/scrape] Match failed for profile ${profile.id}:`, err);
-      profileStatus = "FAILED";
-      profileError  = err instanceof Error ? err.message : String(err);
-    }
-
-    await prisma.scrapeRun.create({
-      data: {
-        profileId:    profile.id,
-        source:       "GREENHOUSE",
-        status:       profileStatus,
-        jobsFound:    0,
-        jobsNew,
-        errorMessage: profileError,
-        durationMs:   Date.now() - profileStart,
-      },
-    });
-
-    results.push({ profileId: profile.id, jobsNew, status: profileStatus });
-  }
-
   if (process.env.NODE_ENV === "development") {
-    console.log(`[/api/scrape] Exit — totalPoolNew: ${totalPoolNew}, profiles: ${results.length}, durationMs: ${Date.now() - startMs}`);
+    console.log(`[/api/scrape] Exit — totalPoolNew: ${totalPoolNew}, durationMs: ${Date.now() - startMs}`);
   }
 
   revalidateTag("dashboard-stats");
-  return Response.json({ poolNew: totalPoolNew, results });
+  return Response.json({ poolNew: totalPoolNew });
 }
 
 // Vercel cron jobs send GET requests — delegate to the same handler
