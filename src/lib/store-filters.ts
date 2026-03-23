@@ -74,6 +74,13 @@ export function sortJobs(
       });
       break;
 
+    case "source":
+      sorted.sort((a, b) => {
+        const cmp = a.jobPool.source.localeCompare(b.jobPool.source);
+        return ascending ? cmp : -cmp;
+      });
+      break;
+
     default:
       // "match" — always descending, direction parameter ignored
       sorted.sort((a, b) => {
