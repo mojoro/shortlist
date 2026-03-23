@@ -1,9 +1,22 @@
+import { linkedinExtractor } from "./linkedin";
 import { greenhouseExtractor } from "./greenhouse";
 import { leverExtractor } from "./lever";
+import { ashbyExtractor } from "./ashby";
+import { usajobsExtractor } from "./usajobs";
+import { indeedExtractor } from "./indeed";
+import { glassdoorExtractor } from "./glassdoor";
 import { collectPageContent } from "./generic";
 import type { Extractor, ExtractionResult } from "../../types";
 
-const extractors: Extractor[] = [greenhouseExtractor, leverExtractor];
+const extractors: Extractor[] = [
+  linkedinExtractor,
+  greenhouseExtractor,
+  leverExtractor,
+  ashbyExtractor,
+  usajobsExtractor,
+  indeedExtractor,
+  glassdoorExtractor,
+];
 
 /**
  * Attempt extraction using a site-specific extractor first, then fall back

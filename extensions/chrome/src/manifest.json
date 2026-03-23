@@ -19,9 +19,15 @@
   "content_scripts": [
     {
       "matches": [
+        "*://*.linkedin.com/jobs/view/*",
         "*://boards.greenhouse.io/*/jobs/*",
         "*://jobs.greenhouse.io/*/jobs/*",
-        "*://jobs.lever.co/*/*"
+        "*://jobs.lever.co/*/*",
+        "*://jobs.ashbyhq.com/*/*",
+        "*://*.usajobs.gov/job/*",
+        "*://*.indeed.com/viewjob*",
+        "*://*.glassdoor.com/job-listing/*",
+        "*://*.glassdoor.co.*/job-listing/*"
       ],
       "js": ["src/content/content.ts"],
       "run_at": "document_idle"
