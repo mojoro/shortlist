@@ -296,7 +296,7 @@ export async function deleteProfile(data: unknown): Promise<void> {
 
 export async function completeOnboarding(
   data: unknown,
-): Promise<{ profileId: string; jobsFound: number }> {
+): Promise<{ profileId: string }> {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
@@ -348,12 +348,10 @@ export async function completeOnboarding(
     },
   });
 
-  // Match new profile using three-tier pipeline
-  const pipelineResult = await runMatchPipelineForProfile(profile.id, profile);
-  const jobsFound = pipelineResult.jobsCreated;
-
+  // Pipeline runs in the background after dashboard loads — not here.
+  // This keeps onboarding fast (< 1 second).
   revalidatePath("/dashboard");
-  return { profileId: profile.id, jobsFound };
+  return { profileId: profile.id };
 }
 
 // ─── Re-match from pool ───────────────────────────────────────────────────────

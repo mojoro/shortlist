@@ -198,11 +198,7 @@ export function OnboardingWizard() {
           console.log("[OnboardingWizard] completeOnboarding response:", result);
         }
         document.cookie = "shortlist-onboarded=true; path=/";
-        if (result.jobsFound === 0) {
-          setPhase("zero-match");
-        } else {
-          router.push("/dashboard");
-        }
+        router.push("/dashboard");
       } catch (err) {
         if (process.env.NODE_ENV === "development") {
           console.log("[OnboardingWizard] completeOnboarding error:", err);
