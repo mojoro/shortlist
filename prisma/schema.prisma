@@ -65,6 +65,7 @@ model Profile {
   excludedKeywords String[]  // ["Senior", "Lead", "10+ years"] — auto-reject triggers
   companySize      CompanySize[]
   remotePreference RemotePreference @default(ANY)
+  workEligibility  String[]  // ISO 3166-1 alpha-2 codes ["US", "DE"]
 
   // Resume
   masterResume     String?   // Markdown — the base resume for this profile
@@ -103,6 +104,7 @@ model Profile {
   jobs         Job[]
   applications Application[]
   scrapeRuns   ScrapeRun[]
+  matchRuns    MatchRun[]
 
   @@index([userId])
   @@map("profiles")
@@ -144,11 +146,14 @@ model JobPool {
   skills       String[]
   companySize  String?
   industry     String?
+  country      String?   // ISO 3166-1 alpha-2 uppercase (e.g. "US", "DE")
+  region       String?   // Sub-country region (e.g. "California", "Berlin")
 
   jobs        Job[]
 
   @@unique([source, externalId])
   @@index([source, createdAt(sort: Desc)])
+  @@index([country])
   @@map("job_pool")
 }
 
@@ -180,9 +185,11 @@ model Job {
   aiModel        String?
 
   // Feed state
-  feedStatus  FeedStatus  @default(NEW)
-  viewedAt    DateTime?
-  userNotes   String?
+  feedStatus      FeedStatus  @default(NEW)
+  viewedAt        DateTime?
+  userNotes       String?
+  matchTier       MatchTier?
+  matchConfidence Float?
 
   // Relations
   profile     Profile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
@@ -296,6 +303,11 @@ model Usage {
   currentMonthOutputTokens Int @default(0)
   currentMonthResetsAt     DateTime?
 
+  // Triage-specific tracking
+  triageCallCount    Int @default(0)
+  triageInputTokens  Int @default(0)
+  triageOutputTokens Int @default(0)
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("usage")
@@ -326,6 +338,33 @@ model ScrapeRun {
 
   @@index([profileId, createdAt(sort: Desc)])
   @@map("scrape_runs")
+}
+
+// ============================================================
+// MATCH RUN
+// Log of each three-tier matching execution — tracks funnel
+// metrics (SQL candidates → heuristic accepts → AI triage)
+// for pipeline observability.
+// ============================================================
+
+model MatchRun {
+  id        String   @id @default(cuid())
+  profileId String
+  createdAt DateTime @default(now())
+
+  candidatesFromSql    Int @default(0)
+  acceptedByHeuristic  Int @default(0)
+  borderlineToAi       Int @default(0)
+  acceptedByAi         Int @default(0)
+  rejectedTotal        Int @default(0)
+  aiTokensUsed         Int @default(0)
+  durationMs           Int?
+  errorMessage         String?
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, createdAt(sort: Desc)])
+  @@map("match_runs")
 }
 
 // ============================================================
@@ -448,4 +487,9 @@ enum ScrapeStatus {
   SUCCESS
   PARTIAL    // completed but with some errors
   FAILED
+}
+
+enum MatchTier {
+  HEURISTIC
+  AI_TRIAGE
 }
