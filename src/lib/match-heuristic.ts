@@ -324,5 +324,42 @@ export function scoreAndClassify(
   candidates: PoolCandidate[],
   profile: HeuristicProfile,
 ): HeuristicResult {
-  return { accepted: [], borderline: [], rejected: candidates.map(c => ({ id: c.id, confidence: 0 })) };
+  const result: HeuristicResult = {
+    accepted: [],
+    borderline: [],
+    rejected: [],
+  };
+
+  for (const candidate of candidates) {
+    const titleScore = scoreTitleRelevance(candidate.title, profile.targetRoles);
+    const skillScore = scoreSkillOverlap(
+      candidate,
+      profile.requiredSkills,
+      profile.niceToHaveSkills,
+    );
+    const locationScore = scoreLocationQuality(candidate, profile);
+    const descriptionScore = scoreDescriptionRelevance(
+      candidate.descriptionExcerpt,
+      profile.targetRoles,
+      profile.requiredSkills,
+    );
+    const metadataScore = scoreMetadata(candidate, profile);
+
+    const composite =
+      titleScore * WEIGHTS.titleRelevance +
+      skillScore * WEIGHTS.skillOverlap +
+      locationScore * WEIGHTS.locationQuality +
+      descriptionScore * WEIGHTS.descriptionRelevance +
+      metadataScore * WEIGHTS.metadataSignals;
+
+    if (composite >= ACCEPT_THRESHOLD) {
+      result.accepted.push({ id: candidate.id, confidence: composite });
+    } else if (composite >= BORDERLINE_THRESHOLD) {
+      result.borderline.push({ id: candidate.id, confidence: composite, candidate });
+    } else {
+      result.rejected.push({ id: candidate.id, confidence: composite });
+    }
+  }
+
+  return result;
 }
