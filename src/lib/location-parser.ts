@@ -501,5 +501,108 @@ function splitParts(input: string): string[] {
 // ---------------------------------------------------------------------------
 
 export function parseLocation(location: string | null): ParsedLocation {
-  return { country: null, region: null };
+  // 1. Null / empty
+  if (!location || !location.trim()) return NULL_RESULT;
+
+  const raw = location.trim();
+
+  // 2. Unparseable / vague
+  for (const pattern of UNPARSEABLE_PATTERNS) {
+    if (pattern.test(raw)) return NULL_RESULT;
+  }
+
+  // 3. Remote with qualifier
+  const qualifier = extractRemoteQualifier(raw);
+  if (qualifier !== null) {
+    // Try to parse the qualifier itself
+    const qualLower = qualifier.toLowerCase().trim();
+    // Check for continent-level or non-country qualifiers that we can't map
+    const continents = ["europe", "emea", "apac", "latam", "asia", "americas", "africa", "global", "worldwide"];
+    if (continents.includes(qualLower)) return NULL_RESULT;
+
+    // Use matchRemoteQualifier so ISO codes (e.g. "DE") resolve as countries
+    const parsed = matchRemoteQualifier(qualifier);
+    if (parsed) return { country: parsed.country, region: null }; // remote → drop city-level region
+    // Qualifier couldn't be parsed
+    return NULL_RESULT;
+  }
+
+  // 4. Handle bare "Remote" (no qualifier) already caught above in UNPARSEABLE_PATTERNS.
+  //    Also catch "Remote, US" style — if raw starts with "Remote" but wasn't caught
+  //    by extractRemoteQualifier, split and try rest.
+  if (/^remote\b/i.test(raw)) {
+    // Strip leading "Remote" word and try remaining tokens
+    const rest = raw.replace(/^remote\b[\s,]*/i, "").trim();
+    if (!rest) return NULL_RESULT;
+    const parsed = matchToken(rest);
+    if (parsed) return { country: parsed.country, region: null };
+    return NULL_RESULT;
+  }
+
+  // 5. General parsing — multi-part strategy
+  //    Split into parts (e.g. "San Francisco, CA" → ["San Francisco", "CA"]).
+  //    Step A: find the best country/state identifier (state abbrev, state name,
+  //            country name) scanning all parts. State/country tokens carry the
+  //            authoritative country code and (for states) the region.
+  //    Step B: if Step A found a country but not a region, look for a city in
+  //            the other parts to use as the region.
+  //    Step C: if no state/country found at all, fall back to city matching.
+  const parts = splitParts(raw);
+  // Also try the full string as a single-token candidate for multi-word places.
+  const allCandidates = parts.length > 1 ? [...parts, raw] : parts;
+
+  let resolvedCountry: string | null = null;
+  let resolvedRegion: string | null = null;
+
+  // Step A: scan for a state or country token
+  for (const candidate of allCandidates) {
+    const lower = candidate.trim().toLowerCase();
+    if (US_STATES[lower]) {
+      resolvedCountry = "US";
+      resolvedRegion = US_STATES[lower];
+      break;
+    }
+    if (DE_STATES[lower]) {
+      resolvedCountry = "DE";
+      resolvedRegion = DE_STATES[lower];
+      break;
+    }
+    if (COUNTRY_NAMES[lower]) {
+      resolvedCountry = COUNTRY_NAMES[lower];
+      // Don't break yet — keep scanning for a state/city to use as region
+      // But mark resolved so Step C knows we found a country.
+    }
+  }
+
+  // If we only got a country (no region from state), look for a matching city
+  // among the other parts.
+  if (resolvedCountry && !resolvedRegion) {
+    for (const candidate of parts) {
+      const lower = candidate.trim().toLowerCase();
+      const city = CITY_TO_COUNTRY[lower];
+      if (city && city.country === resolvedCountry) {
+        resolvedRegion = city.region;
+        break;
+      }
+      // Also allow DE states (like Berlin) as regions when country is DE
+      if (resolvedCountry === "DE" && DE_STATES[lower]) {
+        resolvedRegion = DE_STATES[lower];
+        break;
+      }
+    }
+    return { country: resolvedCountry, region: resolvedRegion };
+  }
+
+  if (resolvedCountry) {
+    return { country: resolvedCountry, region: resolvedRegion };
+  }
+
+  // Step C: no state/country found — fall back to city-first matching
+  for (const candidate of allCandidates) {
+    const city = CITY_TO_COUNTRY[candidate.trim().toLowerCase()];
+    if (city) return city;
+  }
+
+  // 6. Nothing matched
+  return NULL_RESULT;
 }
