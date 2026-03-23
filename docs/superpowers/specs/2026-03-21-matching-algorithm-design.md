@@ -328,12 +328,26 @@ fast model to make a yes/no relevance decision with minimal token usage.
 
 ### Model and cost
 
-- Model: `anthropic/claude-haiku-4.5` (same as analyze — fast, cheap)
+- Model: `google/gemini-2.5-flash` — cheapest reliable option for simple yes/no
+  classification with JSON output. Defined as `TRIAGE_MODEL` in `src/lib/models.ts`
+  (independent of the analyze/tailor/extract model constants).
 - Batching: up to 10 jobs per prompt to amortize system prompt overhead
 - Per-call estimate: ~2100 input tokens (system prompt ~100 + 10 jobs × ~200
   each), ~200 output tokens (10 decisions × ~20 each)
-- At Haiku 4.5 pricing (~$0.80/M input, ~$4/M output): ~$0.002 per batch call,
-  ~$0.01-0.03 per profile per run (8-15 calls for a broad search)
+
+**Cost comparison (per batch of 10 jobs via OpenRouter):**
+
+| Model | Input $/M | Output $/M | Per batch | Per profile (15 batches) |
+|---|---|---|---|---|
+| `google/gemini-2.5-flash` | $0.15 | $0.60 | ~$0.0004 | ~$0.006 |
+| `google/gemini-2.0-flash` | $0.10 | $0.40 | ~$0.0003 | ~$0.004 |
+| `deepseek/deepseek-v3` | $0.30 | $0.88 | ~$0.0008 | ~$0.012 |
+| `anthropic/claude-haiku-4.5` | $0.80 | $4.00 | ~$0.0025 | ~$0.037 |
+
+Gemini 2.5 Flash is ~6x cheaper than Haiku for this task. The triage task is
+trivial classification — it does not need the reasoning capability of a more
+expensive model. Verify current OpenRouter pricing before deployment as rates
+shift.
 
 ### Prompt design
 
