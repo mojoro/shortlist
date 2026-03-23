@@ -216,6 +216,36 @@ const US_STATES: Record<string, string> = {
   "district of columbia": "District of Columbia",
 };
 
+/** German Bundesländer → canonical German state name */
+const DE_STATES: Record<string, string> = {
+  "baden-württemberg": "Baden-Württemberg",
+  "baden-wurttemberg": "Baden-Württemberg",
+  bavaria: "Bayern",
+  bayern: "Bayern",
+  berlin: "Berlin",
+  brandenburg: "Brandenburg",
+  bremen: "Bremen",
+  hamburg: "Hamburg",
+  hessen: "Hessen",
+  hesse: "Hessen",
+  "mecklenburg-vorpommern": "Mecklenburg-Vorpommern",
+  "mecklenburg-western pomerania": "Mecklenburg-Vorpommern",
+  "lower saxony": "Niedersachsen",
+  niedersachsen: "Niedersachsen",
+  "north rhine-westphalia": "Nordrhein-Westfalen",
+  "nordrhein-westfalen": "Nordrhein-Westfalen",
+  "rheinland-pfalz": "Rheinland-Pfalz",
+  "rhineland-palatinate": "Rheinland-Pfalz",
+  saarland: "Saarland",
+  sachsen: "Sachsen",
+  saxony: "Sachsen",
+  "sachsen-anhalt": "Sachsen-Anhalt",
+  "saxony-anhalt": "Sachsen-Anhalt",
+  "schleswig-holstein": "Schleswig-Holstein",
+  thüringen: "Thüringen",
+  thuringia: "Thüringen",
+};
+
 export function parseLocation(location: string | null): ParsedLocation {
   return { country: null, region: null };
 }
