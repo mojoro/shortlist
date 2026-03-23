@@ -137,6 +137,12 @@ export const importJobSchema = z.object({
   salaryMax:     z.number().int().positive().nullish(),
   currency:      z.string().max(10).nullish(),
   skills:        z.array(z.string()).optional(),
+  source:        z.enum([
+    "LINKEDIN", "GREENHOUSE", "LEVER", "ASHBY", "USAJOBS", "ADZUNA",
+    "ARBEITNOW", "INDEED", "BERLIN_STARTUP_JOBS", "HONEYPOT", "YC_JOBS",
+    "NO_FLUFF_JOBS", "CUSTOM",
+  ]).default("CUSTOM"),
+  externalId:    z.string().optional(),
 });
 
 // ── Custom job field update ────────────────────────────────────────────────
