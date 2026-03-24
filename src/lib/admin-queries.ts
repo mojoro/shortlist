@@ -1,6 +1,6 @@
 import "server-only";
 
-import { type Prisma, type ScraperSource } from "@prisma/client";
+import { type Prisma, ScraperSource } from "@prisma/client";
 import { startOfDay, subDays } from "date-fns";
 
 import { prisma } from "@/lib/prisma";
@@ -139,8 +139,29 @@ export async function getAdminFeedbackList(opts: {
 
 // ── Pool ─────────────────────────────────────────────────────────────────────
 
+// Canonical display order for all scraper sources
+const ALL_SOURCES: ScraperSource[] = [
+  ScraperSource.GREENHOUSE,
+  ScraperSource.ASHBY,
+  ScraperSource.LEVER,
+  ScraperSource.USAJOBS,
+  ScraperSource.ADZUNA,
+  ScraperSource.ARBEITNOW,
+  ScraperSource.CUSTOM,
+];
+
+export function mergeSourceCounts(
+  dbResult: { source: ScraperSource; _count: number }[]
+): { source: ScraperSource; _count: number }[] {
+  const bySource = new Map(dbResult.map((r) => [r.source, r._count]));
+  return ALL_SOURCES.map((source) => ({
+    source,
+    _count: bySource.get(source) ?? 0,
+  }));
+}
+
 export async function getAdminPoolStats() {
-  const [total, bySource] = await Promise.all([
+  const [total, rawBySource] = await Promise.all([
     prisma.jobPool.count(),
     prisma.jobPool.groupBy({
       by: ["source"],
@@ -148,6 +169,10 @@ export async function getAdminPoolStats() {
       orderBy: { _count: { source: "desc" } },
     }),
   ]);
+
+  const bySource = mergeSourceCounts(
+    rawBySource.map((r) => ({ source: r.source, _count: r._count }))
+  );
 
   return { total, bySource };
 }
