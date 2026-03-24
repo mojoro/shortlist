@@ -96,7 +96,7 @@ async function fetchPage(
 
 // ── Main scraper ────────────────────────────────────────────────────────────
 
-const MAX_PAGES = 3; // 50 results/page * 3 = 150 max per search
+const MAX_PAGES = 5; // 50 results/page * 5 = 250 max per search
 
 /**
  * Scrapes job listings from the Adzuna API for all configured searches.
