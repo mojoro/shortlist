@@ -41,26 +41,38 @@ export interface ExtractedJob {
     | "CUSTOM";
 }
 
-// ── Extractor interface ──────────────────────────────────────────────────
+// ── Selector map for AI-identified fields ────────────────────────────────
 
-export interface Extractor {
-  /** URL pattern this extractor handles */
-  matches: RegExp;
-  /** Extract structured job data from the current page DOM */
-  extract: () => ExtractedJob | null;
+export interface SelectorMap {
+  title: string | null;
+  company: string | null;
+  location: string | null;
+  salary: string | null;
+  jobType: string | null;
+  skills: string | null;
+  description: string | null;
+  postedDate: string | null;
+}
+
+// ── Raw extraction before normalization ──────────────────────────────────
+
+export interface RawExtraction {
+  title: string | null;
+  company: string | null;
+  location: string | null;
+  salaryText: string | null;
+  jobTypeText: string | null;
+  skillsText: string | null;
+  descriptionHtml: string;
+  postedDateText: string | null;
+  url: string;
 }
 
 // ── Extraction result variants ───────────────────────────────────────────
 
 export type ExtractionResult =
-  | { type: "structured"; data: ExtractedJob }
-  | {
-      type: "generic";
-      url: string;
-      html: string;
-      title: string;
-      meta: Record<string, string>;
-    }
+  | { type: "extracted"; raw: RawExtraction }
+  | { type: "needs_identification"; skeleton: string; url: string; domain: string }
   | { type: "none" };
 
 // ── Chrome message types ─────────────────────────────────────────────────
@@ -81,24 +93,17 @@ export type Message =
   | { type: "EXTRACT" }
   | { type: "EXTRACTED"; result: ExtractionResult }
 
+  // Two-step AI extraction
+  | { type: "IDENTIFY_SELECTORS"; skeleton: string; profileId: string }
+  | { type: "SELECTORS_IDENTIFIED"; selectors: SelectorMap }
+  | { type: "APPLY_SELECTORS"; selectors: SelectorMap }
+  | { type: "SELECTORS_APPLIED"; result: ExtractionResult }
+  | { type: "NORMALIZE_AND_IMPORT"; raw: RawExtraction; profileId: string; profileName: string }
+  | { type: "IMPORT_COMPLETE"; jobId: string }
+
   // Import (structured job from extractor)
   | { type: "IMPORT_JOB"; profileId: string; profileName: string; job: ExtractedJob }
   | { type: "IMPORT_RESULT"; ok: boolean; jobId?: string; error?: string }
-
-  // Import (generic fallback — needs AI extraction first)
-  | {
-      type: "EXTRACT_AND_IMPORT";
-      profileId: string;
-      profileName: string;
-      html: string;
-      url: string;
-    }
-  | {
-      type: "EXTRACT_AND_IMPORT_RESULT";
-      ok: boolean;
-      jobId?: string;
-      error?: string;
-    }
 
   // Import history
   | { type: "GET_IMPORT_HISTORY" }
