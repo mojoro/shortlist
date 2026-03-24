@@ -191,29 +191,6 @@ export function DashboardClient({
         </div>
       )}
 
-      {/* Load more banner */}
-      {pendingMatchCount > 0 && !isLoadingMatches && (
-        <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3">
-          <p className="text-sm text-[var(--text-muted)]">
-            ~{pendingMatchCount} more matches available
-          </p>
-          <button
-            onClick={handleLoadMore}
-            className="cursor-pointer rounded-md bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-          >
-            Load more
-          </button>
-        </div>
-      )}
-
-      {/* Loading indicator when loading more (but already have jobs) */}
-      {isLoadingMatches && allJobs.length > 0 && (
-        <div className="flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] p-3">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--accent)]" />
-          <p className="text-xs text-[var(--text-muted)]">Loading more matches…</p>
-        </div>
-      )}
-
       <JobFeed
         jobs={jobs}
         profileId={activeProfile.id}
@@ -221,6 +198,32 @@ export function DashboardClient({
         sort={sort}
         lastUpdatedText={lastUpdatedText}
       />
+
+      {/* Load more — shown at the bottom of the feed */}
+      {isLoadingMatches && allJobs.length > 0 && (
+        <div className="flex items-center justify-center gap-2 py-4">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--accent)]" />
+          <p className="text-xs text-[var(--text-muted)]">Loading more matches…</p>
+        </div>
+      )}
+
+      {pendingMatchCount > 0 && !isLoadingMatches && (
+        <div className="flex flex-col items-center gap-3 py-6">
+          <p className="text-sm text-[var(--text-muted)]">
+            ~{pendingMatchCount} more matches in the pool
+          </p>
+          <button
+            onClick={handleLoadMore}
+            className="cursor-pointer inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--accent-fg)] transition-all hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 5v14" />
+              <path d="m19 12-7 7-7-7" />
+            </svg>
+            Load more matches
+          </button>
+        </div>
+      )}
     </div>
   );
 }
