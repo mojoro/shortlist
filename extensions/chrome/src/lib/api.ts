@@ -1,5 +1,5 @@
 const PROD_URL = "https://shortlist.johnmoorman.com";
-const DEV_URL = "http://localhost:3001";
+const DEV_URL = "http://localhost:3000";
 
 interface ApiResponse<T> {
   ok: boolean;
@@ -9,7 +9,7 @@ interface ApiResponse<T> {
 }
 
 /** Resolve the API base URL from extension storage, defaulting to production. */
-async function getBaseUrl(): Promise<string> {
+export async function getBaseUrl(): Promise<string> {
   try {
     const result = await chrome.storage.local.get("apiBaseUrl");
     return (result.apiBaseUrl as string) || PROD_URL;

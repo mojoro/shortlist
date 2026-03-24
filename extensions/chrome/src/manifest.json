@@ -6,6 +6,7 @@
   "permissions": ["activeTab", "storage"],
   "host_permissions": [
     "https://shortlist.johnmoorman.com/*",
+    "http://localhost:3000/*",
     "http://localhost:3001/*"
   ],
   "action": {

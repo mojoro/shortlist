@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { ExtractionResult, ExtractedJob, ImportRecord, Message } from "../types";
+import { getBaseUrl } from "../lib/api";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -21,8 +22,6 @@ function sendMessage<T>(message: Message): Promise<T> {
 function sendTabMessage<T>(tabId: number, message: Message): Promise<T> {
   return chrome.tabs.sendMessage(tabId, message);
 }
-
-const SHORTLIST_URL = "https://shortlist.johnmoorman.com";
 
 function timeAgo(isoDate: string): string {
   const seconds = Math.floor((Date.now() - new Date(isoDate).getTime()) / 1000);
@@ -47,10 +46,15 @@ function Popup() {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [importedJobId, setImportedJobId] = useState<string | null>(null);
   const [importHistory, setImportHistory] = useState<ImportRecord[]>([]);
+  const [baseUrl, setBaseUrl] = useState("https://shortlist.johnmoorman.com");
 
   // Initialize: check auth, fetch profiles, extract from current tab
   useEffect(() => {
     async function init() {
+      // 0. Resolve base URL for links
+      const url = await getBaseUrl();
+      setBaseUrl(url);
+
       // 1. Check auth
       const authResult = await sendMessage<{
         type: string;
@@ -217,9 +221,9 @@ function Popup() {
           <p>Sign in to Shortlist to import jobs.</p>
           <button
             className="btn btn-primary"
-            onClick={() => chrome.tabs.create({ url: SHORTLIST_URL })}
+            onClick={() => chrome.tabs.create({ url: `${baseUrl}/sign-in` })}
           >
-            Open Shortlist
+            Sign in to Shortlist
           </button>
         </div>
       </div>
@@ -239,7 +243,7 @@ function Popup() {
             className="btn btn-link"
             onClick={() =>
               chrome.tabs.create({
-                url: `${SHORTLIST_URL}/jobs/${importedJobId}`,
+                url: `${baseUrl}/jobs/${importedJobId}`,
               })
             }
           >
@@ -249,12 +253,12 @@ function Popup() {
         <button
           className="btn btn-link"
           onClick={() =>
-            chrome.tabs.create({ url: `${SHORTLIST_URL}/dashboard` })
+            chrome.tabs.create({ url: `${baseUrl}/dashboard` })
           }
         >
           Open Dashboard
         </button>
-        <ImportHistory history={importHistory} />
+        <ImportHistory history={importHistory} baseUrl={baseUrl} />
       </div>
     );
   }
@@ -273,12 +277,12 @@ function Popup() {
         <button
           className="btn btn-link"
           onClick={() =>
-            chrome.tabs.create({ url: `${SHORTLIST_URL}/dashboard` })
+            chrome.tabs.create({ url: `${baseUrl}/dashboard` })
           }
         >
           Open Shortlist
         </button>
-        <ImportHistory history={importHistory} />
+        <ImportHistory history={importHistory} baseUrl={baseUrl} />
       </div>
     );
   }
@@ -342,7 +346,7 @@ function Popup() {
         <div className="status status-error">{errorMessage}</div>
       )}
 
-      <ImportHistory history={importHistory} />
+      <ImportHistory history={importHistory} baseUrl={baseUrl} />
     </div>
   );
 }
@@ -367,7 +371,7 @@ function JobPreview({ job }: { job: ExtractedJob }) {
   );
 }
 
-function ImportHistory({ history }: { history: ImportRecord[] }) {
+function ImportHistory({ history, baseUrl }: { history: ImportRecord[]; baseUrl: string }) {
   if (history.length === 0) return null;
 
   return (
@@ -380,7 +384,7 @@ function ImportHistory({ history }: { history: ImportRecord[] }) {
               className="import-history-item"
               onClick={() =>
                 chrome.tabs.create({
-                  url: `${SHORTLIST_URL}/jobs/${record.jobId}`,
+                  url: `${baseUrl}/jobs/${record.jobId}`,
                 })
               }
             >
