@@ -127,15 +127,16 @@ export function LandingNav() {
             <>
               <Link
                 href="/sign-in"
-                className="hidden text-sm font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--text)] sm:block"
+                className="hidden h-8 items-center rounded-lg border border-[var(--border)] px-3.5 text-sm font-medium text-[var(--text-muted)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text)] sm:inline-flex"
               >
                 Sign in
               </Link>
               <Link
                 href="/sign-up"
-                className="inline-flex h-8 items-center rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-fg)] transition-all hover:opacity-90"
+                className="inline-flex h-8 items-center gap-1 rounded-lg bg-[var(--accent)] px-4 text-sm font-semibold text-[var(--accent-fg)] transition-all hover:opacity-90"
               >
                 Get started
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="ml-0.5"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
               </Link>
             </>
           )}
