@@ -9,71 +9,48 @@ export interface ImportRecord {
   profileName: string;
 }
 
-// ── Extracted job data ────────────────────────────────────────────────────
+// ── Page content collected by content script ─────────────────────────────
 
-export interface ExtractedJob {
+export interface PageContent {
+  url: string;
+  html: string;
+  title: string;
+}
+
+// ── Extract endpoint response ────────────────────────────────────────────
+
+export interface ExtractResult {
   title: string;
   company: string;
   description: string;
   location: string | null;
   locationType: "REMOTE" | "HYBRID" | "ONSITE" | null;
-  url: string;
+  url: string | null;
   postedAt: string | null;
-  jobType:
-    | "FULL_TIME"
-    | "PART_TIME"
-    | "CONTRACT"
-    | "FREELANCE"
-    | "INTERNSHIP"
-    | null;
+  jobType: string | null;
   salaryMin: number | null;
   salaryMax: number | null;
   currency: string | null;
   skills: string[];
-  externalId: string | null;
-  source:
-    | "LINKEDIN"
-    | "GREENHOUSE"
-    | "LEVER"
-    | "ASHBY"
-    | "INDEED"
-    | "USAJOBS"
-    | "CUSTOM";
 }
 
-// ── Selector map for AI-identified fields ────────────────────────────────
+// ── Import endpoint payload ──────────────────────────────────────────────
 
-export interface SelectorMap {
-  title: string | null;
-  company: string | null;
-  location: string | null;
-  salary: string | null;
-  jobType: string | null;
-  skills: string | null;
-  description: string | null;
-  postedDate: string | null;
+export interface ImportPayload {
+  originalInput: string;
+  title: string;
+  company: string;
+  description: string;
+  location?: string | null;
+  locationType?: string | null;
+  url?: string | null;
+  postedAt?: string | null;
+  jobType?: string | null;
+  salaryMin?: number | null;
+  salaryMax?: number | null;
+  currency?: string | null;
+  skills?: string[];
 }
-
-// ── Raw extraction before normalization ──────────────────────────────────
-
-export interface RawExtraction {
-  title: string | null;
-  company: string | null;
-  location: string | null;
-  salaryText: string | null;
-  jobTypeText: string | null;
-  skillsText: string | null;
-  descriptionHtml: string;
-  postedDateText: string | null;
-  url: string;
-}
-
-// ── Extraction result variants ───────────────────────────────────────────
-
-export type ExtractionResult =
-  | { type: "extracted"; raw: RawExtraction }
-  | { type: "needs_identification"; skeleton: string; url: string; domain: string }
-  | { type: "none" };
 
 // ── Chrome message types ─────────────────────────────────────────────────
 
@@ -89,20 +66,16 @@ export type Message =
       profiles: Array<{ id: string; name: string; isActive: boolean }>;
     }
 
-  // Extraction (popup -> content script)
-  | { type: "EXTRACT" }
-  | { type: "EXTRACTED"; result: ExtractionResult }
+  // Page content (popup -> content script)
+  | { type: "GET_PAGE_CONTENT" }
+  | { type: "PAGE_CONTENT"; content: PageContent }
 
-  // Two-step AI extraction
-  | { type: "IDENTIFY_SELECTORS"; skeleton: string; profileId: string }
-  | { type: "SELECTORS_IDENTIFIED"; selectors: SelectorMap }
-  | { type: "APPLY_SELECTORS"; selectors: SelectorMap }
-  | { type: "SELECTORS_APPLIED"; result: ExtractionResult }
-  | { type: "NORMALIZE_AND_IMPORT"; raw: RawExtraction; profileId: string; profileName: string }
-  | { type: "IMPORT_COMPLETE"; jobId: string }
+  // Extract (popup -> service worker -> server)
+  | { type: "EXTRACT_JOB"; html: string; profileId: string }
+  | { type: "EXTRACT_RESULT"; ok: boolean; data?: ExtractResult; error?: string }
 
-  // Import (structured job from extractor)
-  | { type: "IMPORT_JOB"; profileId: string; profileName: string; job: ExtractedJob }
+  // Import (popup -> service worker -> server)
+  | { type: "IMPORT_JOB"; profileId: string; profileName: string; data: ImportPayload }
   | { type: "IMPORT_RESULT"; ok: boolean; jobId?: string; error?: string }
 
   // Import history
