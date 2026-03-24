@@ -2,7 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 import { formatDistanceToNow } from "date-fns";
 
-import { getSystemHealth } from "@/lib/admin-queries";
+import { getSystemHealth, getRecentScrapeRuns } from "@/lib/admin-queries";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
 
 export const metadata: Metadata = { title: "System Health" };
@@ -45,7 +45,10 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default async function AdminSystemPage() {
-  const health = await getSystemHealth();
+  const [health, recentRuns] = await Promise.all([
+    getSystemHealth(),
+    getRecentScrapeRuns(30),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -182,6 +185,74 @@ export default async function AdminSystemPage() {
             value={formatTokens(health.aiSpend.totalOutputTokens)}
             subtitle="Lifetime"
           />
+        </div>
+      </section>
+
+      {/* Run History */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          Run History
+        </h2>
+        <div className="overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--bg-card)]">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--border)] text-left text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
+                <th className="px-4 py-3">Source</th>
+                <th className="px-4 py-3">Time</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3 text-right">Jobs Found</th>
+                <th className="px-4 py-3 text-right">In Pool</th>
+                <th className="px-4 py-3 text-right">Duration</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border)]">
+              {recentRuns.map((run) => (
+                <React.Fragment key={run.id}>
+                  <tr className="text-[var(--text)] transition-colors hover:bg-[var(--bg-subtle)]">
+                    <td className="px-4 py-3 font-medium">
+                      {formatSource(run.source)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-[var(--text-muted)]">
+                      {formatDistanceToNow(run.createdAt, { addSuffix: true })}
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={run.status} />
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {run.jobsFound}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {run.jobsInPool}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums text-[var(--text-muted)]">
+                      {formatDuration(run.durationMs)}
+                    </td>
+                  </tr>
+                  {(run.status === "FAILED" || run.status === "PARTIAL") &&
+                    run.errorMessage && (
+                      <tr className="bg-[var(--bg-subtle)]">
+                        <td
+                          colSpan={6}
+                          className="px-4 py-2 text-xs text-[var(--text-muted)]"
+                        >
+                          {run.errorMessage}
+                        </td>
+                      </tr>
+                    )}
+                </React.Fragment>
+              ))}
+              {recentRuns.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-4 py-8 text-center text-[var(--text-muted)]"
+                  >
+                    No scrape runs recorded yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
     </div>
