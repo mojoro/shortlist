@@ -97,17 +97,57 @@ function Popup() {
           currentWindow: true,
         });
         if (tab?.id) {
-          const result = await sendTabMessage<{
-            type: string;
-            result: ExtractionResult;
-          }>(tab.id, { type: "EXTRACT" });
-          setExtraction(result.result);
-        } else {
-          setExtraction({ type: "generic", url: "", html: "", title: "Unknown page", meta: {} });
+          let result: { type: string; result: ExtractionResult } | null = null;
+
+          // Try messaging the content script (already injected via manifest)
+          try {
+            result = await sendTabMessage<{
+              type: string;
+              result: ExtractionResult;
+            }>(tab.id, { type: "EXTRACT" });
+          } catch {
+            // Content script not present (page loaded before extension install/refresh).
+            // Fall back to collecting page content directly via scripting API.
+            try {
+              const [injected] = await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                func: () => {
+                  const mainEl =
+                    document.querySelector("main") ??
+                    document.querySelector("article") ??
+                    document.querySelector("[role='main']") ??
+                    document.body;
+                  const clone = mainEl.cloneNode(true) as HTMLElement;
+                  clone.querySelectorAll("script, style, nav, footer, header, iframe, noscript")
+                    .forEach((el) => el.remove());
+                  return {
+                    url: window.location.href,
+                    html: clone.innerText.slice(0, 50000),
+                    title: document.title,
+                  };
+                },
+              });
+              if (injected?.result) {
+                result = {
+                  type: "EXTRACTED",
+                  result: {
+                    type: "generic",
+                    url: injected.result.url,
+                    html: injected.result.html,
+                    title: injected.result.title,
+                    meta: {},
+                  },
+                };
+              }
+            } catch {
+              // Page is restricted (chrome://, edge://, etc.)
+            }
+          }
+
+          setExtraction(result?.result ?? null);
         }
       } catch {
-        // Content script may not be injected on restricted pages (chrome://, etc.)
-        setExtraction({ type: "generic", url: "", html: "", title: "Unknown page", meta: {} });
+        setExtraction(null);
       }
 
       setStatus("idle");
@@ -275,10 +315,15 @@ function Popup() {
       )}
       {extraction?.type === "generic" && (
         <div className="job-preview">
-          <div className="title">{extraction.title || "Untitled Page"}</div>
+          <div className="title">{extraction.title || document.title || "This page"}</div>
           <div className="generic-notice">
             AI will extract job details from this page
           </div>
+        </div>
+      )}
+      {extraction === null && status === "idle" && (
+        <div className="empty-state">
+          <p>Could not read this page. Try reloading it first.</p>
         </div>
       )}
 

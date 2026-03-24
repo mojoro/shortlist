@@ -3,7 +3,7 @@
   "name": "Shortlist — Job Importer",
   "version": "0.1.0",
   "description": "Import job listings into your Shortlist feed with one click",
-  "permissions": ["activeTab", "storage"],
+  "permissions": ["activeTab", "storage", "scripting"],
   "host_permissions": [
     "https://shortlist.johnmoorman.com/*",
     "http://localhost:3000/*",
