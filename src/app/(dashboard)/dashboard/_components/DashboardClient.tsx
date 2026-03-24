@@ -197,6 +197,7 @@ export function DashboardClient({
         filter={filter}
         sort={sort}
         lastUpdatedText={lastUpdatedText}
+        isLoadingMatches={isLoadingMatches}
       />
 
       {/* Load more — shown at the bottom of the feed */}

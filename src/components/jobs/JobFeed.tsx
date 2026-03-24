@@ -179,6 +179,7 @@ interface JobFeedProps {
   filter: string;
   sort: string;
   lastUpdatedText?: string | null;
+  isLoadingMatches?: boolean;
 }
 
 export function JobFeed({
@@ -187,6 +188,7 @@ export function JobFeed({
   filter,
   sort,
   lastUpdatedText,
+  isLoadingMatches,
 }: JobFeedProps) {
   const [batchPending, startBatchTransition] = useTransition();
 
@@ -322,7 +324,7 @@ export function JobFeed({
   // ── Render ───────────────────────────────────────────────────────────────
   const isIgnoredView = filter === "ignored";
 
-  if (jobs.length === 0) {
+  if (jobs.length === 0 && !isLoadingMatches) {
     const isAll = filter === "all" || !filter;
     return (
       <div className="py-16 text-center">
