@@ -8,16 +8,34 @@
 }
 
 :root {
-  --bg: #ffffff;
-  --bg-secondary: #f9fafb;
-  --text: #111827;
-  --text-muted: #6b7280;
-  --border: #e5e7eb;
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
+  --bg: #eef0f6;
+  --bg-secondary: #ffffff;
+  --text: #0f1221;
+  --text-muted: #5c6080;
+  --border: #d8dae8;
+  --primary: #0e7490;
+  --primary-hover: #0c5e73;
   --success: #10b981;
   --error: #ef4444;
+  --duplicate: #92400e;
+  --duplicate-bg: #fffbeb;
   --radius: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0a0a0a;
+    --bg-secondary: #111111;
+    --text: #ebebeb;
+    --text-muted: #787878;
+    --border: #222222;
+    --primary: #22d3ee;
+    --primary-hover: #06b6d4;
+    --success: #10b981;
+    --error: #f87171;
+    --duplicate: #fbbf24;
+    --duplicate-bg: #1a1500;
+  }
 }
 
 body {
@@ -120,7 +138,13 @@ body {
 
 .btn-primary {
   background: var(--primary);
-  color: white;
+  color: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  .btn-primary {
+    color: #0c1a1f;
+  }
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -168,13 +192,13 @@ body {
 }
 
 .status-success {
-  background: #ecfdf5;
-  color: #065f46;
+  background: color-mix(in srgb, var(--success) 15%, var(--bg));
+  color: var(--success);
 }
 
 .status-error {
-  background: #fef2f2;
-  color: #991b1b;
+  background: color-mix(in srgb, var(--error) 15%, var(--bg));
+  color: var(--error);
 }
 
 .status-loading {
@@ -182,8 +206,8 @@ body {
 }
 
 .status-duplicate {
-  background: #fffbeb;
-  color: #92400e;
+  background: var(--duplicate-bg);
+  color: var(--duplicate);
 }
 
 .job-preview .salary {
