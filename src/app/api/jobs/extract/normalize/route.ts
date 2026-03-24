@@ -55,7 +55,8 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const parsed = normalizeExtractionSchema.safeParse(body);
   if (!parsed.success) {
-    return Response.json({ error: "Invalid request" }, { status: 400 });
+    console.error("[/api/jobs/extract/normalize] Validation failed:", parsed.error.flatten());
+    return Response.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, { status: 400 });
   }
 
   const { profileId } = parsed.data;
@@ -123,45 +124,42 @@ export async function POST(req: Request) {
 
     const text = response.choices[0]?.message?.content ?? "";
 
-    let result: NormalizeResult;
+    let result: NormalizeResult | null = null;
     try {
       const direct = JSON.parse(text.trim());
-      if (isValidResult(direct)) {
-        result = direct;
-      } else {
-        throw new Error("Invalid shape");
-      }
-    } catch {
-      const match = text.match(/\{[\s\S]*\}/);
-      if (!match) {
-        console.error("[/api/jobs/extract/normalize] No JSON in response:", text.slice(0, 200));
-        return Response.json(
-          { error: "Could not normalize the extracted data." },
-          { status: 422 },
-        );
-      }
+      if (isValidResult(direct)) result = direct;
+    } catch {}
+
+    if (!result) {
       try {
-        const extracted = JSON.parse(match[0]);
-        if (!isValidResult(extracted)) {
-          console.error("[/api/jobs/extract/normalize] Invalid shape:", text.slice(0, 200));
-          return Response.json(
-            { error: "Could not normalize the extracted data." },
-            { status: 422 },
-          );
+        const match = text.match(/\{[\s\S]*\}/);
+        if (match) {
+          const extracted = JSON.parse(match[0]);
+          if (isValidResult(extracted)) result = extracted;
         }
-        result = extracted;
-      } catch {
-        console.error("[/api/jobs/extract/normalize] JSON parse failed:", text.slice(0, 200));
-        return Response.json(
-          { error: "Could not normalize the extracted data." },
-          { status: 422 },
-        );
-      }
+      } catch {}
+    }
+
+    // If AI normalization failed, fall back to raw extracted values
+    if (!result) {
+      console.warn("[/api/jobs/extract/normalize] AI parse failed, using raw fields. Response:", text.slice(0, 300));
+      result = {
+        title: parsed.data.title ?? "Untitled",
+        company: parsed.data.company ?? "Unknown",
+        location: parsed.data.location ?? null,
+        locationType: null,
+        postedAt: null,
+        jobType: null,
+        salaryMin: null,
+        salaryMax: null,
+        currency: null,
+        skills: parsed.data.skillsText ? parsed.data.skillsText.split(/,\s*/).filter(Boolean) : [],
+      };
     }
 
     return Response.json({
       ...result,
-      description: descriptionMarkdown,
+      description: descriptionMarkdown || parsed.data.title || "No description available",
       url: parsed.data.url,
     });
   } catch (err) {

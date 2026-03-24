@@ -195,14 +195,14 @@ export const identifySelectorsSchema = z.object({
 
 // ── Chrome extension: extraction normalization ──────────────────────────
 export const normalizeExtractionSchema = z.object({
-  title: z.string().nullable(),
-  company: z.string().nullable(),
-  location: z.string().nullable(),
-  salaryText: z.string().nullable(),
-  jobTypeText: z.string().nullable(),
-  skillsText: z.string().nullable(),
-  descriptionHtml: z.string().min(1).max(100000),
-  postedDateText: z.string().nullable(),
+  title: z.string().nullish(),
+  company: z.string().nullish(),
+  location: z.string().nullish(),
+  salaryText: z.string().nullish(),
+  jobTypeText: z.string().nullish(),
+  skillsText: z.string().nullish(),
+  descriptionHtml: z.string().max(100000).default(""),
+  postedDateText: z.string().nullish(),
   url: z.string(),
   profileId: z.string().cuid(),
 });
