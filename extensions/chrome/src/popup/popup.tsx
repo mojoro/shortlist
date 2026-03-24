@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import type { ExtractionResult, ExtractedJob, Message } from "../types";
+import type { ExtractionResult, ExtractedJob, ImportRecord, Message } from "../types";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -24,6 +24,18 @@ function sendTabMessage<T>(tabId: number, message: Message): Promise<T> {
 
 const SHORTLIST_URL = "https://shortlist.johnmoorman.com";
 
+function timeAgo(isoDate: string): string {
+  const seconds = Math.floor((Date.now() - new Date(isoDate).getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "yesterday";
+  return `${days}d ago`;
+}
+
 // ── App ──────────────────────────────────────────────────────────────────
 
 function Popup() {
@@ -34,6 +46,7 @@ function Popup() {
   const [status, setStatus] = useState<Status>("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [importedJobId, setImportedJobId] = useState<string | null>(null);
+  const [importHistory, setImportHistory] = useState<ImportRecord[]>([]);
 
   // Initialize: check auth, fetch profiles, extract from current tab
   useEffect(() => {
@@ -51,7 +64,14 @@ function Popup() {
       }
       setAuthenticated(true);
 
-      // 2. Fetch profiles
+      // 2. Load import history
+      const historyResult = await sendMessage<{
+        type: string;
+        history: ImportRecord[];
+      }>({ type: "GET_IMPORT_HISTORY" });
+      setImportHistory(historyResult.history ?? []);
+
+      // 3. Fetch profiles
       const profilesResult = await sendMessage<{
         type: string;
         profiles: Profile[];
@@ -65,7 +85,7 @@ function Popup() {
       if (active) setSelectedProfileId(active.id);
       else if (profs.length > 0) setSelectedProfileId(profs[0].id);
 
-      // 3. Extract from the current tab
+      // 4. Extract from the current tab
       setStatus("extracting");
       try {
         const [tab] = await chrome.tabs.query({
@@ -94,6 +114,13 @@ function Popup() {
 
   // ── Import handler ───────────────────────────────────────────────────
 
+  const selectedProfileName =
+    profiles.find((p) => p.id === selectedProfileId)?.name ?? "Unknown";
+
+  function addToHistory(record: ImportRecord) {
+    setImportHistory((prev) => [record, ...prev].slice(0, 5));
+  }
+
   async function handleImport() {
     if (!selectedProfileId || !extraction) return;
 
@@ -110,12 +137,23 @@ function Popup() {
         }>({
           type: "IMPORT_JOB",
           profileId: selectedProfileId,
+          profileName: selectedProfileName,
           job: extraction.data,
         });
 
         if (result.ok) {
           setStatus("success");
           setImportedJobId(result.jobId ?? null);
+          if (result.jobId) {
+            addToHistory({
+              jobId: result.jobId,
+              title: extraction.data.title,
+              company: extraction.data.company,
+              source: extraction.data.source,
+              importedAt: new Date().toISOString(),
+              profileName: selectedProfileName,
+            });
+          }
         } else {
           setStatus("error");
           setErrorMessage(result.error ?? "Import failed");
@@ -129,6 +167,7 @@ function Popup() {
         }>({
           type: "EXTRACT_AND_IMPORT",
           profileId: selectedProfileId,
+          profileName: selectedProfileName,
           html: extraction.html,
           url: extraction.url,
         });
@@ -136,6 +175,16 @@ function Popup() {
         if (result.ok) {
           setStatus("success");
           setImportedJobId(result.jobId ?? null);
+          if (result.jobId) {
+            addToHistory({
+              jobId: result.jobId,
+              title: extraction.title || "Imported job",
+              company: "Via AI extraction",
+              source: "CUSTOM",
+              importedAt: new Date().toISOString(),
+              profileName: selectedProfileName,
+            });
+          }
         } else {
           setStatus("error");
           setErrorMessage(result.error ?? "Import failed");
@@ -205,6 +254,7 @@ function Popup() {
         >
           Open Dashboard
         </button>
+        <ImportHistory history={importHistory} />
       </div>
     );
   }
@@ -228,6 +278,7 @@ function Popup() {
         >
           Open Shortlist
         </button>
+        <ImportHistory history={importHistory} />
       </div>
     );
   }
@@ -290,6 +341,8 @@ function Popup() {
       {status === "error" && (
         <div className="status status-error">{errorMessage}</div>
       )}
+
+      <ImportHistory history={importHistory} />
     </div>
   );
 }
@@ -310,6 +363,40 @@ function JobPreview({ job }: { job: ExtractedJob }) {
       <div className="title">{job.title}</div>
       <div className="company">{job.company}</div>
       {job.location && <div className="location">{job.location}</div>}
+    </div>
+  );
+}
+
+function ImportHistory({ history }: { history: ImportRecord[] }) {
+  if (history.length === 0) return null;
+
+  return (
+    <div className="import-history">
+      <div className="import-history-label">Recent imports</div>
+      <ul className="import-history-list">
+        {history.map((record) => (
+          <li key={record.jobId}>
+            <button
+              className="import-history-item"
+              onClick={() =>
+                chrome.tabs.create({
+                  url: `${SHORTLIST_URL}/jobs/${record.jobId}`,
+                })
+              }
+            >
+              <span className="import-history-title">
+                {record.title}
+                <span className="import-history-company">
+                  {" "}@ {record.company}
+                </span>
+              </span>
+              <span className="import-history-time">
+                {timeAgo(record.importedAt)}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

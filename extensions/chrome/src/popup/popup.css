@@ -182,3 +182,60 @@ body {
   padding: 24px 16px;
   color: var(--text-muted);
 }
+
+/* ── Import history ───────────────────────────────────────────────────── */
+.import-history {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.import-history-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 6px;
+}
+
+.import-history-list {
+  list-style: none;
+}
+
+.import-history-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.import-history-item:hover .import-history-title {
+  color: var(--primary);
+}
+
+.import-history-title {
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.import-history-company {
+  color: var(--text-muted);
+}
+
+.import-history-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
