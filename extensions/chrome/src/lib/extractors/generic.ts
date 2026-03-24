@@ -1,8 +1,9 @@
-const MAX_HTML_LENGTH = 10_000;
+const MAX_CONTENT_LENGTH = 50_000;
 
 /**
- * Generic fallback: collects page metadata and cleaned body text
- * for AI extraction on the server side.
+ * Generic fallback: collects cleaned page HTML and metadata for
+ * AI extraction on the server side. Sends innerHTML so the server
+ * can use Turndown to convert to clean markdown for the AI.
  */
 export function collectPageContent(): {
   url: string;
@@ -10,7 +11,6 @@ export function collectPageContent(): {
   title: string;
   meta: Record<string, string>;
 } {
-  // Collect useful meta tags
   const meta: Record<string, string> = {};
   document.querySelectorAll("meta[property], meta[name]").forEach((el) => {
     const key =
@@ -19,22 +19,28 @@ export function collectPageContent(): {
     if (key && value) meta[key] = value;
   });
 
-  // Get the main content area, or fall back to body
-  const mainEl =
+  // Try job-specific containers first, then general content areas
+  const contentEl =
+    document.querySelector("[role='main'] article") ??
+    document.querySelector("[role='main']") ??
+    document.querySelector("main article") ??
     document.querySelector("main") ??
     document.querySelector("article") ??
-    document.querySelector("[role='main']") ??
     document.body;
 
-  // Strip scripts, styles, navs, footers to reduce noise
-  const clone = mainEl.cloneNode(true) as HTMLElement;
+  const clone = contentEl.cloneNode(true) as HTMLElement;
   clone
-    .querySelectorAll("script, style, nav, footer, header, iframe, noscript")
+    .querySelectorAll(
+      "script, style, nav, footer, header, iframe, noscript, " +
+      "svg, img, video, audio, canvas, " +
+      "[role='navigation'], [role='banner'], [role='contentinfo'], " +
+      "[aria-hidden='true']"
+    )
     .forEach((el) => el.remove());
 
   return {
     url: window.location.href,
-    html: clone.innerText.slice(0, MAX_HTML_LENGTH),
+    html: clone.innerHTML.slice(0, MAX_CONTENT_LENGTH),
     title: document.title,
     meta,
   };

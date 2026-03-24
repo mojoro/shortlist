@@ -112,17 +112,20 @@ function Popup() {
               const [injected] = await chrome.scripting.executeScript({
                 target: { tabId: tab.id },
                 func: () => {
-                  const mainEl =
+                  const el =
+                    document.querySelector("[role='main'] article") ??
+                    document.querySelector("[role='main']") ??
                     document.querySelector("main") ??
                     document.querySelector("article") ??
-                    document.querySelector("[role='main']") ??
                     document.body;
-                  const clone = mainEl.cloneNode(true) as HTMLElement;
-                  clone.querySelectorAll("script, style, nav, footer, header, iframe, noscript")
-                    .forEach((el) => el.remove());
+                  const clone = el.cloneNode(true) as HTMLElement;
+                  clone.querySelectorAll(
+                    "script, style, nav, footer, header, iframe, noscript, " +
+                    "svg, img, video, audio, canvas, [aria-hidden='true']"
+                  ).forEach((n) => n.remove());
                   return {
                     url: window.location.href,
-                    html: clone.innerText.slice(0, 50000),
+                    html: clone.innerHTML.slice(0, 50000),
                     title: document.title,
                   };
                 },

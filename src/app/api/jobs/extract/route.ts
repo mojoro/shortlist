@@ -115,6 +115,9 @@ export async function POST(req: Request) {
         { status: 422 },
       );
     }
+  } else if (/<[a-z][\s\S]*>/i.test(input)) {
+    // Input contains HTML (e.g. from the Chrome extension) — convert to markdown
+    cleanedText = td.turndown(input);
   } else {
     cleanedText = input;
   }
@@ -123,10 +126,10 @@ export async function POST(req: Request) {
   try {
     const response = await openrouter.chat.completions.create({
       model: models.extract,
-      max_tokens: 250,
+      max_tokens: 500,
       messages: [
         { role: "system", content: EXTRACTION_SYSTEM_PROMPT },
-        { role: "user",   content: cleanedText.slice(0, 12000) },
+        { role: "user",   content: cleanedText.slice(0, 24000) },
       ],
     });
 
