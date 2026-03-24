@@ -204,8 +204,10 @@ function Popup() {
           setStatus("extracting");
           setAiIdentified(true);
 
-          // Apply selectors in the content script
+          // Apply selectors — try content script first, fall back to scripting API
           if (tab.id) {
+            let applied = false;
+
             try {
               const applyResult = await sendTabMessage<{
                 type: string;
@@ -217,13 +219,64 @@ function Popup() {
 
               if (applyResult?.result?.type === "extracted") {
                 setRawExtraction(applyResult.result.raw);
-                setStatus("idle");
-              } else {
-                setStatus("error");
-                setErrorMessage("Could not extract job details from this page");
+                applied = true;
               }
             } catch {
-              // Content script not injected — cannot apply selectors
+              // Content script not injected — try scripting API
+            }
+
+            if (!applied) {
+              // Apply selectors directly via scripting API
+              try {
+                const sels = identifyResult.selectors;
+                const [injected] = await chrome.scripting.executeScript({
+                  target: { tabId: tab.id },
+                  func: (selectors: Record<string, string | null>) => {
+                    const q = (sel: string | null) => {
+                      if (!sel) return null;
+                      try { return document.querySelector(sel); } catch { return null; }
+                    };
+                    const textOf = (sel: string | null) => q(sel)?.textContent?.trim() ?? null;
+                    const title = textOf(selectors.title);
+                    const company = textOf(selectors.company);
+                    if (!title && !company) return null;
+                    let skillsText: string | null = null;
+                    if (selectors.skills) {
+                      const container = q(selectors.skills);
+                      if (container) {
+                        const children = container.querySelectorAll("li, span, a");
+                        skillsText = children.length > 0
+                          ? Array.from(children).map(e => e.textContent?.trim()).filter(Boolean).join(", ")
+                          : container.textContent?.trim() ?? null;
+                      }
+                    }
+                    const descEl = q(selectors.description);
+                    return {
+                      title, company,
+                      location: textOf(selectors.location),
+                      salaryText: textOf(selectors.salary),
+                      jobTypeText: textOf(selectors.jobType),
+                      skillsText,
+                      descriptionHtml: descEl?.innerHTML ?? "",
+                      postedDateText: textOf(selectors.postedDate),
+                      url: window.location.href,
+                    };
+                  },
+                  args: [sels as Record<string, string | null>],
+                });
+
+                if (injected?.result) {
+                  setRawExtraction(injected.result as RawExtraction);
+                  applied = true;
+                }
+              } catch {
+                // scripting API also failed
+              }
+            }
+
+            if (applied) {
+              setStatus("idle");
+            } else {
               setStatus("error");
               setErrorMessage("Could not extract job details from this page");
             }
