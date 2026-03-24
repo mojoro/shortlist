@@ -27,7 +27,8 @@
         "*://*.usajobs.gov/job/*",
         "*://*.indeed.com/viewjob*",
         "*://*.glassdoor.com/job-listing/*",
-        "*://*.glassdoor.co.*/job-listing/*"
+        "*://*.glassdoor.co.uk/job-listing/*",
+        "*://*.glassdoor.co.in/job-listing/*"
       ],
       "js": ["src/content/content.ts"],
       "run_at": "document_idle"
