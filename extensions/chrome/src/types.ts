@@ -1,3 +1,14 @@
+// ── Import history ────────────────────────────────────────────────────────
+
+export interface ImportRecord {
+  jobId: string;
+  title: string;
+  company: string;
+  source: string;
+  importedAt: string;
+  profileName: string;
+}
+
 // ── Extracted job data ────────────────────────────────────────────────────
 
 export interface ExtractedJob {
@@ -74,13 +85,14 @@ export type Message =
   | { type: "EXTRACTED"; result: ExtractionResult }
 
   // Import (structured job from extractor)
-  | { type: "IMPORT_JOB"; profileId: string; job: ExtractedJob }
+  | { type: "IMPORT_JOB"; profileId: string; profileName: string; job: ExtractedJob }
   | { type: "IMPORT_RESULT"; ok: boolean; jobId?: string; error?: string }
 
   // Import (generic fallback — needs AI extraction first)
   | {
       type: "EXTRACT_AND_IMPORT";
       profileId: string;
+      profileName: string;
       html: string;
       url: string;
     }
@@ -89,4 +101,8 @@ export type Message =
       ok: boolean;
       jobId?: string;
       error?: string;
-    };
+    }
+
+  // Import history
+  | { type: "GET_IMPORT_HISTORY" }
+  | { type: "IMPORT_HISTORY"; history: ImportRecord[] };

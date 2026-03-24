@@ -4,12 +4,27 @@ import {
   importJob,
   extractJob,
 } from "../lib/api";
-import type { Message, ExtractedJob } from "../types";
+import type { Message, ExtractedJob, ImportRecord } from "../types";
 
 /**
  * Background service worker — coordinates between popup, content script,
  * and the Shortlist API.
  */
+
+// ── Import history ──────────────────────────────────────────────────────
+
+const MAX_HISTORY = 5;
+
+async function saveImportRecord(record: ImportRecord): Promise<void> {
+  const { importHistory = [] } = await chrome.storage.local.get("importHistory");
+  const updated = [record, ...importHistory].slice(0, MAX_HISTORY);
+  await chrome.storage.local.set({ importHistory: updated });
+}
+
+async function getImportHistory(): Promise<ImportRecord[]> {
+  const { importHistory = [] } = await chrome.storage.local.get("importHistory");
+  return importHistory;
+}
 
 // ── Badge management ─────────────────────────────────────────────────────
 
@@ -47,16 +62,21 @@ chrome.runtime.onMessage.addListener(
         return true;
 
       case "IMPORT_JOB":
-        handleImportJob(message.profileId, message.job, sendResponse);
+        handleImportJob(message.profileId, message.profileName, message.job, sendResponse);
         return true;
 
       case "EXTRACT_AND_IMPORT":
         handleExtractAndImport(
           message.profileId,
+          message.profileName,
           message.html,
           message.url,
           sendResponse,
         );
+        return true;
+
+      case "GET_IMPORT_HISTORY":
+        handleGetImportHistory(sendResponse);
         return true;
     }
   },
@@ -86,6 +106,7 @@ async function handleGetProfiles(
 
 async function handleImportJob(
   profileId: string,
+  profileName: string,
   job: ExtractedJob,
   sendResponse: (response: unknown) => void,
 ): Promise<void> {
@@ -108,21 +129,34 @@ async function handleImportJob(
     externalId: job.externalId,
   });
 
+  const jobId = result.data?.job?.id;
+
+  if (result.ok && jobId) {
+    await saveImportRecord({
+      jobId,
+      title: job.title,
+      company: job.company,
+      source: job.source,
+      importedAt: new Date().toISOString(),
+      profileName,
+    });
+  }
+
   sendResponse({
     type: "IMPORT_RESULT",
     ok: result.ok,
-    jobId: result.data?.job?.id,
+    jobId,
     error: result.error,
   });
 }
 
 async function handleExtractAndImport(
   profileId: string,
+  profileName: string,
   html: string,
   url: string,
   sendResponse: (response: unknown) => void,
 ): Promise<void> {
-  // Step 1: AI extraction
   const extractResult = await extractJob({ input: html, profileId });
   if (!extractResult.ok || !extractResult.data) {
     sendResponse({
@@ -135,7 +169,6 @@ async function handleExtractAndImport(
 
   const extracted = extractResult.data;
 
-  // Step 2: Import the extracted job
   const importResult = await importJob({
     profileId,
     originalInput: url,
@@ -153,10 +186,30 @@ async function handleExtractAndImport(
     skills: extracted.skills,
   });
 
+  const jobId = importResult.data?.job?.id;
+
+  if (importResult.ok && jobId) {
+    await saveImportRecord({
+      jobId,
+      title: extracted.title,
+      company: extracted.company,
+      source: "CUSTOM",
+      importedAt: new Date().toISOString(),
+      profileName,
+    });
+  }
+
   sendResponse({
     type: "EXTRACT_AND_IMPORT_RESULT",
     ok: importResult.ok,
-    jobId: importResult.data?.job?.id,
+    jobId,
     error: importResult.error,
   });
+}
+
+async function handleGetImportHistory(
+  sendResponse: (response: unknown) => void,
+): Promise<void> {
+  const history = await getImportHistory();
+  sendResponse({ type: "IMPORT_HISTORY", history });
 }
