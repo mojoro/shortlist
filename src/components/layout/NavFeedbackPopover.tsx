@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect, useTransition } from "react";
 import { submitFeedback } from "@/app/(dashboard)/settings/feedback-actions";
+import { useErrorBuffer } from "@/lib/use-error-buffer";
+import { getFeedbackMetadata } from "@/lib/get-feedback-metadata";
 
 const MIN_LENGTH = 10;
 const MAX_LENGTH = 2000;
@@ -36,6 +38,8 @@ export function NavFeedbackPopover({ labelClass }: NavFeedbackPopoverProps) {
   const [isPending, startTransition] = useTransition();
   const popoverRef = useRef<HTMLDivElement>(null);
 
+  const { getRecentErrors } = useErrorBuffer();
+
   const charCount = message.length;
   const isValid = charCount >= MIN_LENGTH && charCount <= MAX_LENGTH;
 
@@ -68,7 +72,8 @@ export function NavFeedbackPopover({ labelClass }: NavFeedbackPopoverProps) {
     if (!isValid || isPending) return;
     startTransition(async () => {
       try {
-        await submitFeedback({ message });
+        const metadata = getFeedbackMetadata(getRecentErrors());
+        await submitFeedback({ message, metadata });
         setMessage("");
         setStatus("success");
         setTimeout(() => {

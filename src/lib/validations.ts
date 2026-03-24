@@ -173,6 +173,7 @@ export const feedbackSchema = z.object({
     .trim()
     .min(10, "Feedback must be at least 10 characters")
     .max(2000, "Feedback must be under 2,000 characters"),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 // ── Account deletion confirmation ────────────────────────────────────────
@@ -186,4 +187,15 @@ export const updateModelSettingsSchema = z.object({
   customTailorModel:  z.string().trim().min(1).max(200).nullable().optional(),
   customAnalyzeModel: z.string().trim().min(1).max(200).nullable().optional(),
   customExtractModel: z.string().trim().min(1).max(200).nullable().optional(),
+});
+
+// ── Admin: usage limit adjustment ────────────────────────────────────────────
+export const adminAdjustUsageLimitSchema = z.object({
+  userId: z.string().min(1),
+  monthlyLimitInputTokens: z.number().int().positive(),
+});
+
+// ── Admin: user ID parameter ─────────────────────────────────────────────────
+export const adminUserIdSchema = z.object({
+  userId: z.string().min(1),
 });

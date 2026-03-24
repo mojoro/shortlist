@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { submitFeedback } from "@/app/(dashboard)/settings/feedback-actions";
+import { useErrorBuffer } from "@/lib/use-error-buffer";
+import { getFeedbackMetadata } from "@/lib/get-feedback-metadata";
 
 const MIN_LENGTH = 10;
 const MAX_LENGTH = 2000;
@@ -12,6 +14,8 @@ export function FeedbackForm() {
   const [errorText, setErrorText] = useState("");
   const [isPending, startTransition] = useTransition();
 
+  const { getRecentErrors } = useErrorBuffer();
+
   const charCount = message.length;
   const isValid = charCount >= MIN_LENGTH && charCount <= MAX_LENGTH;
 
@@ -20,7 +24,8 @@ export function FeedbackForm() {
 
     startTransition(async () => {
       try {
-        await submitFeedback({ message });
+        const metadata = getFeedbackMetadata(getRecentErrors());
+        await submitFeedback({ message, metadata });
         setMessage("");
         setStatus("success");
       } catch (err) {

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useDashboardStore } from "@/lib/store";
 import { fetchDashboardData } from "@/app/(dashboard)/actions-sync";
+import { useErrorBuffer } from "@/lib/use-error-buffer";
 
 interface Props {
   userId: string;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function DashboardDataProvider({ userId, children }: Props) {
+  useErrorBuffer();
   const hydrate = useDashboardStore((s) => s.hydrate);
   const sync = useDashboardStore((s) => s.sync);
   const hydrated = useDashboardStore((s) => s.hydrated);
