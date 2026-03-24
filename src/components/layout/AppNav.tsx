@@ -70,6 +70,14 @@ function IconSignOut() {
   );
 }
 
+function IconShield() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  );
+}
+
 // ── Data ──────────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS = [
@@ -98,7 +106,7 @@ const LABEL =
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function AppNav() {
+export function AppNav({ isAdmin }: { isAdmin?: boolean }) {
   const followUpCount = useDashboardStore((s) => s.followUpCount);
   const profiles = useDashboardStore((s) => s.profiles);
   const activeProfile = useDashboardStore((s) => s.activeProfile);
@@ -191,8 +199,21 @@ export function AppNav() {
           })}
         </nav>
 
-        {/* Bottom (top-to-bottom): theme → feedback → usage → account */}
+        {/* Bottom (top-to-bottom): admin → theme → feedback → usage → account */}
         <div className="shrink-0 space-y-0.5 border-t border-[var(--border)] px-3 py-3">
+
+          {/* Admin link */}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="flex h-10 w-full items-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]"
+            >
+              <span className="flex w-10 shrink-0 justify-center">
+                <IconShield />
+              </span>
+              <span className={`${LABEL} text-sm font-medium`}>Admin</span>
+            </Link>
+          )}
 
           {/* Theme toggle */}
           <button
@@ -302,6 +323,16 @@ export function AppNav() {
                 )}
 
                 <div className="py-1">
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      role="menuitem"
+                      className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text)]"
+                    >
+                      <IconShield />
+                      Admin
+                    </Link>
+                  )}
                   <Link
                     href="/settings"
                     role="menuitem"
@@ -403,6 +434,16 @@ export function AppNav() {
                   {mounted ? (isDark ? "Light mode" : "Dark mode") : "Theme"}
                 </span>
               </button>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  role="menuitem"
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] hover:text-[var(--text)]"
+                >
+                  <IconShield />
+                  Admin
+                </Link>
+              )}
               <Link
                 href="/settings"
                 role="menuitem"
