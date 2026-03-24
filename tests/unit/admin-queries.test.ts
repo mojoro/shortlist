@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 
 // We only test the merge logic — not the DB query itself.
 // Extract a pure helper so we can test it without Prisma.

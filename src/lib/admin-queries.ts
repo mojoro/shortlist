@@ -139,7 +139,8 @@ export async function getAdminFeedbackList(opts: {
 
 // ── Pool ─────────────────────────────────────────────────────────────────────
 
-// Actively configured scraper sources shown in the admin pool UI
+// Actively configured scraper sources shown in the admin pool UI.
+// Keep in sync with active scrapers in src/config/companies.ts.
 const ACTIVE_SOURCES: ScraperSource[] = [
   ScraperSource.GREENHOUSE,
   ScraperSource.ASHBY,
@@ -170,9 +171,7 @@ export async function getAdminPoolStats() {
     }),
   ]);
 
-  const bySource = mergeSourceCounts(
-    rawBySource.map((r) => ({ source: r.source, _count: r._count }))
-  );
+  const bySource = mergeSourceCounts(rawBySource);
 
   return { total, bySource };
 }
