@@ -1,11 +1,10 @@
 import {
   checkAuth,
   fetchProfiles,
+  extractJob,
   importJob,
-  identifySelectors,
-  normalizeExtraction,
 } from "../lib/api";
-import type { Message, ExtractedJob, RawExtraction, ImportRecord } from "../types";
+import type { Message, ImportPayload, ImportRecord } from "../types";
 
 // ── Import history ──────────────────────────────────────────────────────
 
@@ -39,21 +38,12 @@ chrome.runtime.onMessage.addListener(
         handleGetProfiles(sendResponse);
         return true;
 
+      case "EXTRACT_JOB":
+        handleExtractJob(message.html, message.profileId, sendResponse);
+        return true;
+
       case "IMPORT_JOB":
-        handleImportJob(message.profileId, message.profileName, message.job, sendResponse);
-        return true;
-
-      case "IDENTIFY_SELECTORS":
-        handleIdentifySelectors(message.skeleton, message.profileId, sendResponse);
-        return true;
-
-      case "NORMALIZE_AND_IMPORT":
-        handleNormalizeAndImport(
-          message.raw,
-          message.profileId,
-          message.profileName,
-          sendResponse,
-        );
+        handleImportJob(message.profileId, message.profileName, message.data, sendResponse);
         return true;
 
       case "GET_IMPORT_HISTORY":
@@ -85,39 +75,35 @@ async function handleGetProfiles(
   });
 }
 
+async function handleExtractJob(
+  html: string,
+  profileId: string,
+  sendResponse: (response: unknown) => void,
+): Promise<void> {
+  const result = await extractJob({ input: html, profileId });
+  sendResponse({
+    type: "EXTRACT_RESULT",
+    ok: result.ok,
+    data: result.data ?? undefined,
+    error: result.error ?? undefined,
+  });
+}
+
 async function handleImportJob(
   profileId: string,
   profileName: string,
-  job: ExtractedJob,
+  data: ImportPayload,
   sendResponse: (response: unknown) => void,
 ): Promise<void> {
-  const result = await importJob({
-    profileId,
-    originalInput: job.url,
-    title: job.title,
-    company: job.company,
-    description: job.description,
-    location: job.location,
-    locationType: job.locationType,
-    url: job.url,
-    postedAt: job.postedAt,
-    jobType: job.jobType,
-    salaryMin: job.salaryMin,
-    salaryMax: job.salaryMax,
-    currency: job.currency,
-    skills: job.skills,
-    source: job.source,
-    externalId: job.externalId,
-  });
-
+  const result = await importJob({ profileId, ...data });
   const jobId = result.data?.job?.id;
 
   if (result.ok && jobId) {
     await saveImportRecord({
       jobId,
-      title: job.title,
-      company: job.company,
-      source: job.source,
+      title: data.title,
+      company: data.company,
+      source: "CUSTOM",
       importedAt: new Date().toISOString(),
       profileName,
     });
@@ -127,86 +113,7 @@ async function handleImportJob(
     type: "IMPORT_RESULT",
     ok: result.ok,
     jobId,
-    error: result.error,
-  });
-}
-
-async function handleIdentifySelectors(
-  skeleton: string,
-  profileId: string,
-  sendResponse: (response: unknown) => void,
-): Promise<void> {
-  const result = await identifySelectors({ skeleton, profileId });
-
-  if (result.ok && result.data?.selectors) {
-    sendResponse({
-      type: "SELECTORS_IDENTIFIED",
-      selectors: result.data.selectors,
-    });
-  } else {
-    sendResponse({
-      type: "IMPORT_RESULT",
-      ok: false,
-      error: result.error ?? "Could not identify job fields on this page",
-    });
-  }
-}
-
-async function handleNormalizeAndImport(
-  raw: RawExtraction,
-  profileId: string,
-  profileName: string,
-  sendResponse: (response: unknown) => void,
-): Promise<void> {
-  const normalizeResult = await normalizeExtraction({ ...raw, profileId });
-  if (!normalizeResult.ok || !normalizeResult.data) {
-    sendResponse({
-      type: "IMPORT_RESULT",
-      ok: false,
-      error: normalizeResult.error ?? "Normalization failed",
-    });
-    return;
-  }
-
-  const extracted = normalizeResult.data;
-
-  const importResult = await importJob({
-    profileId,
-    originalInput: raw.url,
-    title: extracted.title,
-    company: extracted.company,
-    description: extracted.description,
-    location: extracted.location,
-    locationType: extracted.locationType,
-    url: extracted.url ?? raw.url,
-    postedAt: extracted.postedAt,
-    jobType: extracted.jobType,
-    salaryMin: extracted.salaryMin,
-    salaryMax: extracted.salaryMax,
-    currency: extracted.currency,
-    skills: extracted.skills,
-    source: extracted.source,
-    externalId: extracted.externalId,
-  });
-
-  const jobId = importResult.data?.job?.id;
-
-  if (importResult.ok && jobId) {
-    await saveImportRecord({
-      jobId,
-      title: extracted.title,
-      company: extracted.company,
-      source: "CUSTOM",
-      importedAt: new Date().toISOString(),
-      profileName,
-    });
-  }
-
-  sendResponse({
-    type: importResult.ok ? "IMPORT_COMPLETE" : "IMPORT_RESULT",
-    ok: importResult.ok,
-    jobId,
-    error: importResult.error,
+    error: result.error ?? undefined,
   });
 }
 
