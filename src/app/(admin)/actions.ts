@@ -55,3 +55,24 @@ export async function adminResetMonthlyUsage(data: unknown) {
   });
   revalidatePath("/admin/users");
 }
+
+export async function adminTriggerScrape(): Promise<{
+  ok: boolean;
+  message: string;
+}> {
+  await requireAdmin();
+
+  const url = new URL("/api/scrape", env.NEXT_PUBLIC_APP_URL);
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.CRON_SECRET}` },
+  });
+
+  if (!res.ok) {
+    return { ok: false, message: `Scrape failed: ${res.status} ${res.statusText}` };
+  }
+
+  const body = (await res.json()) as { poolNew?: number };
+  revalidatePath("/admin/system");
+  return { ok: true, message: `Scrape complete — ${body.poolNew ?? 0} new to pool` };
+}

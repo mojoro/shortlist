@@ -96,7 +96,7 @@ async function fetchPage(
 
 // ── Main scraper ────────────────────────────────────────────────────────────
 
-const MAX_PAGES = 3; // 50 results/page * 3 = 150 max per search
+const MAX_PAGES = 5; // 50 results/page * 5 = 250 max per search
 
 /**
  * Scrapes job listings from the Adzuna API for all configured searches.
@@ -114,6 +114,7 @@ export async function scrapeAdzuna(
 
   for (const search of searches) {
     let page = 1;
+    let searchFetched = 0;
 
     while (page <= MAX_PAGES) {
       const data = await fetchPage(search, page, appId, appKey);
@@ -126,9 +127,10 @@ export async function scrapeAdzuna(
           keyword: search.keyword,
         });
       }
+      searchFetched += data.results.length;
 
-      // Stop if we've fetched all available results
-      if (results.length >= data.count || data.results.length < 50) break;
+      // Stop if we've fetched all available results for this search
+      if (searchFetched >= data.count || data.results.length < 50) break;
       page++;
     }
   }

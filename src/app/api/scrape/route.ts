@@ -17,7 +17,7 @@ import {
 } from "@/lib/normalize";
 import type { ScraperSource } from "@prisma/client";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function POST(req: Request) {
   const authHeader = req.headers.get("authorization");

@@ -4,6 +4,7 @@ import { formatDistanceToNow } from "date-fns";
 
 import { getSystemHealth, getRecentScrapeRuns } from "@/lib/admin-queries";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
+import { TriggerScrapeButton } from "@/components/admin/TriggerScrapeButton";
 
 export const metadata: Metadata = { title: "System Health" };
 
@@ -53,13 +54,16 @@ export default async function AdminSystemPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-[var(--text)]">
-          System Health
-        </h1>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">
-          Scraper status, failure tracking, and AI spend
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-[var(--text)]">
+            System Health
+          </h1>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
+            Scraper status, failure tracking, and AI spend
+          </p>
+        </div>
+        <TriggerScrapeButton />
       </div>
 
       {/* Cron status */}
