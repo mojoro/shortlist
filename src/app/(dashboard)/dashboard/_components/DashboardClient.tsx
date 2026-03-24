@@ -52,6 +52,7 @@ export function DashboardClient({
     setIsLoadingMatches(true);
     loadMoreMatches(activeProfile.id)
       .then(() => sync())
+      .catch(() => {})
       .finally(() => setIsLoadingMatches(false));
   }, [activeProfile, allJobs.length, sync]);
 

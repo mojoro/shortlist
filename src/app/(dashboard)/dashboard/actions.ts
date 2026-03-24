@@ -397,7 +397,7 @@ export async function loadMoreMatches(
   const profile = await prisma.profile.findFirst({
     where: { id: profileId, userId },
   });
-  if (!profile) throw new Error("Profile not found");
+  if (!profile) return { added: 0, remaining: 0 };
 
   const { runMatchPipelineForProfile } = await import("@/lib/match-pipeline");
   const result = await runMatchPipelineForProfile(profileId, profile);
