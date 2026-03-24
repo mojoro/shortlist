@@ -36,6 +36,7 @@ export function normalizeGreenhouseForPool(
     description: raw.content ? htmlToMarkdown(raw.content) : "",
     postedAt:    raw.updated_at ? new Date(raw.updated_at) : null,
     rawData:     rawMeta as unknown as Prisma.InputJsonValue,
+    skills:      [],
     country,
     region,
   };
@@ -89,6 +90,7 @@ export function normalizeLeverForPool(
     jobType:      LEVER_JOB_TYPE[commitment] ?? null,
     postedAt:     raw.createdAt ? new Date(raw.createdAt) : null,
     rawData:      raw as unknown as Prisma.InputJsonValue,
+    skills:       [],
     country,
     region,
   };
@@ -138,6 +140,7 @@ export function normalizeAshbyForPool(
     jobType:      ASHBY_JOB_TYPE[empType] ?? null,
     postedAt:     raw.publishedAt ? new Date(raw.publishedAt) : null,
     rawData:      rawMeta as unknown as Prisma.InputJsonValue,
+    skills:       [],
     country,
     region,
   };
@@ -224,6 +227,7 @@ export function normalizeUSAJobsForPool(
     salaryMax,
     currency:     "USD",
     rawData:      rawMeta as unknown as Prisma.InputJsonValue,
+    skills:       [],
     country:      "US",
     region:       raw.PositionLocation?.[0]?.LocationName
       ? parseLocation(raw.PositionLocation[0].LocationName).region
@@ -259,6 +263,7 @@ export function normalizeAdzunaForPool(
     description: raw.description ?? "",
     postedAt:    raw.created ? new Date(raw.created) : null,
     rawData:     rawMeta as unknown as Prisma.InputJsonValue,
+    skills:      [],
     salaryMin:   raw.salary_min ? Math.round(raw.salary_min) : null,
     salaryMax:   raw.salary_max ? Math.round(raw.salary_max) : null,
     currency:    currencyForCountry(country),
