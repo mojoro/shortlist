@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import type { ExtractionResult, ExtractedJob, ImportRecord, Message } from "../types";
+import type { ExtractionResult, RawExtraction, ImportRecord, SelectorMap, Message } from "../types";
 import { getBaseUrl } from "../lib/api";
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -11,7 +11,15 @@ interface Profile {
   isActive: boolean;
 }
 
-type Status = "idle" | "loading" | "extracting" | "importing" | "success" | "error";
+type Status =
+  | "idle"
+  | "loading"
+  | "reading"
+  | "identifying"
+  | "extracting"
+  | "importing"
+  | "success"
+  | "error";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -35,23 +43,29 @@ function timeAgo(isoDate: string): string {
   return `${days}d ago`;
 }
 
+const STATUS_LABELS: Partial<Record<Status, string>> = {
+  reading: "Reading page...",
+  identifying: "Identifying job fields...",
+  extracting: "Extracting content...",
+  importing: "Importing...",
+};
+
 // ── App ──────────────────────────────────────────────────────────────────
 
 function Popup() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
-  const [extraction, setExtraction] = useState<ExtractionResult | null>(null);
+  const [rawExtraction, setRawExtraction] = useState<RawExtraction | null>(null);
   const [status, setStatus] = useState<Status>("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [importedJobId, setImportedJobId] = useState<string | null>(null);
   const [importHistory, setImportHistory] = useState<ImportRecord[]>([]);
   const [baseUrl, setBaseUrl] = useState("https://shortlist.johnmoorman.com");
+  const [aiIdentified, setAiIdentified] = useState(false);
 
-  // Initialize: check auth, fetch profiles, extract from current tab
   useEffect(() => {
     async function init() {
-      // 0. Resolve base URL for links
       const url = await getBaseUrl();
       setBaseUrl(url);
 
@@ -84,76 +98,142 @@ function Popup() {
       const profs = profilesResult.profiles ?? [];
       setProfiles(profs);
 
-      // Default to the active profile
       const active = profs.find((p) => p.isActive);
       if (active) setSelectedProfileId(active.id);
       else if (profs.length > 0) setSelectedProfileId(profs[0].id);
 
       // 4. Extract from the current tab
-      setStatus("extracting");
+      setStatus("reading");
       try {
         const [tab] = await chrome.tabs.query({
           active: true,
           currentWindow: true,
         });
-        if (tab?.id) {
-          let result: { type: string; result: ExtractionResult } | null = null;
+        if (!tab?.id) {
+          setStatus("idle");
+          return;
+        }
 
-          // Try messaging the content script (already injected via manifest)
+        let extraction: ExtractionResult | null = null;
+
+        try {
+          const result = await sendTabMessage<{
+            type: string;
+            result: ExtractionResult;
+          }>(tab.id, { type: "EXTRACT" });
+          extraction = result?.result ?? null;
+        } catch {
+          // Content script not present — fall back to scripting API
           try {
-            result = await sendTabMessage<{
-              type: string;
-              result: ExtractionResult;
-            }>(tab.id, { type: "EXTRACT" });
-          } catch {
-            // Content script not present (page loaded before extension install/refresh).
-            // Fall back to collecting page content directly via scripting API.
-            try {
-              const [injected] = await chrome.scripting.executeScript({
-                target: { tabId: tab.id },
-                func: () => {
-                  const el =
-                    document.querySelector("[role='main'] article") ??
-                    document.querySelector("[role='main']") ??
-                    document.querySelector("main") ??
-                    document.querySelector("article") ??
-                    document.body;
-                  const clone = el.cloneNode(true) as HTMLElement;
-                  clone.querySelectorAll(
-                    "script, style, nav, footer, header, iframe, noscript, " +
-                    "svg, img, video, audio, canvas, [aria-hidden='true']"
-                  ).forEach((n) => n.remove());
-                  return {
-                    url: window.location.href,
-                    html: clone.innerHTML.slice(0, 50000),
-                    title: document.title,
-                  };
-                },
-              });
-              if (injected?.result) {
-                result = {
-                  type: "EXTRACTED",
-                  result: {
-                    type: "generic",
-                    url: injected.result.url,
-                    html: injected.result.html,
-                    title: injected.result.title,
-                    meta: {},
-                  },
+            const [injected] = await chrome.scripting.executeScript({
+              target: { tabId: tab.id },
+              func: () => {
+                const el =
+                  document.querySelector("[role='main'] article") ??
+                  document.querySelector("[role='main']") ??
+                  document.querySelector("main") ??
+                  document.querySelector("article") ??
+                  document.body;
+                const clone = el.cloneNode(true) as HTMLElement;
+                clone.querySelectorAll(
+                  "script, style, nav, footer, header, iframe, noscript, " +
+                  "svg, img, video, audio, canvas, [aria-hidden='true']"
+                ).forEach((n) => n.remove());
+                return {
+                  skeleton: clone.innerHTML.slice(0, 15000),
+                  url: window.location.href,
+                  domain: window.location.hostname,
+                };
+              },
+            });
+            if (injected?.result) {
+              const r = injected.result;
+              if (r.skeleton && r.skeleton.length >= 50) {
+                extraction = {
+                  type: "needs_identification",
+                  skeleton: r.skeleton,
+                  url: r.url,
+                  domain: r.domain,
                 };
               }
-            } catch {
-              // Page is restricted (chrome://, edge://, etc.)
             }
+          } catch {
+            // Page is restricted (chrome://, edge://, etc.)
+          }
+        }
+
+        if (!extraction || extraction.type === "none") {
+          setStatus("idle");
+          return;
+        }
+
+        // 5. Handle extraction result
+        if (extraction.type === "extracted") {
+          setRawExtraction(extraction.raw);
+          setStatus("idle");
+          return;
+        }
+
+        // 6. Needs AI identification
+        if (extraction.type === "needs_identification") {
+          const profileId = active?.id ?? profs[0]?.id;
+          if (!profileId) {
+            setStatus("error");
+            setErrorMessage("No profile found. Create one in Shortlist first.");
+            return;
           }
 
-          setExtraction(result?.result ?? null);
+          setStatus("identifying");
+          const identifyResult = await sendMessage<{
+            type: string;
+            selectors?: SelectorMap;
+            ok?: boolean;
+            error?: string;
+          }>({
+            type: "IDENTIFY_SELECTORS",
+            skeleton: extraction.skeleton,
+            profileId,
+          });
+
+          if (!identifyResult.selectors) {
+            setStatus("error");
+            setErrorMessage(identifyResult.error ?? "Could not identify job fields on this page");
+            return;
+          }
+
+          setStatus("extracting");
+          setAiIdentified(true);
+
+          // Apply selectors in the content script
+          if (tab.id) {
+            try {
+              const applyResult = await sendTabMessage<{
+                type: string;
+                result: ExtractionResult;
+              }>(tab.id, {
+                type: "APPLY_SELECTORS",
+                selectors: identifyResult.selectors,
+              });
+
+              if (applyResult?.result?.type === "extracted") {
+                setRawExtraction(applyResult.result.raw);
+                setStatus("idle");
+              } else {
+                setStatus("error");
+                setErrorMessage("Could not extract job details from this page");
+              }
+            } catch {
+              // Content script not injected — cannot apply selectors
+              setStatus("error");
+              setErrorMessage("Could not extract job details from this page");
+            }
+          }
+          return;
         }
       } catch {
-        setExtraction(null);
+        setStatus("error");
+        setErrorMessage("Something went wrong reading this page");
       }
-
-      setStatus("idle");
     }
 
     init();
@@ -169,73 +249,40 @@ function Popup() {
   }
 
   async function handleImport() {
-    if (!selectedProfileId || !extraction) return;
+    if (!selectedProfileId || !rawExtraction) return;
 
     setStatus("importing");
     setErrorMessage("");
 
     try {
-      if (extraction.type === "structured") {
-        const result = await sendMessage<{
-          type: string;
-          ok: boolean;
-          jobId?: string;
-          error?: string;
-        }>({
-          type: "IMPORT_JOB",
-          profileId: selectedProfileId,
-          profileName: selectedProfileName,
-          job: extraction.data,
-        });
+      const result = await sendMessage<{
+        type: string;
+        ok?: boolean;
+        jobId?: string;
+        error?: string;
+      }>({
+        type: "NORMALIZE_AND_IMPORT",
+        raw: rawExtraction,
+        profileId: selectedProfileId,
+        profileName: selectedProfileName,
+      });
 
-        if (result.ok) {
-          setStatus("success");
-          setImportedJobId(result.jobId ?? null);
-          if (result.jobId) {
-            addToHistory({
-              jobId: result.jobId,
-              title: extraction.data.title,
-              company: extraction.data.company,
-              source: extraction.data.source,
-              importedAt: new Date().toISOString(),
-              profileName: selectedProfileName,
-            });
-          }
-        } else {
-          setStatus("error");
-          setErrorMessage(result.error ?? "Import failed");
+      if (result.ok || result.type === "IMPORT_COMPLETE") {
+        setStatus("success");
+        setImportedJobId(result.jobId ?? null);
+        if (result.jobId) {
+          addToHistory({
+            jobId: result.jobId,
+            title: rawExtraction.title ?? "Imported job",
+            company: rawExtraction.company ?? "Unknown company",
+            source: "CUSTOM",
+            importedAt: new Date().toISOString(),
+            profileName: selectedProfileName,
+          });
         }
-      } else if (extraction.type === "generic") {
-        const result = await sendMessage<{
-          type: string;
-          ok: boolean;
-          jobId?: string;
-          error?: string;
-        }>({
-          type: "EXTRACT_AND_IMPORT",
-          profileId: selectedProfileId,
-          profileName: selectedProfileName,
-          html: extraction.html,
-          url: extraction.url,
-        });
-
-        if (result.ok) {
-          setStatus("success");
-          setImportedJobId(result.jobId ?? null);
-          if (result.jobId) {
-            addToHistory({
-              jobId: result.jobId,
-              title: extraction.title || "Imported job",
-              company: "Via AI extraction",
-              source: "CUSTOM",
-              importedAt: new Date().toISOString(),
-              profileName: selectedProfileName,
-            });
-          }
-        } else {
-          setStatus("error");
-          setErrorMessage(result.error ?? "Import failed");
-        }
+      } else {
+        setStatus("error");
+        setErrorMessage(result.error ?? "Import failed");
       }
     } catch {
       setStatus("error");
@@ -306,33 +353,34 @@ function Popup() {
     );
   }
 
-
+  const statusLabel = STATUS_LABELS[status];
 
   return (
     <div className="popup">
       <Header />
 
       {/* Job preview */}
-      {extraction?.type === "structured" && (
-        <JobPreview job={extraction.data} />
-      )}
-      {extraction?.type === "generic" && (
+      {rawExtraction && status === "idle" && (
         <div className="job-preview">
-          <div className="title">{extraction.title || document.title || "This page"}</div>
-          <div className="generic-notice">
-            AI will extract job details from this page
-          </div>
+          <div className="title">{rawExtraction.title || "Untitled"}</div>
+          <div className="company">{rawExtraction.company || "Unknown company"}</div>
+          {rawExtraction.location && (
+            <div className="location">{rawExtraction.location}</div>
+          )}
+          {aiIdentified && (
+            <div className="generic-notice">AI-identified</div>
+          )}
         </div>
       )}
-      {extraction === null && status === "idle" && (
+      {!rawExtraction && status === "idle" && (
         <div className="empty-state">
           <p>Could not read this page. Try reloading it first.</p>
         </div>
       )}
 
-      {/* Extracting state */}
-      {status === "extracting" && (
-        <div className="status status-loading">Reading page...</div>
+      {/* Status message */}
+      {statusLabel && (
+        <div className="status status-loading">{statusLabel}</div>
       )}
 
       {/* Profile selector */}
@@ -353,17 +401,13 @@ function Popup() {
       )}
 
       {/* Import button */}
-      {extraction && status !== "extracting" && (
+      {rawExtraction && status === "idle" && (
         <button
           className="btn btn-primary"
           onClick={handleImport}
-          disabled={status === "importing" || !selectedProfileId}
+          disabled={!selectedProfileId}
         >
-          {status === "importing"
-            ? "Importing..."
-            : extraction.type === "generic"
-              ? "Extract & Import"
-              : "Import to Shortlist"}
+          Import to Shortlist
         </button>
       )}
 
@@ -383,16 +427,6 @@ function Header() {
   return (
     <div className="popup-header">
       <h1>Shortlist</h1>
-    </div>
-  );
-}
-
-function JobPreview({ job }: { job: ExtractedJob }) {
-  return (
-    <div className="job-preview">
-      <div className="title">{job.title}</div>
-      <div className="company">{job.company}</div>
-      {job.location && <div className="location">{job.location}</div>}
     </div>
   );
 }
