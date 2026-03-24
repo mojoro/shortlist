@@ -1,3 +1,4 @@
+import React from "react";
 import type { Metadata } from "next";
 import { formatDistanceToNow } from "date-fns";
 
@@ -15,6 +16,12 @@ function formatSource(source: string) {
 
 function formatTokens(count: number) {
   return Intl.NumberFormat("en-US", { notation: "compact" }).format(count);
+}
+
+function formatDuration(ms: number | null): string {
+  if (ms === null) return "—";
+  if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
+  return `${ms}ms`;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -65,32 +72,50 @@ export default async function AdminSystemPage() {
                 <th className="px-4 py-3">Last Run</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Jobs Found</th>
+                <th className="px-4 py-3 text-right">In Pool</th>
+                <th className="px-4 py-3 text-right">Duration</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
               {health.scraperStatus.map((run) => (
-                <tr
-                  key={run.id}
-                  className="text-[var(--text)] transition-colors hover:bg-[var(--bg-subtle)]"
-                >
-                  <td className="px-4 py-3 font-medium">
-                    {formatSource(run.source)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-[var(--text-muted)]">
-                    {formatDistanceToNow(run.createdAt, { addSuffix: true })}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={run.status} />
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
-                    {run.jobsFound}
-                  </td>
-                </tr>
+                <React.Fragment key={run.id}>
+                  <tr className="text-[var(--text)] transition-colors hover:bg-[var(--bg-subtle)]">
+                    <td className="px-4 py-3 font-medium">
+                      {formatSource(run.source)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-[var(--text-muted)]">
+                      {formatDistanceToNow(run.createdAt, { addSuffix: true })}
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={run.status} />
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {run.jobsFound}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {run.jobsInPool}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums text-[var(--text-muted)]">
+                      {formatDuration(run.durationMs)}
+                    </td>
+                  </tr>
+                  {(run.status === "FAILED" || run.status === "PARTIAL") &&
+                    run.errorMessage && (
+                      <tr className="bg-[var(--bg-subtle)]">
+                        <td
+                          colSpan={6}
+                          className="px-4 py-2 text-xs text-[var(--text-muted)]"
+                        >
+                          {run.errorMessage}
+                        </td>
+                      </tr>
+                    )}
+                </React.Fragment>
               ))}
               {health.scraperStatus.length === 0 && (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={6}
                     className="px-4 py-8 text-center text-[var(--text-muted)]"
                   >
                     No scrape runs recorded yet.
