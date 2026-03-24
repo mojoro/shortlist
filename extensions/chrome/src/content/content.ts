@@ -1,12 +1,6 @@
 import { extractFromPage } from "../lib/extractors";
+import { applySelectors, cacheSelectors } from "../lib/extractors/generic";
 import type { Message } from "../types";
-
-/**
- * Content script — injected on demand via chrome.scripting.executeScript
- * when the user opens the popup, or pre-injected on known job board URLs.
- *
- * Listens for EXTRACT messages from the popup and returns extraction results.
- */
 
 chrome.runtime.onMessage.addListener(
   (
@@ -15,9 +9,22 @@ chrome.runtime.onMessage.addListener(
     sendResponse: (response: Message) => void,
   ) => {
     if (message.type === "EXTRACT") {
-      const result = extractFromPage();
-      sendResponse({ type: "EXTRACTED", result });
+      extractFromPage().then((result) => {
+        sendResponse({ type: "EXTRACTED", result });
+      });
+      return true;
     }
-    return true;
+    if (message.type === "APPLY_SELECTORS") {
+      const raw = applySelectors(message.selectors);
+      if (raw) {
+        const domain = window.location.hostname;
+        cacheSelectors(domain, message.selectors);
+      }
+      sendResponse({
+        type: "SELECTORS_APPLIED",
+        result: raw ? { type: "extracted", raw } : { type: "none" },
+      });
+      return true;
+    }
   },
 );
