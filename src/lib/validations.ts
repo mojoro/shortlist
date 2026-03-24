@@ -186,27 +186,6 @@ export const feedbackSchema = z.object({
 export const deleteAccountSchema = z.object({
   confirmation: z.literal("DELETE"),
 });
-
-// ── Chrome extension: selector identification ───────────────────────────
-export const identifySelectorsSchema = z.object({
-  skeleton: z.string().min(1).max(20000),
-  profileId: z.string().cuid(),
-});
-
-// ── Chrome extension: extraction normalization ──────────────────────────
-export const normalizeExtractionSchema = z.object({
-  title: z.string().nullish(),
-  company: z.string().nullish(),
-  location: z.string().nullish(),
-  salaryText: z.string().nullish(),
-  jobTypeText: z.string().nullish(),
-  skillsText: z.string().nullish(),
-  descriptionHtml: z.string().max(100000).default(""),
-  postedDateText: z.string().nullish(),
-  url: z.string(),
-  profileId: z.string().cuid(),
-});
-
 // ── Custom model settings ────────────────────────────────────────────────
 export const updateModelSettingsSchema = z.object({
   profileId:          z.string().cuid(),
