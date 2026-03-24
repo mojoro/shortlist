@@ -60,7 +60,7 @@ Add 2 new columns and inline error display to the existing scraper status table.
 
 ### Error sub-row
 
-After each data `<tr>`, if `entry.status === "FAILED"` and `entry.errorMessage` is non-null: render an additional `<tr>` containing a single `<td colSpan={6}>` with the error message in small muted text. Render nothing when `errorMessage` is null.
+After each data `<tr>`, if `entry.status === "FAILED"` or `entry.status === "PARTIAL"`, and `entry.errorMessage` is non-null: render an additional `<tr>` containing a single `<td colSpan={6}>` with the error message in small muted text. Render nothing when `errorMessage` is null.
 
 **No changes to `getSystemHealth()` — it already returns all needed fields.**
 
@@ -85,7 +85,7 @@ const [health, recentRuns] = await Promise.all([
 
 `getRecentScrapeRuns` already exists and returns full `ScrapeRun` rows — no changes to the function needed.
 
-Render a table with the same 6-column structure as the enhanced status table (Source, Last Run, Status, Jobs Found, In Pool, Duration) and the same error sub-row treatment for FAILED rows with non-null `errorMessage` (colSpan={6}). The table markup is duplicated inline in the same page file — no shared component needed at this scale.
+Render a table with the same 6-column structure as the enhanced status table (Source, Last Run, Status, Jobs Found, In Pool, Duration) and the same error sub-row treatment for FAILED or PARTIAL rows with non-null `errorMessage` (colSpan={6}). The table markup is duplicated inline in the same page file — no shared component needed at this scale.
 
 No pagination. The existing "Failed Runs (24h)" section remains in place as the third section, immediately before this new fourth section.
 
