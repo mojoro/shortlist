@@ -20,12 +20,14 @@ export default async function DashboardLayout({
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
+  const isAdmin = userId === process.env.ADMIN_USER_ID;
+
   // No data fetching here — DashboardDataProvider handles it client-side.
   // The shell renders immediately; data arrives from localStorage (instant
   // on return visits) or from a background server fetch (first-ever visit).
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      <AppNav />
+      <AppNav isAdmin={isAdmin} />
       {/* sm:ml-16 offsets the 64px fixed sidebar on desktop */}
       {/* pb-24 adds space for the mobile bottom tab bar */}
       <div className="sm:ml-16">
