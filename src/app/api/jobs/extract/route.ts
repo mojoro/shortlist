@@ -82,6 +82,15 @@ export async function POST(req: Request) {
 
   const models = getModels(profile);
 
+  // Usage limit check
+  const usage = await prisma.usage.findUnique({ where: { userId } });
+  if (usage && usage.currentMonthInputTokens >= usage.monthlyLimitInputTokens) {
+    return Response.json(
+      { error: "Monthly AI usage limit reached." },
+      { status: 429 },
+    );
+  }
+
   // Resolve input to clean text
   let cleanedText: string;
   const isUrl = URL_RE.test(input.trim());
@@ -132,6 +141,30 @@ export async function POST(req: Request) {
         { role: "user",   content: cleanedText.slice(0, 24000) },
       ],
     });
+
+    const inputTokens = response.usage?.prompt_tokens ?? 0;
+    const outputTokens = response.usage?.completion_tokens ?? 0;
+
+    if (inputTokens > 0) {
+      await prisma.usage.upsert({
+        where: { userId },
+        create: {
+          userId,
+          totalInputTokens: inputTokens,
+          totalOutputTokens: outputTokens,
+          currentMonthInputTokens: inputTokens,
+          currentMonthOutputTokens: outputTokens,
+          analysisCallCount: 1,
+        },
+        update: {
+          totalInputTokens: { increment: inputTokens },
+          totalOutputTokens: { increment: outputTokens },
+          currentMonthInputTokens: { increment: inputTokens },
+          currentMonthOutputTokens: { increment: outputTokens },
+          analysisCallCount: { increment: 1 },
+        },
+      });
+    }
 
     const text   = response.choices[0]?.message?.content ?? "";
     const result = parseAiResponse(text);
