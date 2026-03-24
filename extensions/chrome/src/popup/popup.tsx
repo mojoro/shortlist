@@ -425,6 +425,17 @@ function Popup() {
 function Header() {
   return (
     <div className="popup-header">
+      <svg viewBox="0 0 32 32" className="popup-logo" aria-hidden="true">
+        <circle cx="16" cy="16" r="16" fill="var(--primary)" />
+        <path
+          d="M8 17L13 22L24 10"
+          stroke="var(--primary-fg)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+        />
+      </svg>
       <h1>Shortlist</h1>
     </div>
   );
