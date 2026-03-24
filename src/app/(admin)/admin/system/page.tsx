@@ -247,7 +247,7 @@ export default async function AdminSystemPage() {
                     colSpan={6}
                     className="px-4 py-8 text-center text-[var(--text-muted)]"
                   >
-                    No scrape runs recorded yet.
+                    No run history available.
                   </td>
                 </tr>
               )}
