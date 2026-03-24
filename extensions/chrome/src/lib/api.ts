@@ -1,3 +1,5 @@
+import type { SelectorMap, ExtractedJob } from "../types";
+
 const PROD_URL = "https://shortlist.johnmoorman.com";
 const DEV_URL = "http://localhost:3000";
 
@@ -132,6 +134,34 @@ export function importJob(payload: {
 
 export function extractJob(payload: { input: string; profileId: string }) {
   return apiCall<ExtractResponse>("/api/jobs/extract", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function identifySelectors(payload: {
+  skeleton: string;
+  profileId: string;
+}): Promise<ApiResponse<{ selectors: SelectorMap }>> {
+  return apiCall("/api/jobs/extract/identify", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function normalizeExtraction(payload: {
+  title: string | null;
+  company: string | null;
+  location: string | null;
+  salaryText: string | null;
+  jobTypeText: string | null;
+  skillsText: string | null;
+  descriptionHtml: string;
+  postedDateText: string | null;
+  url: string;
+  profileId: string;
+}): Promise<ApiResponse<ExtractedJob>> {
+  return apiCall("/api/jobs/extract/normalize", {
     method: "POST",
     body: JSON.stringify(payload),
   });
