@@ -24,7 +24,7 @@ export function FeedbackForm() {
 
     startTransition(async () => {
       try {
-        const metadata = getFeedbackMetadata(getRecentErrors());
+        const metadata = await getFeedbackMetadata(getRecentErrors());
         await submitFeedback({ message, metadata });
         setMessage("");
         setStatus("success");

@@ -72,7 +72,7 @@ export function NavFeedbackPopover({ labelClass }: NavFeedbackPopoverProps) {
     if (!isValid || isPending) return;
     startTransition(async () => {
       try {
-        const metadata = getFeedbackMetadata(getRecentErrors());
+        const metadata = await getFeedbackMetadata(getRecentErrors());
         await submitFeedback({ message, metadata });
         setMessage("");
         setStatus("success");
