@@ -51,7 +51,7 @@ export async function toggleSaveJob(
   jobId: string,
   profileId: string,
   save: boolean
-): Promise<void> {
+): Promise<{ applicationId?: string }> {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
@@ -66,17 +66,21 @@ export async function toggleSaveJob(
   });
 
   // When saving a job, ensure it appears in the pipeline at INTERESTED
+  let applicationId: string | undefined;
   if (save) {
-    await prisma.application.upsert({
+    const app = await prisma.application.upsert({
       where:  { jobId },
       create: { jobId, profileId, status: "INTERESTED", statusUpdatedAt: new Date() },
       update: {}, // never downgrade an existing application
+      select: { id: true },
     });
+    applicationId = app.id;
     revalidatePath("/pipeline");
   }
 
   revalidatePath("/dashboard");
   revalidateTag("dashboard-stats");
+  return { applicationId };
 }
 
 export async function ignoreJob(

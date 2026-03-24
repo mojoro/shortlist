@@ -210,13 +210,46 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
         const job = get().jobs.find((j) => j.id === jobId);
         if (!job) return;
         const prevStatus = job.feedStatus;
+        const hadApplication = get().applications.some((a) => a.jobId === jobId);
 
+        // Optimistic: update feed status
         set({
           jobs: updateJob(get().jobs, jobId, (j) => ({
             ...j,
             feedStatus: save ? "SAVED" : "NEW",
           })),
         });
+
+        // Optimistic: add application entry so pipeline updates immediately
+        if (save && !hadApplication) {
+          const now = new Date();
+          set({
+            applications: [
+              ...get().applications,
+              {
+                id: `optimistic-${jobId}`,
+                jobId,
+                profileId,
+                status: "INTERESTED",
+                statusUpdatedAt: now,
+                notes: null,
+                appliedAt: null,
+                followUpAt: null,
+                recruiterName: null,
+                recruiterEmail: null,
+                interviewDates: [],
+                offerReceivedAt: null,
+                decisionAt: null,
+                salaryOffered: null,
+                exportedResumeMarkdown: null,
+                exportedAt: null,
+                createdAt: now,
+                updatedAt: now,
+                job: { ...job, application: { status: "INTERESTED" } },
+              } as unknown as ApplicationWithJob,
+            ],
+          });
+        }
 
         retryServerAction(() => serverToggleSave(jobId, profileId, save)).then(
           (ok) => {
@@ -227,7 +260,17 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
                   feedStatus: prevStatus,
                 })),
               });
+              // Revert the optimistic application
+              if (save && !hadApplication) {
+                set({
+                  applications: get().applications.filter(
+                    (a) => a.id !== `optimistic-${jobId}`,
+                  ),
+                });
+              }
+              return;
             }
+            // Replace optimistic ID with real one from server on next sync
           },
         );
       },
@@ -339,17 +382,24 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
       },
 
       updateJobAiFields(jobId, fields) {
+        const aiUpdate = {
+          aiScore: fields.score,
+          aiStatus: fields.status as JobWithApplication["aiStatus"],
+          aiSummary: fields.summary,
+          aiMatchPoints: fields.matchPoints,
+          aiGapPoints: fields.gapPoints,
+          aiAnalyzedAt: new Date(),
+          ...(fields.hidden ? { feedStatus: "HIDDEN" as const } : {}),
+        };
         set({
-          jobs: updateJob(get().jobs, jobId, (j) => ({
-            ...j,
-            aiScore: fields.score,
-            aiStatus: fields.status as JobWithApplication["aiStatus"],
-            aiSummary: fields.summary,
-            aiMatchPoints: fields.matchPoints,
-            aiGapPoints: fields.gapPoints,
-            aiAnalyzedAt: new Date(),
-            ...(fields.hidden ? { feedStatus: "HIDDEN" as const } : {}),
-          })),
+          jobs: updateJob(get().jobs, jobId, (j) => ({ ...j, ...aiUpdate })),
+          // Also update the nested job inside applications so the pipeline
+          // reflects the new score without needing a full sync
+          applications: get().applications.map((a) =>
+            a.jobId === jobId
+              ? { ...a, job: { ...a.job, ...aiUpdate } }
+              : a,
+          ),
         });
       },
 
