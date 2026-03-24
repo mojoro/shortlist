@@ -139,8 +139,8 @@ export async function getAdminFeedbackList(opts: {
 
 // ── Pool ─────────────────────────────────────────────────────────────────────
 
-// Canonical display order for all scraper sources
-const ALL_SOURCES: ScraperSource[] = [
+// Actively configured scraper sources shown in the admin pool UI
+const ACTIVE_SOURCES: ScraperSource[] = [
   ScraperSource.GREENHOUSE,
   ScraperSource.ASHBY,
   ScraperSource.LEVER,
@@ -154,7 +154,7 @@ export function mergeSourceCounts(
   dbResult: { source: ScraperSource; _count: number }[]
 ): { source: ScraperSource; _count: number }[] {
   const bySource = new Map(dbResult.map((r) => [r.source, r._count]));
-  return ALL_SOURCES.map((source) => ({
+  return ACTIVE_SOURCES.map((source) => ({
     source,
     _count: bySource.get(source) ?? 0,
   }));

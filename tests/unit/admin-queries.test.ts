@@ -44,7 +44,7 @@ describe("mergeSourceCounts", () => {
     }
   });
 
-  it("returns sources in the canonical display order", () => {
+  it("returns active sources in canonical display order", () => {
     const result = mergeSourceCounts([]);
     const sources = result.map((r) => r.source);
     expect(sources).toEqual([
