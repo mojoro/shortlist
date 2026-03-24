@@ -51,7 +51,7 @@ export async function toggleSaveJob(
   jobId: string,
   profileId: string,
   save: boolean
-): Promise<void> {
+): Promise<{ applicationId?: string }> {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
@@ -66,17 +66,21 @@ export async function toggleSaveJob(
   });
 
   // When saving a job, ensure it appears in the pipeline at INTERESTED
+  let applicationId: string | undefined;
   if (save) {
-    await prisma.application.upsert({
+    const app = await prisma.application.upsert({
       where:  { jobId },
       create: { jobId, profileId, status: "INTERESTED", statusUpdatedAt: new Date() },
       update: {}, // never downgrade an existing application
+      select: { id: true },
     });
+    applicationId = app.id;
     revalidatePath("/pipeline");
   }
 
   revalidatePath("/dashboard");
   revalidateTag("dashboard-stats");
+  return { applicationId };
 }
 
 export async function ignoreJob(
@@ -384,4 +388,33 @@ export async function updateJobNotes(
     where: { id: jobId },
     data: { userNotes: notes.trim() || null },
   });
+}
+
+// ─── Load more matches ────────────────────────────────────────────────────────
+
+export async function loadMoreMatches(
+  profileId: string,
+): Promise<{ added: number; remaining: number }> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  const profile = await prisma.profile.findFirst({
+    where: { id: profileId, userId },
+  });
+  if (!profile) return { added: 0, remaining: 0 };
+
+  const { runMatchPipelineForProfile } = await import("@/lib/match-pipeline");
+  const result = await runMatchPipelineForProfile(profileId, profile);
+
+  // Re-read the updated count (pipeline persists it)
+  const updated = await prisma.profile.findUnique({
+    where: { id: profileId },
+    select: { pendingMatchCount: true },
+  });
+
+  revalidatePath("/dashboard");
+  return {
+    added: result.jobsCreated,
+    remaining: updated?.pendingMatchCount ?? 0,
+  };
 }

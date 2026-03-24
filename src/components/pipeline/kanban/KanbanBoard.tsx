@@ -201,12 +201,20 @@ export function KanbanBoard({
       saveTimers.current.delete(appId);
       const fields = pendingSaves.current.get(appId);
       if (!fields) return;
+      pendingSaves.current.delete(appId);
       storeUpdateAppDetail(appId, {
         notes: fields.notes,
         appliedAt: fields.appliedAt,
         followUpAt: fields.followUpAt,
         recruiterName: fields.recruiterName,
         recruiterEmail: fields.recruiterEmail,
+      });
+      // Clear override — store now holds the optimistic value.
+      // If a server revert happens later, the UI will reflect it.
+      setFieldOverrides((prev) => {
+        const next = new Map(prev);
+        next.delete(appId);
+        return next;
       });
     }, 1500);
 
@@ -360,7 +368,7 @@ export function KanbanBoard({
                     className="flex w-full items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg-card)] px-3 py-2.5 text-left transition-colors hover:border-[var(--border-strong)]"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-[var(--text)]">
+                      <p title={app.job.jobPool.title} className="truncate text-sm font-medium text-[var(--text)]">
                         {app.job.jobPool.title}
                       </p>
                       <p className="text-xs text-[var(--text-muted)]">

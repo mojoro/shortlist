@@ -27,6 +27,7 @@ const SORT_OPTIONS = [
   { key: "match",   label: "Match" },
   { key: "newest",  label: "Newest" },
   { key: "salary",  label: "Salary" },
+  { key: "source",  label: "Source" },
 ] as const;
 
 type FilterKey = (typeof CHIPS)[number]["key"];

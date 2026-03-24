@@ -42,6 +42,7 @@ export type HydrationPayload = {
   applications: ApplicationWithJob[];
   followUpCount: number;
   usage: UsageSummary | null;
+  pendingMatchCount: number;
 };
 
 export interface DashboardState {
@@ -53,6 +54,7 @@ export interface DashboardState {
   applications: ApplicationWithJob[];
   followUpCount: number;
   usage: UsageSummary | null;
+  pendingMatchCount: number;
 
   // Sync state
   hydrated: boolean;
@@ -110,6 +112,30 @@ function updateApp(
   return apps.map((a) => (a.id === appId ? updater(a) : a));
 }
 
+/**
+ * Retry a server action with exponential backoff.
+ * Returns true if the action succeeded, false if all retries exhausted.
+ */
+async function retryServerAction(
+  fn: () => Promise<unknown>,
+  retries = 3,
+  baseDelay = 1000,
+): Promise<boolean> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      await fn();
+      return true;
+    } catch (err) {
+      if (attempt < retries - 1) {
+        await new Promise((r) => setTimeout(r, baseDelay * 2 ** attempt));
+      } else {
+        console.error("[store] Server action failed after retries:", err);
+      }
+    }
+  }
+  return false;
+}
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
@@ -125,6 +151,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
       applications: [],
       followUpCount: 0,
       usage: null,
+      pendingMatchCount: 0,
       hydrated: false,
       lastSyncedAt: 0,
       isSyncing: false,
@@ -141,6 +168,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           applications: data.applications,
           followUpCount: data.followUpCount,
           usage: data.usage,
+          pendingMatchCount: data.pendingMatchCount,
           hydrated: true,
           lastSyncedAt: Date.now(),
         });
@@ -165,6 +193,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
             applications: data.applications,
             followUpCount: data.followUpCount,
             usage: data.usage,
+            pendingMatchCount: data.pendingMatchCount,
             lastSyncedAt: Date.now(),
           });
         } catch (err) {
@@ -178,86 +207,199 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
       // Job mutations — optimistic update, then fire server action
       // ------------------------------------------------------------------
       toggleSaveJob(jobId, profileId, save) {
-        const prev = get().jobs;
+        const job = get().jobs.find((j) => j.id === jobId);
+        if (!job) return;
+        const prevStatus = job.feedStatus;
+        const hadApplication = get().applications.some((a) => a.jobId === jobId);
+
+        // Optimistic: update feed status
         set({
-          jobs: updateJob(prev, jobId, (j) => ({
+          jobs: updateJob(get().jobs, jobId, (j) => ({
             ...j,
             feedStatus: save ? "SAVED" : "NEW",
           })),
         });
 
-        serverToggleSave(jobId, profileId, save).catch(() => {
-          set({ jobs: prev });
-        });
+        // Optimistic: add application entry so pipeline updates immediately
+        if (save && !hadApplication) {
+          const now = new Date();
+          set({
+            applications: [
+              ...get().applications,
+              {
+                id: `optimistic-${jobId}`,
+                jobId,
+                profileId,
+                status: "INTERESTED",
+                statusUpdatedAt: now,
+                notes: null,
+                appliedAt: null,
+                followUpAt: null,
+                recruiterName: null,
+                recruiterEmail: null,
+                interviewDates: [],
+                offerReceivedAt: null,
+                decisionAt: null,
+                salaryOffered: null,
+                exportedResumeMarkdown: null,
+                exportedAt: null,
+                createdAt: now,
+                updatedAt: now,
+                job: { ...job, application: { status: "INTERESTED" } },
+              } as unknown as ApplicationWithJob,
+            ],
+          });
+        }
+
+        retryServerAction(() => serverToggleSave(jobId, profileId, save)).then(
+          (ok) => {
+            if (!ok) {
+              set({
+                jobs: updateJob(get().jobs, jobId, (j) => ({
+                  ...j,
+                  feedStatus: prevStatus,
+                })),
+              });
+              // Revert the optimistic application
+              if (save && !hadApplication) {
+                set({
+                  applications: get().applications.filter(
+                    (a) => a.id !== `optimistic-${jobId}`,
+                  ),
+                });
+              }
+              return;
+            }
+            // Replace optimistic ID with real one from server on next sync
+          },
+        );
       },
 
       ignoreJob(jobId, profileId) {
-        const prev = get().jobs;
+        const job = get().jobs.find((j) => j.id === jobId);
+        if (!job) return;
+        const prevStatus = job.feedStatus;
+
         set({
-          jobs: updateJob(prev, jobId, (j) => ({
+          jobs: updateJob(get().jobs, jobId, (j) => ({
             ...j,
             feedStatus: "ARCHIVED",
           })),
         });
 
-        serverIgnore(jobId, profileId).catch(() => {
-          set({ jobs: prev });
+        retryServerAction(() => serverIgnore(jobId, profileId)).then((ok) => {
+          if (!ok) {
+            set({
+              jobs: updateJob(get().jobs, jobId, (j) => ({
+                ...j,
+                feedStatus: prevStatus,
+              })),
+            });
+          }
         });
       },
 
       unignoreJob(jobId, profileId, restoreStatus) {
-        const prev = get().jobs;
+        const job = get().jobs.find((j) => j.id === jobId);
+        if (!job) return;
+        const prevStatus = job.feedStatus;
         const feedStatus =
           restoreStatus === "SAVED" ? ("SAVED" as const) : ("NEW" as const);
 
         set({
-          jobs: updateJob(prev, jobId, (j) => ({ ...j, feedStatus })),
+          jobs: updateJob(get().jobs, jobId, (j) => ({ ...j, feedStatus })),
         });
 
-        serverUnignore(jobId, profileId, restoreStatus).catch(() => {
-          set({ jobs: prev });
+        retryServerAction(() =>
+          serverUnignore(jobId, profileId, restoreStatus),
+        ).then((ok) => {
+          if (!ok) {
+            set({
+              jobs: updateJob(get().jobs, jobId, (j) => ({
+                ...j,
+                feedStatus: prevStatus,
+              })),
+            });
+          }
         });
       },
 
       batchIgnoreJobs(jobIds, profileId) {
-        const prev = get().jobs;
         const idSet = new Set(jobIds);
+        const prevStatuses = new Map(
+          get()
+            .jobs.filter((j) => idSet.has(j.id))
+            .map((j) => [j.id, j.feedStatus]),
+        );
+
         set({
-          jobs: prev.map((j) =>
+          jobs: get().jobs.map((j) =>
             idSet.has(j.id) ? { ...j, feedStatus: "ARCHIVED" as const } : j,
           ),
         });
 
-        serverBatchIgnore(jobIds, profileId).catch(() => {
-          set({ jobs: prev });
-        });
+        retryServerAction(() => serverBatchIgnore(jobIds, profileId)).then(
+          (ok) => {
+            if (!ok) {
+              set({
+                jobs: get().jobs.map((j) => {
+                  const prev = prevStatuses.get(j.id);
+                  return prev !== undefined ? { ...j, feedStatus: prev } : j;
+                }),
+              });
+            }
+          },
+        );
       },
 
       batchSaveJobs(jobIds, profileId, save) {
-        const prev = get().jobs;
         const idSet = new Set(jobIds);
+        const prevStatuses = new Map(
+          get()
+            .jobs.filter((j) => idSet.has(j.id))
+            .map((j) => [j.id, j.feedStatus]),
+        );
         const feedStatus = save ? ("SAVED" as const) : ("NEW" as const);
+
         set({
-          jobs: prev.map((j) => (idSet.has(j.id) ? { ...j, feedStatus } : j)),
+          jobs: get().jobs.map((j) =>
+            idSet.has(j.id) ? { ...j, feedStatus } : j,
+          ),
         });
 
-        serverBatchSave(jobIds, profileId, save).catch(() => {
-          set({ jobs: prev });
+        retryServerAction(() =>
+          serverBatchSave(jobIds, profileId, save),
+        ).then((ok) => {
+          if (!ok) {
+            set({
+              jobs: get().jobs.map((j) => {
+                const prev = prevStatuses.get(j.id);
+                return prev !== undefined ? { ...j, feedStatus: prev } : j;
+              }),
+            });
+          }
         });
       },
 
       updateJobAiFields(jobId, fields) {
+        const aiUpdate = {
+          aiScore: fields.score,
+          aiStatus: fields.status as JobWithApplication["aiStatus"],
+          aiSummary: fields.summary,
+          aiMatchPoints: fields.matchPoints,
+          aiGapPoints: fields.gapPoints,
+          aiAnalyzedAt: new Date(),
+          ...(fields.hidden ? { feedStatus: "HIDDEN" as const } : {}),
+        };
         set({
-          jobs: updateJob(get().jobs, jobId, (j) => ({
-            ...j,
-            aiScore: fields.score,
-            aiStatus: fields.status as JobWithApplication["aiStatus"],
-            aiSummary: fields.summary,
-            aiMatchPoints: fields.matchPoints,
-            aiGapPoints: fields.gapPoints,
-            aiAnalyzedAt: new Date(),
-            ...(fields.hidden ? { feedStatus: "HIDDEN" as const } : {}),
-          })),
+          jobs: updateJob(get().jobs, jobId, (j) => ({ ...j, ...aiUpdate })),
+          // Also update the nested job inside applications so the pipeline
+          // reflects the new score without needing a full sync
+          applications: get().applications.map((a) =>
+            a.jobId === jobId
+              ? { ...a, job: { ...a.job, ...aiUpdate } }
+              : a,
+          ),
         });
       },
 
@@ -280,9 +422,12 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
       },
 
       updateJobNotes(jobId, notes) {
-        const prev = get().jobs;
+        const job = get().jobs.find((j) => j.id === jobId);
+        if (!job) return;
+        const prevNotes = job.userNotes;
+
         set({
-          jobs: updateJob(prev, jobId, (j) => ({
+          jobs: updateJob(get().jobs, jobId, (j) => ({
             ...j,
             userNotes: notes.trim() || null,
           })),
@@ -291,8 +436,17 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
         const profileId = get().activeProfile?.id;
         if (!profileId) return;
 
-        serverUpdateNotes(jobId, profileId, notes).catch(() => {
-          set({ jobs: prev });
+        retryServerAction(() =>
+          serverUpdateNotes(jobId, profileId, notes),
+        ).then((ok) => {
+          if (!ok) {
+            set({
+              jobs: updateJob(get().jobs, jobId, (j) => ({
+                ...j,
+                userNotes: prevNotes,
+              })),
+            });
+          }
         });
       },
 
@@ -300,9 +454,14 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
       // Application mutations — optimistic update, then fire server action
       // ------------------------------------------------------------------
       updateAppStatus(appId, status) {
-        const prev = get().applications;
+        const app = get().applications.find((a) => a.id === appId);
+        if (!app) return;
+        const prevStatus = app.status;
+        const prevUpdatedAt = app.statusUpdatedAt;
+        const prevAppliedAt = app.appliedAt;
+
         set({
-          applications: updateApp(prev, appId, (a) => ({
+          applications: updateApp(get().applications, appId, (a) => ({
             ...a,
             status: status as ApplicationWithJob["status"],
             statusUpdatedAt: new Date(),
@@ -312,15 +471,35 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           })),
         });
 
-        serverUpdateAppStatus(appId, status).catch(() => {
-          set({ applications: prev });
-        });
+        retryServerAction(() => serverUpdateAppStatus(appId, status)).then(
+          (ok) => {
+            if (!ok) {
+              set({
+                applications: updateApp(get().applications, appId, (a) => ({
+                  ...a,
+                  status: prevStatus,
+                  statusUpdatedAt: prevUpdatedAt,
+                  appliedAt: prevAppliedAt,
+                })),
+              });
+            }
+          },
+        );
       },
 
       updateAppDetail(appId, fields) {
-        const prev = get().applications;
+        const app = get().applications.find((a) => a.id === appId);
+        if (!app) return;
+        const prevSnapshot = {
+          notes: app.notes,
+          appliedAt: app.appliedAt,
+          followUpAt: app.followUpAt,
+          recruiterName: app.recruiterName,
+          recruiterEmail: app.recruiterEmail,
+        };
+
         set({
-          applications: updateApp(prev, appId, (a) => {
+          applications: updateApp(get().applications, appId, (a) => {
             const updated = { ...a };
             if (fields.notes !== undefined) updated.notes = fields.notes || null;
             if (fields.appliedAt !== undefined) {
@@ -343,31 +522,48 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           }),
         });
 
-        serverUpdateAppDetail(appId, fields).catch(() => {
-          set({ applications: prev });
-        });
+        retryServerAction(() => serverUpdateAppDetail(appId, fields)).then(
+          (ok) => {
+            if (!ok) {
+              set({
+                applications: updateApp(get().applications, appId, (a) => ({
+                  ...a,
+                  ...prevSnapshot,
+                })),
+              });
+            }
+          },
+        );
       },
 
       bulkRemoveApps(appIds) {
-        const prevApps = get().applications;
-        const prevJobs = get().jobs;
         const idSet = new Set(appIds);
-
-        // Find the jobIds linked to these applications
-        const jobIds = new Set(
-          prevApps.filter((a) => idSet.has(a.id)).map((a) => a.jobId),
+        const removedApps = get().applications.filter((a) => idSet.has(a.id));
+        const jobIds = new Set(removedApps.map((a) => a.jobId));
+        const prevJobStatuses = new Map(
+          get()
+            .jobs.filter((j) => jobIds.has(j.id))
+            .map((j) => [j.id, j.feedStatus]),
         );
 
         // Optimistic: remove apps and hide their jobs
         set({
-          applications: prevApps.filter((a) => !idSet.has(a.id)),
-          jobs: prevJobs.map((j) =>
+          applications: get().applications.filter((a) => !idSet.has(a.id)),
+          jobs: get().jobs.map((j) =>
             jobIds.has(j.id) ? { ...j, feedStatus: "HIDDEN" as const } : j,
           ),
         });
 
-        serverBulkRemoveApps(appIds).catch(() => {
-          set({ applications: prevApps, jobs: prevJobs });
+        retryServerAction(() => serverBulkRemoveApps(appIds)).then((ok) => {
+          if (!ok) {
+            set({
+              applications: [...get().applications, ...removedApps],
+              jobs: get().jobs.map((j) => {
+                const prev = prevJobStatuses.get(j.id);
+                return prev !== undefined ? { ...j, feedStatus: prev } : j;
+              }),
+            });
+          }
         });
       },
     }),
@@ -400,6 +596,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
         applications: state.applications,
         followUpCount: state.followUpCount,
         usage: state.usage,
+        pendingMatchCount: state.pendingMatchCount,
         lastSyncedAt: state.lastSyncedAt,
         // hydrated / isSyncing intentionally excluded
       }),

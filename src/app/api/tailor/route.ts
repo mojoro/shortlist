@@ -259,7 +259,7 @@ identify what would make it a 9.5/10 and implement that adjustment, but never us
         { role: "system", content: systemPrompt },
         { role: "user", content: userContent },
       ],
-      max_tokens: 3500,
+      max_tokens: 8000,
     });
 
     let inputTokens = 0;

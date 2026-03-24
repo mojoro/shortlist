@@ -64,6 +64,7 @@ export function DashboardDataProvider({ userId, children }: Props) {
           applications: [],
           followUpCount: 0,
           usage: null,
+          pendingMatchCount: 0,
         });
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps

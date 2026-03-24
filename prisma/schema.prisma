@@ -99,6 +99,9 @@ model Profile {
   scraperFrequency ScraperFrequency @default(DAILY)
   lastScrapedAt    DateTime?
 
+  // Match pipeline state
+  pendingMatchCount Int @default(0) // Qualified candidates remaining in pool after cap
+
   // Relations
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   jobs         Job[]

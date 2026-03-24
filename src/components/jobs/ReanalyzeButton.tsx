@@ -1,12 +1,20 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { discardAnalysis, analyzeJob } from "@/app/(dashboard)/dashboard/actions";
 
 interface ReanalyzeButtonProps {
   jobId:     string;
   profileId: string;
+  onCleared?: () => void;
+  onAnalyzed?: (result: {
+    score: number;
+    status: string;
+    summary: string;
+    matchPoints: string[];
+    gapPoints: string[];
+    hidden: boolean;
+  }) => void;
 }
 
 type State = "idle" | "clearing" | "pending" | "error";
@@ -27,8 +35,7 @@ function Spinner() {
   );
 }
 
-export function ReanalyzeButton({ jobId, profileId }: ReanalyzeButtonProps) {
-  const router = useRouter();
+export function ReanalyzeButton({ jobId, profileId, onCleared, onAnalyzed }: ReanalyzeButtonProps) {
   const [state, setState] = useState<State>("idle");
   const [, startTransition] = useTransition();
 
@@ -43,6 +50,7 @@ export function ReanalyzeButton({ jobId, profileId }: ReanalyzeButtonProps) {
         return;
       }
 
+      onCleared?.();
       setState("pending");
       const result = await analyzeJob(jobId, profileId);
 
@@ -52,7 +60,7 @@ export function ReanalyzeButton({ jobId, profileId }: ReanalyzeButtonProps) {
       }
 
       setState("idle");
-      router.refresh();
+      onAnalyzed?.(result);
     });
   }
 

@@ -1,6 +1,6 @@
 import type { FeedStatus, ApplicationStatus, Prisma } from "@prisma/client";
 
-export type SortOption = "match" | "newest" | "salary";
+export type SortOption = "match" | "newest" | "salary" | "source";
 export type SortDir = "asc" | "desc";
 
 export function buildOrderBy(
@@ -13,6 +13,8 @@ export function buildOrderBy(
       return { createdAt: order };
     case "salary":
       return { jobPool: { salaryMax: { sort: order, nulls: "last" } } };
+    case "source":
+      return { jobPool: { source: order } };
     default:
       // match score — always desc (higher is better), direction toggle ignored
       return { aiScore: { sort: "desc", nulls: "last" } };

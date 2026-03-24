@@ -25,6 +25,7 @@ export async function fetchDashboardData() {
       applications: [],
       followUpCount: 0,
       usage: null,
+      pendingMatchCount: 0,
     };
   }
 
@@ -68,7 +69,10 @@ export async function fetchDashboardData() {
       }
     : null;
 
-  return { userId, activeProfile, profiles, jobs, applications, followUpCount, usage };
+  return {
+    userId, activeProfile, profiles, jobs, applications, followUpCount, usage,
+    pendingMatchCount: activeProfile.pendingMatchCount,
+  };
   } catch (err) {
     console.error("[fetchDashboardData] Failed:", err);
     // Return empty data rather than crashing the entire dashboard
@@ -80,6 +84,7 @@ export async function fetchDashboardData() {
       applications: [],
       followUpCount: 0,
       usage: null,
+      pendingMatchCount: 0,
     };
   }
 }
