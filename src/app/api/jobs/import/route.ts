@@ -72,14 +72,25 @@ export async function POST(req: Request) {
       update: {},
     });
 
-    const job = await prisma.job.upsert({
-      where:  { profileId_jobPoolId: { profileId, jobPoolId: poolEntry.id } },
-      create: { profileId, jobPoolId: poolEntry.id, feedStatus: "NEW" },
-      update: {},
+    // Check if this job already exists for this profile
+    const existing = await prisma.job.findUnique({
+      where: { profileId_jobPoolId: { profileId, jobPoolId: poolEntry.id } },
+      select: { id: true },
+    });
+
+    if (existing) {
+      return Response.json(
+        { error: "You've already imported this job listing.", job: { id: existing.id } },
+        { status: 409 },
+      );
+    }
+
+    const job = await prisma.job.create({
+      data: { profileId, jobPoolId: poolEntry.id, feedStatus: "NEW" },
       include: { jobPool: true, application: { select: { status: true } } },
     });
 
-    // Fire analysis — fire-and-forget, reuse same host-based pattern as requestAnalysis
+    // Fire analysis — fire-and-forget
     const h = await headers();
     const host  = h.get("host") ?? "";
     const proto = host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https";
