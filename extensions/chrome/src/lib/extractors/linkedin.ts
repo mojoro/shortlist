@@ -53,7 +53,7 @@ function extractLinkedInSkills(): string[] {
 }
 
 export const linkedinExtractor: Extractor = {
-  matches: /^https?:\/\/(www\.)?linkedin\.com\/jobs\/view\//,
+  matches: /^https?:\/\/(www\.)?linkedin\.com\/jobs\/(view|collections|search)\//,
 
   extract(): ExtractedJob | null {
     const title =
@@ -126,9 +126,11 @@ export const linkedinExtractor: Extractor = {
 
     const skills = extractLinkedInSkills();
 
-    const idMatch = window.location.pathname.match(/\/jobs\/view\/(\d+)/);
-    const cleanUrl = idMatch
-      ? `https://www.linkedin.com/jobs/view/${idMatch[1]}/`
+    const pathMatch = window.location.pathname.match(/\/jobs\/view\/(\d+)/);
+    const queryId = new URLSearchParams(window.location.search).get("currentJobId");
+    const jobId = pathMatch?.[1] ?? queryId;
+    const cleanUrl = jobId
+      ? `https://www.linkedin.com/jobs/view/${jobId}/`
       : window.location.origin + window.location.pathname;
 
     return {
@@ -144,7 +146,7 @@ export const linkedinExtractor: Extractor = {
       salaryMax: salary.salaryMax,
       currency: salary.currency,
       skills,
-      externalId: idMatch?.[1] ?? null,
+      externalId: jobId ?? null,
       source: "LINKEDIN",
     };
   },

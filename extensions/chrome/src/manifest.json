@@ -21,6 +21,8 @@
     {
       "matches": [
         "*://*.linkedin.com/jobs/view/*",
+        "*://*.linkedin.com/jobs/collections/*",
+        "*://*.linkedin.com/jobs/search/*",
         "*://boards.greenhouse.io/*/jobs/*",
         "*://jobs.greenhouse.io/*/jobs/*",
         "*://jobs.lever.co/*/*",
