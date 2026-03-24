@@ -9,6 +9,13 @@
     "http://localhost:3000/*",
     "http://localhost:3001/*"
   ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/content.ts"],
+      "run_at": "document_idle"
+    }
+  ],
   "action": {
     "default_popup": "src/popup/popup.html",
     "default_icon": {
@@ -17,26 +24,6 @@
       "128": "icons/icon128.png"
     }
   },
-  "content_scripts": [
-    {
-      "matches": [
-        "*://*.linkedin.com/jobs/view/*",
-        "*://*.linkedin.com/jobs/collections/*",
-        "*://*.linkedin.com/jobs/search/*",
-        "*://boards.greenhouse.io/*/jobs/*",
-        "*://jobs.greenhouse.io/*/jobs/*",
-        "*://jobs.lever.co/*/*",
-        "*://jobs.ashbyhq.com/*/*",
-        "*://*.usajobs.gov/job/*",
-        "*://*.indeed.com/viewjob*",
-        "*://*.glassdoor.com/job-listing/*",
-        "*://*.glassdoor.co.uk/job-listing/*",
-        "*://*.glassdoor.co.in/job-listing/*"
-      ],
-      "js": ["src/content/content.ts"],
-      "run_at": "document_idle"
-    }
-  ],
   "background": {
     "service_worker": "src/background/service-worker.ts",
     "type": "module"

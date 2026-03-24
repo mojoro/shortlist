@@ -26,24 +26,6 @@ async function getImportHistory(): Promise<ImportRecord[]> {
   return importHistory;
 }
 
-// ── Badge management ─────────────────────────────────────────────────────
-
-// When a content script detects a job page, show a badge on the icon
-chrome.runtime.onMessage.addListener(
-  (
-    message: Message,
-    sender: chrome.runtime.MessageSender,
-  ) => {
-    if (message.type === "JOB_PAGE_DETECTED" && sender.tab?.id) {
-      chrome.action.setBadgeText({ text: "+", tabId: sender.tab.id });
-      chrome.action.setBadgeBackgroundColor({
-        color: "#6366f1",
-        tabId: sender.tab.id,
-      });
-    }
-  },
-);
-
 // ── Message handler ──────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener(

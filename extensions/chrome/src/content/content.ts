@@ -2,18 +2,12 @@ import { extractFromPage } from "../lib/extractors";
 import type { Message } from "../types";
 
 /**
- * Content script — injected into job board pages.
+ * Content script — injected on demand via chrome.scripting.executeScript
+ * when the user opens the popup, or pre-injected on known job board URLs.
  *
- * Responsibilities:
- * 1. Detect supported job pages and notify the background worker (badge).
- * 2. On request from the popup, extract job data from the DOM.
+ * Listens for EXTRACT messages from the popup and returns extraction results.
  */
 
-// Notify the background worker that this page may be a job listing.
-// The worker uses this to set the toolbar badge.
-chrome.runtime.sendMessage({ type: "JOB_PAGE_DETECTED" });
-
-// Listen for extraction requests from the popup
 chrome.runtime.onMessage.addListener(
   (
     message: Message,
@@ -24,7 +18,6 @@ chrome.runtime.onMessage.addListener(
       const result = extractFromPage();
       sendResponse({ type: "EXTRACTED", result });
     }
-    // Return true to keep the message channel open for async sendResponse
     return true;
   },
 );

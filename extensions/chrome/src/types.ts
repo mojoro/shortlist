@@ -66,9 +66,6 @@ export type ExtractionResult =
 // ── Chrome message types ─────────────────────────────────────────────────
 
 export type Message =
-  // Page detection (content script -> background)
-  | { type: "JOB_PAGE_DETECTED" }
-
   // Auth
   | { type: "GET_AUTH_STATUS" }
   | { type: "AUTH_STATUS"; authenticated: boolean }

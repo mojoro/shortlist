@@ -34,9 +34,8 @@ export function extractFromPage(): ExtractionResult {
     }
   }
 
-  // Generic fallback: collect raw page content for AI extraction
+  // Generic fallback: collect raw page content for AI extraction.
+  // The user clicked the extension, so trust that there's a job on this page.
   const content = collectPageContent();
-  if (content.html.length < 100) return { type: "none" };
-
   return { type: "generic", ...content };
 }

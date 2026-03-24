@@ -103,11 +103,11 @@ function Popup() {
           }>(tab.id, { type: "EXTRACT" });
           setExtraction(result.result);
         } else {
-          setExtraction({ type: "none" });
+          setExtraction({ type: "generic", url: "", html: "", title: "Unknown page", meta: {} });
         }
       } catch {
-        // Content script not injected on this page -- use generic fallback
-        setExtraction({ type: "none" });
+        // Content script may not be injected on restricted pages (chrome://, etc.)
+        setExtraction({ type: "generic", url: "", html: "", title: "Unknown page", meta: {} });
       }
 
       setStatus("idle");
@@ -263,29 +263,7 @@ function Popup() {
     );
   }
 
-  // No extractable content
-  if (extraction?.type === "none") {
-    return (
-      <div className="popup">
-        <Header />
-        <div className="empty-state">
-          <p>No job listing detected on this page.</p>
-          <p style={{ marginTop: 8, fontSize: 12 }}>
-            Try opening a specific job posting page.
-          </p>
-        </div>
-        <button
-          className="btn btn-link"
-          onClick={() =>
-            chrome.tabs.create({ url: `${baseUrl}/dashboard` })
-          }
-        >
-          Open Shortlist
-        </button>
-        <ImportHistory history={importHistory} baseUrl={baseUrl} />
-      </div>
-    );
-  }
+
 
   return (
     <div className="popup">
