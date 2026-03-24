@@ -10,6 +10,9 @@ const isPublicRoute = createRouteMatcher([
   "/api/analyze",          // protected by CRON_SECRET instead
   "/api/dev/(.*)",         // dev routes — protected by CRON_SECRET
   "/api/check-onboarding", // internal — called by this middleware; Clerk validates session
+  "/api/check-disabled",   // internal — called by this middleware; Clerk validates session
+  "/api/track-activity",   // internal — called by this middleware; Clerk validates session
+  "/disabled",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
@@ -27,6 +30,37 @@ export default clerkMiddleware(async (auth, req) => {
     const signInUrl = new URL("/sign-in", req.url);
     signInUrl.searchParams.set("redirect_url", req.url);
     return NextResponse.redirect(signInUrl);
+  }
+
+  // Admin route guard — only the configured admin user can access /admin routes.
+  if (req.nextUrl.pathname.startsWith("/admin")) {
+    if (userId !== process.env.ADMIN_USER_ID) {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+    // Admin skips onboarding check — fall through to response
+    return NextResponse.next();
+  }
+
+  // The shortlist-active cookie (5min TTL) debounces both the disabled check and
+  // the lastActiveAt tracking — avoids hitting these internal routes on every request.
+  const activeCheck = req.cookies.get("shortlist-active")?.value;
+
+  // Disabled user check (debounced via cookie)
+  if (!activeCheck && !req.nextUrl.pathname.startsWith("/onboarding")) {
+    try {
+      const checkUrl = new URL("/api/check-disabled", req.url);
+      const checkRes = await fetch(checkUrl.toString(), {
+        headers: { cookie: req.headers.get("cookie") ?? "" },
+      });
+      if (checkRes.ok) {
+        const { disabled } = (await checkRes.json()) as { disabled: boolean };
+        if (disabled) {
+          return NextResponse.redirect(new URL("/disabled", req.url));
+        }
+      }
+    } catch {
+      // Fail open — don't block users if check fails
+    }
   }
 
   // Redirect incomplete onboarding (checked via cookie set on wizard completion).
@@ -84,7 +118,17 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(new URL("/onboarding", req.url));
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  if (!activeCheck) {
+    response.cookies.set("shortlist-active", "true", { path: "/", maxAge: 300 });
+    // Fire-and-forget activity tracking
+    const trackUrl = new URL("/api/track-activity", req.url);
+    fetch(trackUrl.toString(), {
+      method: "POST",
+      headers: { cookie: req.headers.get("cookie") ?? "" },
+    }).catch(() => {});
+  }
+  return response;
 });
 
 export const config = {

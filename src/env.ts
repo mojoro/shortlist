@@ -13,6 +13,7 @@ export const env = createEnv({
     ADZUNA_APP_ID:        z.string().min(1).optional(),
     ADZUNA_APP_KEY:       z.string().min(1).optional(),
     CRON_SECRET:          z.string().min(1),
+    ADMIN_USER_ID:        z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),
@@ -30,6 +31,7 @@ export const env = createEnv({
     ADZUNA_APP_ID:                     process.env.ADZUNA_APP_ID,
     ADZUNA_APP_KEY:                    process.env.ADZUNA_APP_KEY,
     CRON_SECRET:                       process.env.CRON_SECRET,
+    ADMIN_USER_ID:                     process.env.ADMIN_USER_ID,
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
     NEXT_PUBLIC_APP_URL:               process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_DEFAULT_THEME:         process.env.NEXT_PUBLIC_DEFAULT_THEME,
