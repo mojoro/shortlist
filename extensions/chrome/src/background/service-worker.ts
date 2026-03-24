@@ -114,6 +114,7 @@ async function handleImportJob(
     ok: result.ok,
     jobId,
     error: result.error ?? undefined,
+    status: result.status,
   });
 }
 

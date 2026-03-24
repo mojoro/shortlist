@@ -1,6 +1,7 @@
 import type { ExtractResult, ImportPayload } from "../types";
 
 const PROD_URL = "https://shortlist.johnmoorman.com";
+const DEV_URL = "http://localhost:3000";
 
 interface ApiResponse<T> {
   ok: boolean;
@@ -9,14 +10,23 @@ interface ApiResponse<T> {
   error: string | null;
 }
 
-/** Resolve the API base URL from extension storage, defaulting to production. */
+/** Resolve the API base URL. Checks storage override first, then auto-detects localhost. */
 export async function getBaseUrl(): Promise<string> {
   try {
     const result = await chrome.storage.local.get("apiBaseUrl");
-    return (result.apiBaseUrl as string) || PROD_URL;
-  } catch {
-    return PROD_URL;
-  }
+    if (result.apiBaseUrl) return result.apiBaseUrl as string;
+  } catch {}
+
+  // Auto-detect: if localhost is reachable, use it (dev mode)
+  try {
+    const res = await fetch(`${DEV_URL}/api/extension/status`, {
+      credentials: "include",
+      signal: AbortSignal.timeout(1000),
+    });
+    if (res.ok || res.status === 401) return DEV_URL;
+  } catch {}
+
+  return PROD_URL;
 }
 
 /** Generic API call that includes cookies for Clerk session auth. */

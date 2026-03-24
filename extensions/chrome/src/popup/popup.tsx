@@ -17,6 +17,7 @@ type Status =
   | "idle"
   | "importing"
   | "success"
+  | "duplicate"
   | "error";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -37,11 +38,6 @@ function timeAgo(isoDate: string): string {
   return `${days}d ago`;
 }
 
-const STATUS_LABELS: Partial<Record<Status, string>> = {
-  extracting: "Extracting job details...",
-  importing: "Importing...",
-};
-
 // ── App ──────────────────────────────────────────────────────────────────
 
 function Popup() {
@@ -49,22 +45,19 @@ function Popup() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const [extracted, setExtracted] = useState<ExtractResult | null>(null);
-  const [pageTitle, setPageTitle] = useState<string>("");
   const [pageUrl, setPageUrl] = useState<string>("");
-  const [pageHtml, setPageHtml] = useState<string>("");
   const [status, setStatus] = useState<Status>("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [importedJobId, setImportedJobId] = useState<string | null>(null);
   const [importHistory, setImportHistory] = useState<ImportRecord[]>([]);
-  const [baseUrl, setBaseUrl] = useState("https://shortlist.johnmoorman.com");
+  const [baseUrl, setBaseUrl] = useState("");
 
   useEffect(() => {
     async function init() {
-      // 1. Resolve base URL
       const url = await getBaseUrl();
       setBaseUrl(url);
 
-      // 2. Check auth
+      // Auth check
       const authResult = await sendMessage<{
         type: string;
         authenticated: boolean;
@@ -77,19 +70,17 @@ function Popup() {
       }
       setAuthenticated(true);
 
-      // 3. Load import history
-      const historyResult = await sendMessage<{
-        type: string;
-        history: ImportRecord[];
-      }>({ type: "GET_IMPORT_HISTORY" });
+      // Load history + profiles in parallel
+      const [historyResult, profilesResult] = await Promise.all([
+        sendMessage<{ type: string; history: ImportRecord[] }>({
+          type: "GET_IMPORT_HISTORY",
+        }),
+        sendMessage<{ type: string; profiles: Profile[] }>({
+          type: "GET_PROFILES",
+        }),
+      ]);
+
       setImportHistory(historyResult.history ?? []);
-
-      // 4. Fetch profiles
-      const profilesResult = await sendMessage<{
-        type: string;
-        profiles: Profile[];
-      }>({ type: "GET_PROFILES" });
-
       const profs = profilesResult.profiles ?? [];
       setProfiles(profs);
 
@@ -104,7 +95,7 @@ function Popup() {
         return;
       }
 
-      // 5. Collect page content
+      // Collect page content
       const [tab] = await chrome.tabs.query({
         active: true,
         currentWindow: true,
@@ -116,17 +107,12 @@ function Popup() {
 
       let content: PageContent | null = null;
 
-      // Try content script first
       try {
         const result = await chrome.tabs.sendMessage(tab.id, {
           type: "GET_PAGE_CONTENT",
         });
-        if (result?.content) {
-          content = result.content;
-        }
-      } catch {
-        // Content script not injected — fall back to scripting API
-      }
+        if (result?.content) content = result.content;
+      } catch {}
 
       if (!content) {
         try {
@@ -155,12 +141,8 @@ function Popup() {
               };
             },
           });
-          if (injected?.result) {
-            content = injected.result;
-          }
-        } catch {
-          // Page is restricted (chrome://, edge://, etc.)
-        }
+          if (injected?.result) content = injected.result;
+        } catch {}
       }
 
       if (!content || content.html.length < 50) {
@@ -168,13 +150,10 @@ function Popup() {
         return;
       }
 
-      setPageTitle(content.title);
       setPageUrl(content.url);
-      setPageHtml(content.html);
 
-      // 6. Send to extract endpoint
+      // Extract via API
       setStatus("extracting");
-
       const extractResult = await sendMessage<{
         type: string;
         ok?: boolean;
@@ -192,7 +171,7 @@ function Popup() {
       } else {
         setStatus("error");
         setErrorMessage(
-          extractResult.error ?? "Could not extract job details from this page.",
+          extractResult.error ?? "Could not extract job details.",
         );
       }
     }
@@ -216,7 +195,7 @@ function Popup() {
     setErrorMessage("");
 
     const data: ImportPayload = {
-      originalInput: pageUrl || extracted.url || pageHtml,
+      originalInput: pageUrl || extracted.url || "",
       title: extracted.title,
       company: extracted.company,
       description: extracted.description,
@@ -237,6 +216,7 @@ function Popup() {
         ok?: boolean;
         jobId?: string;
         error?: string;
+        status?: number;
       }>({
         type: "IMPORT_JOB",
         profileId: selectedProfileId,
@@ -257,6 +237,8 @@ function Popup() {
             profileName: selectedProfileName,
           });
         }
+      } else if (result.status === 409) {
+        setStatus("duplicate");
       } else {
         setStatus("error");
         setErrorMessage(result.error ?? "Import failed");
@@ -267,9 +249,15 @@ function Popup() {
     }
   }
 
+  function handleEditInShortlist() {
+    const importUrl = pageUrl
+      ? `${baseUrl}/dashboard?import=${encodeURIComponent(pageUrl)}`
+      : `${baseUrl}/dashboard`;
+    chrome.tabs.create({ url: importUrl });
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────
 
-  // Loading state
   if (authenticated === null) {
     return (
       <div className="popup">
@@ -279,7 +267,6 @@ function Popup() {
     );
   }
 
-  // Not authenticated
   if (!authenticated) {
     return (
       <div className="popup">
@@ -297,26 +284,45 @@ function Popup() {
     );
   }
 
-  // Success state
   if (status === "success") {
     return (
       <div className="popup">
         <Header />
-        <div className="status status-success">
-          Job imported successfully!
-        </div>
-        {importedJobId && (
+        <div className="status status-success">Job imported successfully!</div>
+        <div className="button-group">
+          {importedJobId && (
+            <button
+              className="btn btn-primary"
+              onClick={() =>
+                chrome.tabs.create({
+                  url: `${baseUrl}/jobs/${importedJobId}`,
+                })
+              }
+            >
+              View in Shortlist
+            </button>
+          )}
           <button
             className="btn btn-link"
             onClick={() =>
-              chrome.tabs.create({
-                url: `${baseUrl}/jobs/${importedJobId}`,
-              })
+              chrome.tabs.create({ url: `${baseUrl}/dashboard` })
             }
           >
-            View in Shortlist
+            Open Dashboard
           </button>
-        )}
+        </div>
+        <ImportHistory history={importHistory} baseUrl={baseUrl} />
+      </div>
+    );
+  }
+
+  if (status === "duplicate") {
+    return (
+      <div className="popup">
+        <Header />
+        <div className="status status-duplicate">
+          This job has already been imported.
+        </div>
         <button
           className="btn btn-link"
           onClick={() =>
@@ -330,73 +336,83 @@ function Popup() {
     );
   }
 
-  const statusLabel = STATUS_LABELS[status];
-
   return (
     <div className="popup">
       <Header />
 
-      {/* Extracting status with page title */}
       {status === "extracting" && (
         <div className="status status-loading">
-          {pageTitle
-            ? `Extracting from: ${pageTitle.slice(0, 60)}${pageTitle.length > 60 ? "..." : ""}`
-            : "Extracting job details..."}
+          Extracting job details...
         </div>
       )}
 
-      {/* Job preview */}
       {extracted && status === "idle" && (
-        <div className="job-preview">
-          <div className="title">{extracted.title}</div>
-          <div className="company">{extracted.company}</div>
-          {extracted.location && (
-            <div className="location">{extracted.location}</div>
+        <>
+          <div className="job-preview">
+            <div className="title">{extracted.title}</div>
+            <div className="company">{extracted.company}</div>
+            {extracted.location && (
+              <div className="location">{extracted.location}</div>
+            )}
+            {extracted.salaryMin && extracted.salaryMax && (
+              <div className="salary">
+                {extracted.currency ?? "$"}
+                {extracted.salaryMin.toLocaleString()} – {extracted.currency ?? "$"}
+                {extracted.salaryMax.toLocaleString()}
+              </div>
+            )}
+          </div>
+
+          {profiles.length > 1 && (
+            <select
+              className="profile-select"
+              value={selectedProfileId}
+              onChange={(e) => setSelectedProfileId(e.target.value)}
+            >
+              {profiles.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                  {p.isActive ? " (active)" : ""}
+                </option>
+              ))}
+            </select>
           )}
-        </div>
+
+          <div className="button-group">
+            <button
+              className="btn btn-primary"
+              onClick={handleImport}
+              disabled={!selectedProfileId}
+            >
+              Import to Shortlist
+            </button>
+            <button className="btn btn-secondary" onClick={handleEditInShortlist}>
+              Edit in Shortlist
+            </button>
+          </div>
+        </>
       )}
+
       {!extracted && status === "idle" && (
         <div className="empty-state">
-          <p>No job listing found on this page. Try navigating to a job posting.</p>
+          <p>No job listing found on this page.</p>
+          <button className="btn btn-secondary" onClick={handleEditInShortlist}>
+            Import manually in Shortlist
+          </button>
         </div>
       )}
 
-      {/* Importing status */}
       {status === "importing" && (
         <div className="status status-loading">Importing...</div>
       )}
 
-      {/* Profile selector */}
-      {profiles.length > 1 && (
-        <select
-          className="profile-select"
-          value={selectedProfileId}
-          onChange={(e) => setSelectedProfileId(e.target.value)}
-          disabled={status === "importing" || status === "extracting"}
-        >
-          {profiles.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-              {p.isActive ? " (active)" : ""}
-            </option>
-          ))}
-        </select>
-      )}
-
-      {/* Import button */}
-      {extracted && status === "idle" && (
-        <button
-          className="btn btn-primary"
-          onClick={handleImport}
-          disabled={!selectedProfileId}
-        >
-          Import to Shortlist
-        </button>
-      )}
-
-      {/* Error message */}
       {status === "error" && (
-        <div className="status status-error">{errorMessage}</div>
+        <>
+          <div className="status status-error">{errorMessage}</div>
+          <button className="btn btn-secondary" onClick={handleEditInShortlist}>
+            Try importing in Shortlist instead
+          </button>
+        </>
       )}
 
       <ImportHistory history={importHistory} baseUrl={baseUrl} />
