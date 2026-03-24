@@ -31,6 +31,7 @@ export function DashboardClient({
   const [sort, setSort] = useState(initialSort);
   const [dir, setDir] = useState(initialDir);
 
+  const hydrated = useDashboardStore((s) => s.hydrated);
   const activeProfile = useDashboardStore((s) => s.activeProfile);
   const profiles = useDashboardStore(useShallow((s) => s.profiles));
   const allJobs = useDashboardStore((s) => s.jobs);
@@ -42,7 +43,7 @@ export function DashboardClient({
   const firstRunTriggered = useRef(false);
 
   useEffect(() => {
-    if (!activeProfile || firstRunTriggered.current) return;
+    if (!hydrated || !activeProfile || firstRunTriggered.current) return;
     if (allJobs.length > 0) return; // Already has jobs
     const created = activeProfile.onboardingCompletedAt;
     if (!created) return;
@@ -54,7 +55,7 @@ export function DashboardClient({
       .then(() => sync())
       .catch(() => {})
       .finally(() => setIsLoadingMatches(false));
-  }, [activeProfile, allJobs.length, sync]);
+  }, [hydrated, activeProfile, allJobs.length, sync]);
 
   // Manual "load more" handler
   function handleLoadMore() {
@@ -100,8 +101,6 @@ export function DashboardClient({
       updateUrl({ sort: newSort === "match" ? null : newSort, dir: null });
     }
   }
-
-  const hydrated = useDashboardStore((s) => s.hydrated);
 
   // Store not yet hydrated — show skeleton instead of empty/error state
   if (!hydrated) {
