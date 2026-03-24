@@ -157,25 +157,60 @@ export const LEVER_COMPANIES: CompanyConfig[] = [
 
 // ── USAJobs ──────────────────────────────────────────────────────────────────
 // data.usajobs.gov/api/search — requires API key + registered email
+// No rate limit. Empty keyword = all listings posted in the last 7 days.
+// Pool dedup (skipDuplicates) prevents redundant DB rows across runs.
 
 export const USAJOBS_SEARCHES: USAJobsSearchConfig[] = [
-  { keyword: "Software Engineer", location: "Washington, DC" },
-  { keyword: "IT Specialist", location: "" },
-  { keyword: "Human Resources", location: "" },
-  { keyword: "Administrative", location: "" },
-  { keyword: "Banking", location: "" },
+  // Catch-all: fetches every federal listing posted in the last 7 days
+  { keyword: "", location: "" },
 ];
 
 // ── Adzuna ────────────────────────────────────────────────────────────────────
 // api.adzuna.com/v1/api/jobs/{country}/search/{page}
 // Requires ADZUNA_APP_ID and ADZUNA_APP_KEY env vars
+// Broad coverage across major English + European markets.
 
 export const ADZUNA_SEARCHES: AdzunaSearchConfig[] = [
-  { country: "us", keyword: "Software Engineer",        location: "" },
-  { country: "us", keyword: "Human Resources",          location: "" },
-  { country: "us", keyword: "IT Specialist",            location: "" },
-  { country: "us", keyword: "Bank Teller",              location: "" },
-  { country: "us", keyword: "Administrative Assistant", location: "" },
-  { country: "de", keyword: "Software Engineer",        location: "Berlin" },
-  { country: "gb", keyword: "Software Engineer",        location: "London" },
+  // United States — broad categories
+  { country: "us", keyword: "Software Engineer",    location: "" },
+  { country: "us", keyword: "Data Scientist",       location: "" },
+  { country: "us", keyword: "Product Manager",      location: "" },
+  { country: "us", keyword: "Human Resources",      location: "" },
+  { country: "us", keyword: "Accountant",           location: "" },
+  { country: "us", keyword: "Marketing Manager",    location: "" },
+  { country: "us", keyword: "Administrative",       location: "" },
+  { country: "us", keyword: "Sales",                location: "" },
+  { country: "us", keyword: "Project Manager",      location: "" },
+  { country: "us", keyword: "Nurse",                location: "" },
+  // United Kingdom
+  { country: "gb", keyword: "Software Engineer",    location: "" },
+  { country: "gb", keyword: "Data Analyst",         location: "" },
+  { country: "gb", keyword: "Product Manager",      location: "" },
+  { country: "gb", keyword: "Marketing",            location: "" },
+  { country: "gb", keyword: "Finance",              location: "" },
+  // Germany
+  { country: "de", keyword: "Software Engineer",    location: "" },
+  { country: "de", keyword: "Data Engineer",        location: "" },
+  { country: "de", keyword: "Product Manager",      location: "" },
+  // Canada
+  { country: "ca", keyword: "Software Engineer",    location: "" },
+  { country: "ca", keyword: "Data Analyst",         location: "" },
+  { country: "ca", keyword: "Project Manager",      location: "" },
+  // Australia
+  { country: "au", keyword: "Software Engineer",    location: "" },
+  { country: "au", keyword: "Data Analyst",         location: "" },
+  // Netherlands
+  { country: "nl", keyword: "Software Engineer",    location: "" },
+  { country: "nl", keyword: "Data",                 location: "" },
+  // France
+  { country: "fr", keyword: "Software Engineer",    location: "" },
+  // Poland
+  { country: "pl", keyword: "Software Engineer",    location: "" },
+  // India
+  { country: "in", keyword: "Software Engineer",    location: "" },
+  { country: "in", keyword: "Data Scientist",       location: "" },
+  // Singapore
+  { country: "sg", keyword: "Software Engineer",    location: "" },
+  { country: "sg", keyword: "Data",                 location: "" },
+  { country: "sg", keyword: "Product Manager",      location: "" },
 ];

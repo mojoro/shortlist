@@ -78,13 +78,16 @@ async function fetchSearch(
   if (!apiKey || !email) return null;
 
   const params = new URLSearchParams({
-    Keyword: search.keyword,
     ResultsPerPage: String(RESULTS_PER_PAGE),
     Page: String(page),
     DatePosted: "7",
     SortField: "DatePosted",
     SortDirection: "Desc",
   });
+
+  if (search.keyword) {
+    params.set("Keyword", search.keyword);
+  }
 
   if (search.location) {
     params.set("LocationName", search.location);
