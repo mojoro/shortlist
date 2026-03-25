@@ -144,7 +144,9 @@ export async function runMatchPipelineForProfile(
   }
 
   // ── Persist surplus for "load more" UI ──
-  const pendingMatchCount = Math.max(0, totalQualified - jobsCreated);
+  // Use capped.length (attempted) instead of jobsCreated (actual) to avoid
+  // inflating the count when skipDuplicates filters out already-matched jobs.
+  const pendingMatchCount = Math.max(0, totalQualified - capped.length);
   await prisma.profile.update({
     where: { id: profileId },
     data: { pendingMatchCount },
