@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { openrouter } from "@/lib/openrouter";
 import { getModels } from "@/lib/models";
 import { extractJobSchema } from "@/lib/validations";
+import { incrementUsage, checkUsageLimit } from "@/lib/usage";
 import TurndownService from "turndown";
 
 const td = new TurndownService({ headingStyle: "atx", bulletListMarker: "-" });
@@ -115,8 +116,8 @@ export async function POST(req: Request) {
   const models = getModels(profile);
 
   // Usage limit check
-  const usage = await prisma.usage.findUnique({ where: { userId } });
-  if (usage && usage.currentMonthInputTokens >= usage.monthlyLimitInputTokens) {
+  const withinLimit = await checkUsageLimit(userId);
+  if (!withinLimit) {
     return Response.json(
       { error: "Monthly AI usage limit reached." },
       { status: 429 },
@@ -191,26 +192,7 @@ export async function POST(req: Request) {
     const inputTokens = response.usage?.prompt_tokens ?? 0;
     const outputTokens = response.usage?.completion_tokens ?? 0;
 
-    if (inputTokens > 0) {
-      await prisma.usage.upsert({
-        where: { userId },
-        create: {
-          userId,
-          totalInputTokens: inputTokens,
-          totalOutputTokens: outputTokens,
-          currentMonthInputTokens: inputTokens,
-          currentMonthOutputTokens: outputTokens,
-          analysisCallCount: 1,
-        },
-        update: {
-          totalInputTokens: { increment: inputTokens },
-          totalOutputTokens: { increment: outputTokens },
-          currentMonthInputTokens: { increment: inputTokens },
-          currentMonthOutputTokens: { increment: outputTokens },
-          analysisCallCount: { increment: 1 },
-        },
-      });
-    }
+    await incrementUsage(userId, inputTokens, outputTokens, "analysis");
 
     const text   = response.choices[0]?.message?.content ?? "";
     const result = parseAiResponse(text);

@@ -11,6 +11,7 @@ import { getModels } from "@/lib/models";
 import { buildWhereClause, buildOrderBy } from "@/lib/jobs";
 import { buildAnalysisSystemPrompt, parseAiAnalysisResponse } from "@/lib/ai-analysis";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { incrementUsage, checkUsageLimit } from "@/lib/usage";
 import { updateCustomJobSchema } from "@/lib/validations";
 import type { SortOption } from "@/lib/jobs";
 import type { JobWithApplication } from "@/types";
@@ -201,8 +202,8 @@ export async function analyzeJob(
   const { allowed } = checkRateLimit(userId, "analyze", 10);
   if (!allowed) return { error: "UNKNOWN" as const };
 
-  const usage = profile.user.usage;
-  if (usage && usage.currentMonthInputTokens >= usage.monthlyLimitInputTokens) {
+  const withinLimit = await checkUsageLimit(profile.userId);
+  if (!withinLimit) {
     return { error: "CREDITS" };
   }
 
@@ -257,26 +258,7 @@ export async function analyzeJob(
 
     const inputTokens  = response.usage?.prompt_tokens    ?? 0;
     const outputTokens = response.usage?.completion_tokens ?? 0;
-    if (inputTokens > 0) {
-      await prisma.usage.upsert({
-        where:  { userId },
-        create: {
-          userId,
-          totalInputTokens:         inputTokens,
-          totalOutputTokens:        outputTokens,
-          currentMonthInputTokens:  inputTokens,
-          currentMonthOutputTokens: outputTokens,
-          analysisCallCount:        1,
-        },
-        update: {
-          totalInputTokens:         { increment: inputTokens },
-          totalOutputTokens:        { increment: outputTokens },
-          currentMonthInputTokens:  { increment: inputTokens },
-          currentMonthOutputTokens: { increment: outputTokens },
-          analysisCallCount:        { increment: 1 },
-        },
-      });
-    }
+    await incrementUsage(userId, inputTokens, outputTokens, "analysis");
 
     revalidatePath("/dashboard");
     return {

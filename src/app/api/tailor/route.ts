@@ -5,6 +5,7 @@ import { openrouter } from "@/lib/openrouter";
 import { getModels } from "@/lib/models";
 import { tailorSchema } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { incrementUsage, checkUsageLimit } from "@/lib/usage";
 
 export const maxDuration = 60;
 
@@ -88,11 +89,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const usage = await prisma.usage.findUnique({ where: { userId } });
-    if (
-      usage &&
-      usage.currentMonthInputTokens >= usage.monthlyLimitInputTokens
-    ) {
+    const withinLimit = await checkUsageLimit(userId);
+    if (!withinLimit) {
       return Response.json(
         { error: "Monthly AI usage limit reached. Try again next month." },
         { status: 429 }
@@ -283,26 +281,7 @@ identify what would make it a 9.5/10 and implement that adjustment, but never us
           }
           controller.close();
           // Increment usage counters — non-blocking, best-effort
-          prisma.usage
-            .upsert({
-              where: { userId },
-              create: {
-                userId,
-                totalInputTokens: inputTokens,
-                totalOutputTokens: outputTokens,
-                currentMonthInputTokens: inputTokens,
-                currentMonthOutputTokens: outputTokens,
-                tailorCallCount: 1,
-              },
-              update: {
-                totalInputTokens: { increment: inputTokens },
-                totalOutputTokens: { increment: outputTokens },
-                currentMonthInputTokens: { increment: inputTokens },
-                currentMonthOutputTokens: { increment: outputTokens },
-                tailorCallCount: { increment: 1 },
-              },
-            })
-            .catch(console.error);
+          incrementUsage(userId, inputTokens, outputTokens, "tailor").catch(console.error);
         }
       },
     });

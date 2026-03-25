@@ -5,6 +5,7 @@ import { getModels } from "@/lib/models";
 import { env } from "@/env";
 import { analyzeSchema } from "@/lib/validations";
 import { buildAnalysisSystemPrompt, parseAiAnalysisResponse } from "@/lib/ai-analysis";
+import { incrementUsage, checkUsageLimit } from "@/lib/usage";
 
 export const maxDuration = 60;
 
@@ -45,8 +46,8 @@ export async function POST(req: Request) {
     const models = getModels(profile);
 
     // Usage limit check
-    const usage = profile.user.usage;
-    if (usage && usage.currentMonthInputTokens >= usage.monthlyLimitInputTokens) {
+    const withinLimit = await checkUsageLimit(profile.userId);
+    if (!withinLimit) {
       return Response.json(
         { error: "Monthly AI usage limit reached." },
         { status: 429 },
@@ -186,26 +187,7 @@ export async function POST(req: Request) {
     }
 
     // Increment usage counters
-    if (totalInputTokens > 0) {
-      await prisma.usage.upsert({
-        where:  { userId: profile.userId },
-        create: {
-          userId:                   profile.userId,
-          totalInputTokens,
-          totalOutputTokens,
-          currentMonthInputTokens:  totalInputTokens,
-          currentMonthOutputTokens: totalOutputTokens,
-          analysisCallCount:        jobsScored,
-        },
-        update: {
-          totalInputTokens:         { increment: totalInputTokens },
-          totalOutputTokens:        { increment: totalOutputTokens },
-          currentMonthInputTokens:  { increment: totalInputTokens },
-          currentMonthOutputTokens: { increment: totalOutputTokens },
-          analysisCallCount:        { increment: jobsScored },
-        },
-      });
-    }
+    await incrementUsage(profile.userId, totalInputTokens, totalOutputTokens, "analysis", jobsScored);
 
     if (process.env.NODE_ENV === "development") {
       console.log(`[/api/analyze] Complete — jobsScored: ${jobsScored}, autoHidden: ${toHide.length}, inputTokens: ${totalInputTokens}, outputTokens: ${totalOutputTokens}`);
