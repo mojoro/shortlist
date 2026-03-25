@@ -10,6 +10,38 @@ td.remove(["script", "style", "noscript", "iframe"]);
 
 const URL_RE = /^https?:\/\//i;
 
+/** Block SSRF by rejecting URLs that resolve to private/reserved IP ranges. */
+function isPrivateHostname(hostname: string): boolean {
+  // Block obvious private hostnames
+  const lower = hostname.toLowerCase();
+  if (
+    lower === "localhost" ||
+    lower.endsWith(".local") ||
+    lower.endsWith(".internal") ||
+    lower === "[::1]"
+  ) {
+    return true;
+  }
+
+  // Block private IP ranges
+  const parts = lower.split(".");
+  if (parts.length === 4 && parts.every((p) => /^\d+$/.test(p))) {
+    const [a, b] = parts.map(Number);
+    if (
+      a === 10 ||                         // 10.0.0.0/8
+      a === 127 ||                        // 127.0.0.0/8
+      (a === 172 && b >= 16 && b <= 31) || // 172.16.0.0/12
+      (a === 192 && b === 168) ||          // 192.168.0.0/16
+      (a === 169 && b === 254) ||          // 169.254.0.0/16 (link-local / cloud metadata)
+      a === 0                              // 0.0.0.0/8
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 const EXTRACTION_SYSTEM_PROMPT = `Extract structured job listing metadata from the text below. Return ONLY valid JSON — no markdown fences, no explanation:
 {
   "title": "string",
@@ -110,9 +142,23 @@ export async function POST(req: Request) {
   }
 
   if (isUrl) {
+    // Validate URL target to prevent SSRF attacks against internal services
+    try {
+      const parsed = new URL(input.trim());
+      if (isPrivateHostname(parsed.hostname)) {
+        return Response.json(
+          { error: "That URL points to a private or internal address." },
+          { status: 422 },
+        );
+      }
+    } catch {
+      return Response.json({ error: "Invalid URL." }, { status: 422 });
+    }
+
     try {
       const res = await fetch(input.trim(), {
         headers: { "User-Agent": "Mozilla/5.0 (compatible; Shortlist-bot/1.0)" },
+        redirect: "follow",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const html = await res.text();
