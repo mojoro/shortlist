@@ -232,7 +232,7 @@ export async function analyzeJob(
         { role: "system", content: systemPrompt },
         { role: "user", content: userMsg },
       ],
-      max_tokens: 1500,
+      max_completion_tokens: 1500,
     });
 
     const text   = response.choices[0]?.message?.content ?? "";

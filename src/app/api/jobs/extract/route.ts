@@ -181,7 +181,7 @@ export async function POST(req: Request) {
   try {
     const response = await openrouter.chat.completions.create({
       model: models.extract,
-      max_tokens: 500,
+      max_completion_tokens: 500,
       messages: [
         { role: "system", content: EXTRACTION_SYSTEM_PROMPT },
         { role: "user",   content: cleanedText.slice(0, 24000) },
