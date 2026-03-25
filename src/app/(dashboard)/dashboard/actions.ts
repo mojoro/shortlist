@@ -170,6 +170,21 @@ export async function batchSaveJobs(
     where: { id: { in: jobIds }, profileId },
     data: { feedStatus: save ? "SAVED" : "NEW" },
   });
+
+  // Create Application records for batch-saved jobs (matches toggleSaveJob behavior)
+  if (save) {
+    await prisma.$transaction(
+      jobIds.map((id) =>
+        prisma.application.upsert({
+          where: { jobId: id },
+          create: { jobId: id, profileId, status: "INTERESTED", statusUpdatedAt: new Date() },
+          update: {},
+        })
+      )
+    );
+    revalidatePath("/pipeline");
+  }
+
   revalidatePath("/dashboard");
   revalidateTag("dashboard-stats");
 }
