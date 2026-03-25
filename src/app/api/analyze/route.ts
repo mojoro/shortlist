@@ -1,10 +1,10 @@
-import { appendFileSync } from "fs";
 import { prisma } from "@/lib/prisma";
 import { openrouter } from "@/lib/openrouter";
 import { getModels } from "@/lib/models";
 import { env } from "@/env";
 import { analyzeSchema } from "@/lib/validations";
 import { buildAnalysisSystemPrompt, parseAiAnalysisResponse } from "@/lib/ai-analysis";
+import { logAiContext } from "@/lib/ai-logging";
 
 export const maxDuration = 60;
 
@@ -18,7 +18,6 @@ export async function POST(req: Request) {
   }
 
   const host = req.headers.get("host") ?? "";
-  const isLocalhost = host.startsWith("localhost") || host.startsWith("127.");
 
   try {
     const body = await req.json().catch(() => null);
@@ -115,14 +114,13 @@ export async function POST(req: Request) {
           if (process.env.NODE_ENV === "development") {
             console.log(`[/api/analyze] Scoring job — id: ${job.id}, title: "${job.jobPool.title}"`);
           }
-          if (isLocalhost) {
-            const userMsg = `## ${job.jobPool.title} at ${job.jobPool.company}\n\n${job.jobPool.description.slice(0, 8000)}`;
-            const sep = "=".repeat(80);
-            appendFileSync(
-              "ai-context.log",
-              `\n${sep}\n[${new Date().toISOString()}] ANALYZE — jobId: ${job.id}, title: "${job.jobPool.title}"\n\n## SYSTEM\n${systemPrompt}\n\n## USER\n${userMsg}\n`,
-            );
-          }
+          logAiContext(
+            host,
+            `ANALYZE — jobId: ${job.id}`,
+            job.jobPool.title,
+            systemPrompt,
+            `## ${job.jobPool.title} at ${job.jobPool.company}\n\n${job.jobPool.description.slice(0, 8000)}`,
+          );
 
           try {
             const response = await openrouter.chat.completions.create({
