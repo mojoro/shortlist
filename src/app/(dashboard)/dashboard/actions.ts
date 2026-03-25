@@ -60,10 +60,12 @@ export async function toggleSaveJob(
   });
   if (!profile) throw new Error("Profile not found");
 
-  await prisma.job.update({
-    where: { id: jobId },
+  // Scope to profileId to prevent cross-user mutation (IDOR)
+  const updated = await prisma.job.updateMany({
+    where: { id: jobId, profileId },
     data: { feedStatus: save ? "SAVED" : "NEW" },
   });
+  if (updated.count === 0) throw new Error("Job not found");
 
   // When saving a job, ensure it appears in the pipeline at INTERESTED
   let applicationId: string | undefined;
@@ -95,10 +97,11 @@ export async function ignoreJob(
   });
   if (!profile) throw new Error("Profile not found");
 
-  await prisma.job.update({
-    where: { id: jobId },
+  const updated = await prisma.job.updateMany({
+    where: { id: jobId, profileId },
     data: { feedStatus: "ARCHIVED" },
   });
+  if (updated.count === 0) throw new Error("Job not found");
   revalidatePath("/dashboard");
   revalidateTag("dashboard-stats");
 }
@@ -121,10 +124,11 @@ export async function unignoreJob(
     ? (restoreStatus as "NEW" | "SAVED")
     : "NEW";
 
-  await prisma.job.update({
-    where: { id: jobId },
+  const updated = await prisma.job.updateMany({
+    where: { id: jobId, profileId },
     data: { feedStatus },
   });
+  if (updated.count === 0) throw new Error("Job not found");
   revalidatePath("/dashboard");
   revalidateTag("dashboard-stats");
 }
@@ -384,10 +388,11 @@ export async function updateJobNotes(
   });
   if (!profile) throw new Error("Profile not found");
 
-  await prisma.job.update({
-    where: { id: jobId },
+  const updated = await prisma.job.updateMany({
+    where: { id: jobId, profileId },
     data: { userNotes: notes.trim() || null },
   });
+  if (updated.count === 0) throw new Error("Job not found");
 }
 
 // ─── Load more matches ────────────────────────────────────────────────────────
