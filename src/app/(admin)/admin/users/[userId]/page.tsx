@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format, formatDistanceToNow } from "date-fns";
+import type { Metadata } from "next";
 
 import { env } from "@/env";
+
+export const metadata: Metadata = { title: "User Detail" };
 import { getAdminUserDetail } from "@/lib/admin-queries";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
 import { CopyProfileButton } from "@/components/admin/CopyProfileButton";

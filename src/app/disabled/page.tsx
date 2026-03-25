@@ -1,4 +1,7 @@
 import { SignOutButton } from "@clerk/nextjs";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Account Suspended" };
 
 export default function DisabledPage() {
   return (

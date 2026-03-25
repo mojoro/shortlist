@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import type { Metadata } from "next";
 
 import { getAdminUserList } from "@/lib/admin-queries";
 import { UserSearchBar } from "@/components/admin/UserSearchBar";
 
-export const metadata = { title: "Users" };
+export const metadata: Metadata = { title: "Users" };
 
 export default async function AdminUsersPage({
   searchParams,
