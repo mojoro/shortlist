@@ -4,6 +4,7 @@ import { openrouter } from "@/lib/openrouter";
 import { getModels } from "@/lib/models";
 import { extractJobSchema } from "@/lib/validations";
 import { incrementUsage, checkUsageLimit } from "@/lib/usage";
+import { parseAiJsonResponse } from "@/lib/ai-analysis";
 import TurndownService from "turndown";
 
 const td = new TurndownService({ headingStyle: "atx", bulletListMarker: "-" });
@@ -73,26 +74,14 @@ interface ExtractionResult {
   skills: string[];
 }
 
-function isValidResult(parsed: unknown): parsed is ExtractionResult {
+function isValidExtractionResult(parsed: unknown): parsed is ExtractionResult {
   if (typeof parsed !== "object" || parsed === null) return false;
   const p = parsed as Record<string, unknown>;
   return typeof p.title === "string" && typeof p.company === "string";
 }
 
 function parseAiResponse(text: string): ExtractionResult | null {
-  try {
-    const direct = JSON.parse(text.trim());
-    if (isValidResult(direct)) return direct;
-  } catch {}
-
-  try {
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return null;
-    const parsed = JSON.parse(match[0]);
-    if (isValidResult(parsed)) return parsed;
-  } catch {}
-
-  return null;
+  return parseAiJsonResponse(text, isValidExtractionResult);
 }
 
 export async function POST(req: Request) {
