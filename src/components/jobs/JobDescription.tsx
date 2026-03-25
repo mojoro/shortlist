@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
+import rehypeSanitize from "rehype-sanitize";
 
 const Markdown = dynamic(
   () => import("@uiw/react-md-editor").then((m) => m.default.Markdown),
@@ -14,6 +15,7 @@ export function JobDescription({ source }: { source: string }) {
     <div data-color-mode={resolvedTheme === "dark" ? "dark" : "light"}>
       <Markdown
         source={source}
+        rehypePlugins={[rehypeSanitize]}
         style={{
           background:  "transparent",
           fontSize:    "0.875rem",
