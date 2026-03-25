@@ -107,7 +107,7 @@ export default clerkMiddleware(async (auth, req) => {
     console.log(`[middleware] userId: ${userId}, onboarded: ${!!onboarded}, isOnboardingRoute: ${isOnboardingRoute}, path: ${req.nextUrl.pathname}`);
   }
 
-  if (!onboarded && !isOnboardingRoute) {
+  if (!onboarded && !isOnboardingRoute && !corsOrigin) {
     // Cookie is missing — check DB to avoid trapping users on new devices.
     // Prisma cannot run in Edge Runtime, so we call a thin internal API route.
     try {
