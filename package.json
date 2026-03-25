@@ -28,6 +28,8 @@
     "prisma": "^6.19.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "rehype-sanitize": "^6.0.0",
+    "server-only": "^0.0.1",
     "svix": "^1.87.0",
     "turndown": "^7.2.2",
     "zod": "^4.3.6",

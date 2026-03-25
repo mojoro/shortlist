@@ -117,6 +117,13 @@ export async function createApplication(
   });
   if (!profile) throw new Error("Profile not found");
 
+  // Verify the job belongs to this profile before creating an application
+  const job = await prisma.job.findFirst({
+    where: { id: jobId, profileId },
+    select: { id: true },
+  });
+  if (!job) throw new Error("Job not found");
+
   const application = await prisma.application.upsert({
     where: { jobId },
     create: { jobId, profileId, status: "INTERESTED" },
