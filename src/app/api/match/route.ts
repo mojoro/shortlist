@@ -1,4 +1,4 @@
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/env";
 import { matchSchema } from "@/lib/validations";
@@ -92,6 +92,7 @@ export async function POST(req: Request) {
     }
   }
 
+  revalidatePath("/dashboard");
   revalidateTag("dashboard-stats");
   return Response.json({ results });
 }

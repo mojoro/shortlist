@@ -1,4 +1,5 @@
 import { appendFileSync } from "fs";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { openrouter } from "@/lib/openrouter";
 import { getModels } from "@/lib/models";
@@ -211,6 +212,7 @@ export async function POST(req: Request) {
       console.log(`[/api/analyze] Complete — jobsScored: ${jobsScored}, autoHidden: ${toHide.length}, inputTokens: ${totalInputTokens}, outputTokens: ${totalOutputTokens}`);
     }
 
+    revalidatePath("/dashboard");
     return Response.json({ jobsScored: jobsScored + toHide.length });
   } catch (err) {
     console.error("[/api/analyze]", err);
