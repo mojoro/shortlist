@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { tailorSaveSchema } from "@/lib/validations";
 import { getModels } from "@/lib/models";
@@ -95,6 +96,9 @@ export async function POST(req: Request) {
           data: { feedStatus: "ARCHIVED" },
         }),
       ]);
+
+      revalidatePath("/dashboard");
+      revalidatePath("/pipeline");
     }
 
     return Response.json({ tailoredResumeId: tailoredResume.id });
