@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useDashboardStore } from "@/lib/store";
 
 interface ExtractedFields {
   title:        string;
@@ -247,6 +248,7 @@ function ImportJobModal({ profileId, open, onClose }: ImportJobModalProps) {
         return;
       }
       router.refresh();
+      await useDashboardStore.getState().sync();
       reset();
       onClose();
     } catch {
