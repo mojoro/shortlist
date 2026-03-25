@@ -408,6 +408,9 @@ export async function updateJobNotes(
     data: { userNotes: notes.trim() || null },
   });
   if (updated.count === 0) throw new Error("Job not found");
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/jobs/${jobId}`);
 }
 
 // ─── Load more matches ────────────────────────────────────────────────────────
