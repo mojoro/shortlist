@@ -126,7 +126,7 @@ export async function createApplication(
 
   const application = await prisma.application.upsert({
     where: { jobId },
-    create: { jobId, profileId, status: "INTERESTED" },
+    create: { jobId, profileId, status: "INTERESTED", statusUpdatedAt: new Date() },
     update: {},
     select: { id: true },
   });
