@@ -2,6 +2,10 @@
  * In-memory sliding window rate limiter keyed by userId.
  * Best-effort on Vercel serverless (resets per cold start).
  * The Usage table's monthly limit is the hard backstop.
+ *
+ * NOTE: This in-memory rate limiter resets on serverless cold starts.
+ * For production hardening, replace with @upstash/ratelimit backed by
+ * Redis for durable cross-instance state. See audit finding #42.
  */
 
 interface WindowEntry {
