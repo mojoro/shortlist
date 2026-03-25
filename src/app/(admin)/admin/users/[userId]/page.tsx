@@ -87,7 +87,7 @@ export default async function AdminUserDetailPage({
             No profiles created yet.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--bg-card)]">
+          <div className="overflow-visible rounded-xl border border-[var(--border)] bg-[var(--bg-card)]">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
