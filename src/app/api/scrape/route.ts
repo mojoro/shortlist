@@ -142,13 +142,18 @@ export async function POST(req: Request) {
         rawCount       = rawJobs.length;
         const poolData = normalize(rawJobs);
 
-        // Insert in chunks of 200 to keep individual query sizes manageable
+        // Insert in parallel chunks of 200 — skipDuplicates makes them idempotent
         const CHUNK = 200;
+        const chunks: (typeof poolData)[] = [];
         for (let i = 0; i < poolData.length; i += CHUNK) {
-          const { count } = await prisma.jobPool.createMany({
-            data:           poolData.slice(i, i + CHUNK),
-            skipDuplicates: true,
-          });
+          chunks.push(poolData.slice(i, i + CHUNK));
+        }
+        const chunkResults = await Promise.all(
+          chunks.map((chunk) =>
+            prisma.jobPool.createMany({ data: chunk, skipDuplicates: true }),
+          ),
+        );
+        for (const { count } of chunkResults) {
           poolNew      += count;
           totalPoolNew += count;
         }
