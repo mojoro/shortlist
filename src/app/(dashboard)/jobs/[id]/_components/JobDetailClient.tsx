@@ -169,14 +169,15 @@ export function JobDetailClient({ jobId }: JobDetailClientProps) {
           onSave={async (data) => {
             setSaving(true);
             setSaveError(null);
-            const result = await updateCustomJob(data);
-            if (result.error) {
-              setSaveError(result.error);
-            } else {
+            try {
+              await updateCustomJob(data);
               await sync();
               setEditing(false);
+            } catch (err) {
+              setSaveError(err instanceof Error ? err.message : "Failed to save");
+            } finally {
+              setSaving(false);
             }
-            setSaving(false);
           }}
           saving={saving}
           saveError={saveError}

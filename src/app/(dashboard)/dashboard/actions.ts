@@ -330,12 +330,12 @@ export async function discardAnalysis(
 
 export async function updateCustomJob(
   data: unknown
-): Promise<{ error?: string }> {
+): Promise<void> {
   const { userId } = await auth();
-  if (!userId) return { error: "Unauthorized" };
+  if (!userId) throw new Error("Unauthorized");
 
   const parsed = updateCustomJobSchema.safeParse(data);
-  if (!parsed.success) return { error: "Invalid request" };
+  if (!parsed.success) throw new Error("Invalid request");
 
   const { jobId, profileId, title, company, description, location,
     locationType, url, jobType, salaryMin, salaryMax, currency, skills } = parsed.data;
@@ -348,10 +348,10 @@ export async function updateCustomJob(
       jobPool: { select: { source: true, id: true } },
     },
   });
-  if (!job || job.profile.userId !== userId) return { error: "Not found" };
+  if (!job || job.profile.userId !== userId) throw new Error("Not found");
 
   // Only CUSTOM-sourced jobs can be edited
-  if (job.jobPool.source !== "CUSTOM") return { error: "Only imported jobs can be edited" };
+  if (job.jobPool.source !== "CUSTOM") throw new Error("Only imported jobs can be edited");
 
   await prisma.jobPool.update({
     where: { id: job.jobPool.id },
@@ -372,7 +372,6 @@ export async function updateCustomJob(
 
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath("/dashboard");
-  return {};
 }
 
 export async function updateJobNotes(
