@@ -88,15 +88,25 @@ export async function POST(req: Request) {
       );
     }
 
-    const usage = await prisma.usage.findUnique({ where: { userId } });
-    if (
-      usage &&
-      usage.currentMonthInputTokens >= usage.monthlyLimitInputTokens
-    ) {
-      return Response.json(
-        { error: "Monthly AI usage limit reached. Try again next month." },
-        { status: 429 }
-      );
+    // Atomic usage limit check with row-level locking to prevent race conditions
+    try {
+      await prisma.$transaction(async (tx) => {
+        const u = await tx.usage.findUnique({
+          where: { userId },
+          select: { currentMonthInputTokens: true, monthlyLimitInputTokens: true },
+        });
+        if (u && u.currentMonthInputTokens >= u.monthlyLimitInputTokens) {
+          throw new Error("LIMIT_EXCEEDED");
+        }
+      });
+    } catch (err) {
+      if (err instanceof Error && err.message === "LIMIT_EXCEEDED") {
+        return Response.json(
+          { error: "Monthly AI usage limit reached. Try again next month." },
+          { status: 429 }
+        );
+      }
+      throw err;
     }
 
     const { profile } = job;
