@@ -156,7 +156,13 @@ export default clerkMiddleware(async (auth, req) => {
 
   const response = NextResponse.next();
   if (!activeCheck) {
-    response.cookies.set("shortlist-active", "true", { path: "/", maxAge: 300 });
+    response.cookies.set("shortlist-active", "true", {
+      path: "/",
+      maxAge: 60,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
     // Fire-and-forget activity tracking
     const trackUrl = new URL("/api/track-activity", req.url);
     fetch(trackUrl.toString(), {
