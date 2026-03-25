@@ -460,6 +460,9 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
         const prevUpdatedAt = app.statusUpdatedAt;
         const prevAppliedAt = app.appliedAt;
 
+        // Capture jobId before optimistic update for feedStatus mirror
+        const jobId = app.jobId;
+
         set({
           applications: updateApp(get().applications, appId, (a) => ({
             ...a,
@@ -470,6 +473,17 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
               : {}),
           })),
         });
+
+        // Mirror server-side behavior: archive job from feed when APPLIED
+        if (status === "APPLIED") {
+          set({
+            jobs: get().jobs.map((j) =>
+              j.id === jobId && (j.feedStatus === "NEW" || j.feedStatus === "SAVED")
+                ? { ...j, feedStatus: "ARCHIVED" as const }
+                : j
+            ),
+          });
+        }
 
         retryServerAction(() => serverUpdateAppStatus(appId, status)).then(
           (ok) => {
@@ -482,6 +496,18 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
                   appliedAt: prevAppliedAt,
                 })),
               });
+              // Revert the feed status change on failure
+              if (status === "APPLIED") {
+                const job = get().jobs.find((j) => j.id === jobId);
+                if (job && job.feedStatus === "ARCHIVED") {
+                  set({
+                    jobs: updateJob(get().jobs, jobId, (j) => ({
+                      ...j,
+                      feedStatus: "NEW" as const,
+                    })),
+                  });
+                }
+              }
             }
           },
         );
