@@ -19,6 +19,32 @@ import {
   completeOnboardingSchema,
 } from "@/lib/validations";
 
+// ─── Shared rematch helper ────────────────────────────────────────────────────
+
+type RematchProfile = Parameters<typeof findStaleJobIds>[1] &
+  Parameters<typeof runMatchPipelineForProfile>[1];
+
+async function rematchAndRevalidate(
+  profileId: string,
+  profile: RematchProfile,
+): Promise<{ removed: number; added: number }> {
+  const staleIds = await findStaleJobIds(profileId, profile);
+  let removed = 0;
+  if (staleIds.length > 0) {
+    const { count } = await prisma.job.updateMany({
+      where: { id: { in: staleIds } },
+      data: { feedStatus: "HIDDEN" },
+    });
+    removed = count;
+  }
+
+  const pipelineResult = await runMatchPipelineForProfile(profileId, profile);
+
+  revalidatePath("/settings");
+  revalidatePath("/dashboard");
+  return { removed, added: pipelineResult.jobsCreated };
+}
+
 // ─── Profile info ────────────────────────────────────────────────────────────
 
 export async function updateProfileInfo(data: unknown): Promise<void> {
@@ -60,23 +86,7 @@ export async function updateSearchCriteria(
     data:  fields,
   });
 
-  // Remove stale jobs (SQL-only — conservative, keeps borderline jobs)
-  const staleIds = await findStaleJobIds(profileId, updated);
-  let removed = 0;
-  if (staleIds.length > 0) {
-    const { count } = await prisma.job.updateMany({
-      where: { id: { in: staleIds } },
-      data: { feedStatus: "HIDDEN" },
-    });
-    removed = count;
-  }
-
-  // Add new matches using the three-tier pipeline
-  const pipelineResult = await runMatchPipelineForProfile(profileId, updated);
-
-  revalidatePath("/settings");
-  revalidatePath("/dashboard");
-  return { removed, added: pipelineResult.jobsCreated };
+  return rematchAndRevalidate(profileId, updated);
 }
 
 // ─── Resume ──────────────────────────────────────────────────────────────────
@@ -325,21 +335,5 @@ export async function rematchProfile(
 ): Promise<{ removed: number; added: number }> {
   const { profile } = await requireProfile(profileId);
 
-  // Remove stale jobs
-  const staleIds = await findStaleJobIds(profileId, profile);
-  let removed = 0;
-  if (staleIds.length > 0) {
-    const { count } = await prisma.job.updateMany({
-      where: { id: { in: staleIds } },
-      data: { feedStatus: "HIDDEN" },
-    });
-    removed = count;
-  }
-
-  // Add new matches
-  const pipelineResult = await runMatchPipelineForProfile(profileId, profile);
-
-  revalidatePath("/dashboard");
-  revalidatePath("/settings");
-  return { removed, added: pipelineResult.jobsCreated };
+  return rematchAndRevalidate(profileId, profile);
 }
