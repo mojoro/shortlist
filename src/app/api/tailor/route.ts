@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       console.log(`[/api/tailor] Entry — userId: ${userId}, jobId: ${jobId}`);
     }
 
-    const job = await prisma.job.findFirst({
+    const job = await prisma.job.findUnique({
       where: { id: jobId },
       include: {
         jobPool: true,
