@@ -1,0 +1,1 @@
+export { collectPageContent } from "./generic";

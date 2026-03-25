@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/env";
 import { importJobSchema } from "@/lib/validations";
-import type { LocationType, JobType } from "@prisma/client";
+import type { LocationType, JobType, ScraperSource } from "@prisma/client";
 
 const URL_RE = /^https?:\/\//i;
 
@@ -35,22 +35,25 @@ export async function POST(req: Request) {
     salaryMax,
     currency,
     skills,
+    source,
+    externalId: clientExternalId,
   } = parsed.data;
 
   const profile = await prisma.profile.findFirst({ where: { id: profileId, userId } });
   if (!profile) return new Response("Profile not found", { status: 404 });
 
-  // Determine a stable externalId for deduplication
+  // Determine a stable externalId for deduplication.
+  // Prefer client-supplied externalId (e.g. from Chrome extension scraping a known source),
+  // then fall back to URL-based or random ID for manual imports.
   const isUrl = URL_RE.test(originalInput.trim());
-  const externalId = isUrl
-    ? originalInput.trim()
-    : (url?.trim() || crypto.randomUUID());
+  const externalId = clientExternalId
+    ?? (isUrl ? originalInput.trim() : (url?.trim() || crypto.randomUUID()));
 
   try {
     const poolEntry = await prisma.jobPool.upsert({
-      where:  { source_externalId: { source: "CUSTOM", externalId } },
+      where:  { source_externalId: { source: source as ScraperSource, externalId } },
       create: {
-        source:      "CUSTOM",
+        source:      source as ScraperSource,
         externalId,
         url:         url || "",
         title,
@@ -69,14 +72,25 @@ export async function POST(req: Request) {
       update: {},
     });
 
-    const job = await prisma.job.upsert({
-      where:  { profileId_jobPoolId: { profileId, jobPoolId: poolEntry.id } },
-      create: { profileId, jobPoolId: poolEntry.id, feedStatus: "NEW" },
-      update: {},
+    // Check if this job already exists for this profile
+    const existing = await prisma.job.findUnique({
+      where: { profileId_jobPoolId: { profileId, jobPoolId: poolEntry.id } },
+      select: { id: true },
+    });
+
+    if (existing) {
+      return Response.json(
+        { error: "You've already imported this job listing.", job: { id: existing.id } },
+        { status: 409 },
+      );
+    }
+
+    const job = await prisma.job.create({
+      data: { profileId, jobPoolId: poolEntry.id, feedStatus: "NEW" },
       include: { jobPool: true, application: { select: { status: true } } },
     });
 
-    // Fire analysis — fire-and-forget, reuse same host-based pattern as requestAnalysis
+    // Fire analysis — fire-and-forget
     const h = await headers();
     const host  = h.get("host") ?? "";
     const proto = host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https";
