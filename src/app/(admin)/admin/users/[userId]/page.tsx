@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format, formatDistanceToNow } from "date-fns";
 
+import { env } from "@/env";
 import { getAdminUserDetail } from "@/lib/admin-queries";
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
+import { CopyProfileButton } from "@/components/admin/CopyProfileButton";
 import { UserDetailActions } from "@/components/admin/UserDetailActions";
 
 export default async function AdminUserDetailPage({
@@ -16,6 +18,7 @@ export default async function AdminUserDetailPage({
   if (!user) notFound();
 
   const isDisabled = user.disabledAt !== null;
+  const isOwnAccount = userId === env.ADMIN_USER_ID;
 
   return (
     <div className="space-y-8">
@@ -84,13 +87,16 @@ export default async function AdminUserDetailPage({
             No profiles created yet.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--bg-card)]">
+          <div className="overflow-visible rounded-xl border border-[var(--border)] bg-[var(--bg-card)]">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3 text-right">Jobs</th>
                   <th className="px-4 py-3 text-right">Applications</th>
+                  {!isOwnAccount && (
+                    <th className="px-4 py-3 text-right">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
@@ -106,6 +112,14 @@ export default async function AdminUserDetailPage({
                     <td className="px-4 py-3 text-right tabular-nums">
                       {profile._count.applications}
                     </td>
+                    {!isOwnAccount && (
+                      <td className="px-4 py-3 text-right">
+                        <CopyProfileButton
+                          profileId={profile.id}
+                          profileName={profile.name}
+                        />
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

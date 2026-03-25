@@ -204,3 +204,9 @@ export const adminAdjustUsageLimitSchema = z.object({
 export const adminUserIdSchema = z.object({
   userId: z.string().min(1),
 });
+
+// ── Admin: copy profile to admin account ─────────────────────────────────────
+export const adminCopyProfileSchema = z.object({
+  profileId: z.string().cuid(),
+  mode: z.enum(["full", "metadata", "reset"]),
+});

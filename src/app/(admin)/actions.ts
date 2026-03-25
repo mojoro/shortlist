@@ -7,6 +7,7 @@ import { env } from "@/env";
 import { prisma } from "@/lib/prisma";
 import {
   adminAdjustUsageLimitSchema,
+  adminCopyProfileSchema,
   adminUserIdSchema,
 } from "@/lib/validations";
 
@@ -75,4 +76,160 @@ export async function adminTriggerScrape(): Promise<{
   const body = (await res.json()) as { poolNew?: number };
   revalidatePath("/admin/system");
   return { ok: true, message: `Scrape complete — ${body.poolNew ?? 0} new to pool` };
+}
+
+export async function adminCopyProfileToAdmin(
+  data: unknown,
+): Promise<{ profileId: string; jobsCopied: number; applicationsCopied: number }> {
+  const adminUserId = await requireAdmin();
+  const { profileId, mode } = adminCopyProfileSchema.parse(data);
+
+  const sourceProfile = await prisma.profile.findUnique({
+    where: { id: profileId },
+  });
+
+  if (!sourceProfile) throw new Error("Profile not found");
+
+  // Fetch jobs with nested relations when copying jobs (full or reset mode)
+  const sourceJobs =
+    mode !== "metadata"
+      ? await prisma.job.findMany({
+          where: { profileId },
+          include: {
+            application: {
+              include: { tailoredResumes: true },
+            },
+          },
+        })
+      : [];
+
+  let jobsCopied = 0;
+  let applicationsCopied = 0;
+
+  const newProfile = await prisma.$transaction(async (tx) => {
+    // Ensure admin user row exists (may not if they never onboarded)
+    await tx.user.upsert({
+      where: { id: adminUserId },
+      create: { id: adminUserId },
+      update: {},
+    });
+
+    // Deactivate all existing admin profiles
+    await tx.profile.updateMany({
+      where: { userId: adminUserId },
+      data: { isActive: false },
+    });
+
+    // Create new profile under admin user
+    const created = await tx.profile.create({
+      data: {
+        userId: adminUserId,
+        name: `[copy - ${mode}] ${sourceProfile.name}`,
+        isActive: true,
+        onboardingCompletedAt: new Date(),
+        // Search criteria
+        targetRoles: sourceProfile.targetRoles,
+        targetLocations: sourceProfile.targetLocations,
+        currency: sourceProfile.currency,
+        targetSalaryMin: sourceProfile.targetSalaryMin,
+        targetSalaryMax: sourceProfile.targetSalaryMax,
+        requiredSkills: sourceProfile.requiredSkills,
+        niceToHaveSkills: sourceProfile.niceToHaveSkills,
+        excludedKeywords: sourceProfile.excludedKeywords,
+        companySize: sourceProfile.companySize,
+        remotePreference: sourceProfile.remotePreference,
+        workEligibility: sourceProfile.workEligibility,
+        // Resume & contact
+        masterResume: sourceProfile.masterResume,
+        resumeLastEdited: sourceProfile.resumeLastEdited,
+        curriculumVitae: sourceProfile.curriculumVitae,
+        displayName: sourceProfile.displayName,
+        email: sourceProfile.email,
+        phone: sourceProfile.phone,
+        location: sourceProfile.location,
+        linkedinUrl: sourceProfile.linkedinUrl,
+        portfolioUrl: sourceProfile.portfolioUrl,
+        githubUrl: sourceProfile.githubUrl,
+        skills: sourceProfile.skills,
+        // Writing rules
+        protectedPhrases: sourceProfile.protectedPhrases,
+        bannedPhrases: sourceProfile.bannedPhrases,
+        verifiedMetrics: sourceProfile.verifiedMetrics,
+        neverClaim: sourceProfile.neverClaim,
+        // AI model overrides
+        customTailorModel: sourceProfile.customTailorModel,
+        customAnalyzeModel: sourceProfile.customAnalyzeModel,
+        customExtractModel: sourceProfile.customExtractModel,
+        // Scraper config
+        scraperEnabled: sourceProfile.scraperEnabled,
+        scraperSources: sourceProfile.scraperSources,
+        scraperFrequency: sourceProfile.scraperFrequency,
+      },
+    });
+
+    // Copy jobs + applications + tailored resumes in full mode
+    for (const sourceJob of sourceJobs) {
+      const newJob = await tx.job.create({
+        data: {
+          profileId: created.id,
+          jobPoolId: sourceJob.jobPoolId,
+          aiScore: sourceJob.aiScore,
+          aiStatus: sourceJob.aiStatus,
+          aiSummary: sourceJob.aiSummary,
+          aiMatchPoints: sourceJob.aiMatchPoints,
+          aiGapPoints: sourceJob.aiGapPoints,
+          aiAnalyzedAt: sourceJob.aiAnalyzedAt,
+          aiModel: sourceJob.aiModel,
+          feedStatus: mode === "reset" ? "NEW" : sourceJob.feedStatus,
+          viewedAt: mode === "reset" ? null : sourceJob.viewedAt,
+          userNotes: sourceJob.userNotes,
+          matchTier: sourceJob.matchTier,
+          matchConfidence: sourceJob.matchConfidence,
+        },
+      });
+      jobsCopied++;
+
+      if (sourceJob.application) {
+        const newApplication = await tx.application.create({
+          data: {
+            profileId: created.id,
+            jobId: newJob.id,
+            status: sourceJob.application.status,
+            statusUpdatedAt: sourceJob.application.statusUpdatedAt,
+            appliedAt: sourceJob.application.appliedAt,
+            interviewDates: sourceJob.application.interviewDates,
+            offerReceivedAt: sourceJob.application.offerReceivedAt,
+            decisionAt: sourceJob.application.decisionAt,
+            notes: sourceJob.application.notes,
+            salaryOffered: sourceJob.application.salaryOffered,
+            recruiterName: sourceJob.application.recruiterName,
+            recruiterEmail: sourceJob.application.recruiterEmail,
+            followUpAt: sourceJob.application.followUpAt,
+            exportedResumeMarkdown:
+              sourceJob.application.exportedResumeMarkdown,
+            exportedAt: sourceJob.application.exportedAt,
+          },
+        });
+        applicationsCopied++;
+
+        for (const sourceResume of sourceJob.application.tailoredResumes) {
+          await tx.tailoredResume.create({
+            data: {
+              applicationId: newApplication.id,
+              markdown: sourceResume.markdown,
+              generatedBy: sourceResume.generatedBy,
+              wasExported: sourceResume.wasExported,
+              exportedAt: sourceResume.exportedAt,
+              promptSnapshot: sourceResume.promptSnapshot,
+            },
+          });
+        }
+      }
+    }
+
+    return created;
+  }, { timeout: 30000 });
+
+  revalidatePath("/admin/users");
+  return { profileId: newProfile.id, jobsCopied, applicationsCopied };
 }
