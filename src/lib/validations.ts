@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// ── Shared constants ───────────────────────────────────────────────────────
+export const URL_RE = /^https?:\/\//i;
+
 // ── Tailor generation ──────────────────────────────────────────────────────
 export const tailorSchema = z.object({
   jobId: z.string().cuid(),

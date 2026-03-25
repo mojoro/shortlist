@@ -6,10 +6,8 @@ import type { USAJobsPosition } from "@/lib/scrapers/usajobs";
 import type { AdzunaApiJob } from "@/lib/scrapers/adzuna";
 import { currencyForCountry } from "@/lib/scrapers/adzuna";
 import type { ArbeitnowJob } from "@/lib/scrapers/arbeitnow";
-import TurndownService from "turndown";
 import { parseLocation } from "@/lib/location-parser";
-
-const td = new TurndownService({ headingStyle: "atx", bulletListMarker: "-" });
+import { td } from "@/lib/html-to-markdown";
 
 function htmlToMarkdown(html: string): string {
   return html ? td.turndown(html).trim() : "";
