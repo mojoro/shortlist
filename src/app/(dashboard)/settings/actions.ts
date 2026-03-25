@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { findStaleJobIds } from "@/lib/match-sql";
 import { runMatchPipelineForProfile } from "@/lib/match-pipeline";
+import { requireProfile } from "@/lib/auth-helpers";
 import {
   updateProfileInfoSchema,
   updateSearchCriteriaSchema,
@@ -21,20 +22,14 @@ import {
 // ─── Profile info ────────────────────────────────────────────────────────────
 
 export async function updateProfileInfo(data: unknown): Promise<void> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  if (process.env.NODE_ENV === "development") {
-    console.log("[settings/actions] updateProfileInfo entry — userId:", userId);
-  }
-
   const parsed = updateProfileInfoSchema.safeParse(data);
   if (!parsed.success) throw new Error("Invalid data");
 
-  const profile = await prisma.profile.findFirst({
-    where: { id: parsed.data.profileId, userId },
-  });
-  if (!profile) throw new Error("Profile not found");
+  await requireProfile(parsed.data.profileId);
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("[settings/actions] updateProfileInfo entry — profileId:", parsed.data.profileId);
+  }
 
   const { profileId, ...fields } = parsed.data;
   await prisma.profile.update({
@@ -54,16 +49,10 @@ export async function updateProfileInfo(data: unknown): Promise<void> {
 export async function updateSearchCriteria(
   data: unknown,
 ): Promise<{ removed: number; added: number }> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
   const parsed = updateSearchCriteriaSchema.safeParse(data);
   if (!parsed.success) throw new Error("Invalid data");
 
-  const profile = await prisma.profile.findFirst({
-    where: { id: parsed.data.profileId, userId },
-  });
-  if (!profile) throw new Error("Profile not found");
+  await requireProfile(parsed.data.profileId);
 
   const { profileId, ...fields } = parsed.data;
   const updated = await prisma.profile.update({
@@ -93,20 +82,14 @@ export async function updateSearchCriteria(
 // ─── Resume ──────────────────────────────────────────────────────────────────
 
 export async function updateResume(data: unknown): Promise<void> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  if (process.env.NODE_ENV === "development") {
-    console.log("[settings/actions] updateResume entry — userId:", userId);
-  }
-
   const parsed = updateResumeSchema.safeParse(data);
   if (!parsed.success) throw new Error("Invalid data");
 
-  const profile = await prisma.profile.findFirst({
-    where: { id: parsed.data.profileId, userId },
-  });
-  if (!profile) throw new Error("Profile not found");
+  await requireProfile(parsed.data.profileId);
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("[settings/actions] updateResume entry — profileId:", parsed.data.profileId);
+  }
 
   const { profileId, ...fields } = parsed.data;
   await prisma.profile.update({
@@ -124,16 +107,10 @@ export async function updateResume(data: unknown): Promise<void> {
 // ─── Resume writing rules ─────────────────────────────────────────────────────
 
 export async function updateResumeWritingRules(data: unknown): Promise<void> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
   const parsed = updateResumeWritingRulesSchema.safeParse(data);
   if (!parsed.success) throw new Error("Invalid data");
 
-  const profile = await prisma.profile.findFirst({
-    where: { id: parsed.data.profileId, userId },
-  });
-  if (!profile) throw new Error("Profile not found");
+  await requireProfile(parsed.data.profileId);
 
   const { profileId, ...fields } = parsed.data;
   await prisma.profile.update({
@@ -214,21 +191,14 @@ export async function createProfile(data: unknown): Promise<{ profileId: string 
 // ─── Switch active profile ────────────────────────────────────────────────────
 
 export async function switchProfile(data: unknown): Promise<void> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+  const parsed = switchProfileSchema.safeParse(data);
+  if (!parsed.success) throw new Error("Invalid data");
+
+  const { userId } = await requireProfile(parsed.data.profileId);
 
   if (process.env.NODE_ENV === "development") {
     console.log("[settings/actions] switchProfile entry — userId:", userId);
   }
-
-  const parsed = switchProfileSchema.safeParse(data);
-  if (!parsed.success) throw new Error("Invalid data");
-
-  // Verify the target profile belongs to this user
-  const target = await prisma.profile.findFirst({
-    where: { id: parsed.data.profileId, userId },
-  });
-  if (!target) throw new Error("Profile not found");
 
   await prisma.$transaction([
     prisma.profile.updateMany({
@@ -252,16 +222,10 @@ export async function switchProfile(data: unknown): Promise<void> {
 // ─── Delete profile ───────────────────────────────────────────────────────────
 
 export async function deleteProfile(data: unknown): Promise<void> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
   const parsed = deleteProfileSchema.safeParse(data);
   if (!parsed.success) throw new Error("Invalid data");
 
-  const profile = await prisma.profile.findFirst({
-    where: { id: parsed.data.profileId, userId },
-  });
-  if (!profile) throw new Error("Profile not found");
+  const { userId, profile } = await requireProfile(parsed.data.profileId);
 
   const profileCount = await prisma.profile.count({ where: { userId } });
 
@@ -359,13 +323,7 @@ export async function completeOnboarding(
 export async function rematchProfile(
   profileId: string,
 ): Promise<{ removed: number; added: number }> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const profile = await prisma.profile.findFirst({
-    where: { id: profileId, userId },
-  });
-  if (!profile) throw new Error("Profile not found");
+  const { profile } = await requireProfile(profileId);
 
   // Remove stale jobs
   const staleIds = await findStaleJobIds(profileId, profile);
