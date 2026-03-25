@@ -114,17 +114,16 @@ function updateApp(
 
 /**
  * Retry a server action with exponential backoff.
- * Returns true if the action succeeded, false if all retries exhausted.
+ * Returns the action result on success, or null if all retries exhausted.
  */
-async function retryServerAction(
-  fn: () => Promise<unknown>,
+async function retryServerAction<T>(
+  fn: () => Promise<T>,
   retries = 3,
   baseDelay = 1000,
-): Promise<boolean> {
+): Promise<T | null> {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      await fn();
-      return true;
+      return await fn();
     } catch (err) {
       if (attempt < retries - 1) {
         await new Promise((r) => setTimeout(r, baseDelay * 2 ** attempt));
@@ -133,7 +132,7 @@ async function retryServerAction(
       }
     }
   }
-  return false;
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -252,15 +251,14 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
         }
 
         retryServerAction(() => serverToggleSave(jobId, profileId, save)).then(
-          (ok) => {
-            if (!ok) {
+          (result) => {
+            if (!result) {
               set({
                 jobs: updateJob(get().jobs, jobId, (j) => ({
                   ...j,
                   feedStatus: prevStatus,
                 })),
               });
-              // Revert the optimistic application
               if (save && !hadApplication) {
                 set({
                   applications: get().applications.filter(
@@ -270,7 +268,16 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
               }
               return;
             }
-            // Replace optimistic ID with real one from server on next sync
+            // Replace optimistic ID with real one from server
+            if (result.applicationId) {
+              set({
+                applications: get().applications.map((a) =>
+                  a.id === `optimistic-${jobId}`
+                    ? { ...a, id: result.applicationId! }
+                    : a,
+                ),
+              });
+            }
           },
         );
       },
@@ -287,8 +294,8 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           })),
         });
 
-        retryServerAction(() => serverIgnore(jobId, profileId)).then((ok) => {
-          if (!ok) {
+        retryServerAction(() => serverIgnore(jobId, profileId)).then((result) => {
+          if (result === null) {
             set({
               jobs: updateJob(get().jobs, jobId, (j) => ({
                 ...j,
@@ -312,8 +319,8 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
 
         retryServerAction(() =>
           serverUnignore(jobId, profileId, restoreStatus),
-        ).then((ok) => {
-          if (!ok) {
+        ).then((result) => {
+          if (result === null) {
             set({
               jobs: updateJob(get().jobs, jobId, (j) => ({
                 ...j,
@@ -339,8 +346,8 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
         });
 
         retryServerAction(() => serverBatchIgnore(jobIds, profileId)).then(
-          (ok) => {
-            if (!ok) {
+          (result) => {
+            if (result === null) {
               set({
                 jobs: get().jobs.map((j) => {
                   const prev = prevStatuses.get(j.id);
@@ -369,8 +376,8 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
 
         retryServerAction(() =>
           serverBatchSave(jobIds, profileId, save),
-        ).then((ok) => {
-          if (!ok) {
+        ).then((result) => {
+          if (result === null) {
             set({
               jobs: get().jobs.map((j) => {
                 const prev = prevStatuses.get(j.id);
@@ -438,8 +445,8 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
 
         retryServerAction(() =>
           serverUpdateNotes(jobId, profileId, notes),
-        ).then((ok) => {
-          if (!ok) {
+        ).then((result) => {
+          if (result === null) {
             set({
               jobs: updateJob(get().jobs, jobId, (j) => ({
                 ...j,
@@ -472,8 +479,8 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
         });
 
         retryServerAction(() => serverUpdateAppStatus(appId, status)).then(
-          (ok) => {
-            if (!ok) {
+          (result) => {
+            if (result === null) {
               set({
                 applications: updateApp(get().applications, appId, (a) => ({
                   ...a,
@@ -523,8 +530,8 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
         });
 
         retryServerAction(() => serverUpdateAppDetail(appId, fields)).then(
-          (ok) => {
-            if (!ok) {
+          (result) => {
+            if (result === null) {
               set({
                 applications: updateApp(get().applications, appId, (a) => ({
                   ...a,
@@ -554,8 +561,8 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           ),
         });
 
-        retryServerAction(() => serverBulkRemoveApps(appIds)).then((ok) => {
-          if (!ok) {
+        retryServerAction(() => serverBulkRemoveApps(appIds)).then((result) => {
+          if (result === null) {
             set({
               applications: [...get().applications, ...removedApps],
               jobs: get().jobs.map((j) => {
