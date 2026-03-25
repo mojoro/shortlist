@@ -208,5 +208,5 @@ export const adminUserIdSchema = z.object({
 // ── Admin: copy profile to admin account ─────────────────────────────────────
 export const adminCopyProfileSchema = z.object({
   profileId: z.string().cuid(),
-  mode: z.enum(["full", "metadata"]),
+  mode: z.enum(["full", "metadata", "reset"]),
 });

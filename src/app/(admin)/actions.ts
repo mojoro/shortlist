@@ -90,9 +90,9 @@ export async function adminCopyProfileToAdmin(
 
   if (!sourceProfile) throw new Error("Profile not found");
 
-  // Fetch jobs with nested relations only when copying everything
+  // Fetch jobs with nested relations when copying jobs (full or reset mode)
   const sourceJobs =
-    mode === "full"
+    mode !== "metadata"
       ? await prisma.job.findMany({
           where: { profileId },
           include: {
@@ -124,7 +124,7 @@ export async function adminCopyProfileToAdmin(
     const created = await tx.profile.create({
       data: {
         userId: adminUserId,
-        name: `[Copy] ${sourceProfile.name}`,
+        name: `[copy - ${mode}] ${sourceProfile.name}`,
         isActive: true,
         onboardingCompletedAt: new Date(),
         // Search criteria
@@ -180,8 +180,8 @@ export async function adminCopyProfileToAdmin(
           aiGapPoints: sourceJob.aiGapPoints,
           aiAnalyzedAt: sourceJob.aiAnalyzedAt,
           aiModel: sourceJob.aiModel,
-          feedStatus: sourceJob.feedStatus,
-          viewedAt: sourceJob.viewedAt,
+          feedStatus: mode === "reset" ? "NEW" : sourceJob.feedStatus,
+          viewedAt: mode === "reset" ? null : sourceJob.viewedAt,
           userNotes: sourceJob.userNotes,
           matchTier: sourceJob.matchTier,
           matchConfidence: sourceJob.matchConfidence,

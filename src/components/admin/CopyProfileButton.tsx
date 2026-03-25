@@ -35,7 +35,7 @@ export function CopyProfileButton({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [isOpen]);
 
-  function handleCopy(mode: "full" | "metadata") {
+  function handleCopy(mode: "full" | "metadata" | "reset") {
     setIsOpen(false);
     startTransition(async () => {
       try {
@@ -99,13 +99,20 @@ export function CopyProfileButton({
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full z-10 mt-1 min-w-[10rem] rounded-lg border border-[var(--border)] bg-[var(--bg-card)] shadow-lg">
+        <div className="absolute right-0 top-full z-10 mt-1 min-w-[12rem] rounded-lg border border-[var(--border)] bg-[var(--bg-card)] shadow-lg">
           <button
             type="button"
             onClick={() => handleCopy("full")}
             className="w-full cursor-pointer px-3 py-2 text-left text-sm text-[var(--text)] transition-colors hover:bg-[var(--bg-subtle)]"
           >
             Full copy (with jobs)
+          </button>
+          <button
+            type="button"
+            onClick={() => handleCopy("reset")}
+            className="w-full cursor-pointer px-3 py-2 text-left text-sm text-[var(--text)] transition-colors hover:bg-[var(--bg-subtle)]"
+          >
+            Reset copy (all jobs as new)
           </button>
           <button
             type="button"
