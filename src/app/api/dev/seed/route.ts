@@ -6,12 +6,12 @@ import { prisma } from "@/lib/prisma";
 // Only available when E2E_SEED is set (CI and local test runs)
 export async function GET() {
   if (!process.env.E2E_SEED) {
-    return NextResponse.json({ error: "Seed not enabled" }, { status: 403 });
+    return Response.json({ error: "Seed not enabled" }, { status: 403 });
   }
 
   const { userId } = await auth();
   if (!userId) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return Response.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   // Upsert user record
