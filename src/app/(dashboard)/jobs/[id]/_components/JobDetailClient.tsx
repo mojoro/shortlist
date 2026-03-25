@@ -37,9 +37,10 @@ const JOB_TYPE_LABELS: Record<string, string> = {
 
 interface JobDetailClientProps {
   jobId: string;
+  description: string | null;
 }
 
-export function JobDetailClient({ jobId }: JobDetailClientProps) {
+export function JobDetailClient({ jobId, description }: JobDetailClientProps) {
   const hydrated = useDashboardStore((s) => s.hydrated);
   const job = useDashboardStore((s) => s.jobs.find((j) => j.id === jobId) ?? null);
   const [editing, setEditing] = useState(false);
@@ -166,6 +167,7 @@ export function JobDetailClient({ jobId }: JobDetailClientProps) {
       {editing && isCustom && (
         <CustomJobEditForm
           job={job}
+          description={description ?? ""}
           onSave={async (data) => {
             setSaving(true);
             setSaveError(null);
@@ -194,7 +196,7 @@ export function JobDetailClient({ jobId }: JobDetailClientProps) {
             className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6"
             style={{ boxShadow: "var(--shadow-card)" }}
           >
-            <JobDescription source={pool.description} />
+            <JobDescription source={description ?? ""} />
           </div>
         </div>
 
@@ -336,11 +338,13 @@ type JobForEdit = NonNullable<ReturnType<typeof useDashboardStore.getState>["job
 
 function CustomJobEditForm({
   job,
+  description,
   onSave,
   saving,
   saveError,
 }: {
   job: JobForEdit;
+  description: string;
   onSave: (data: unknown) => void;
   saving: boolean;
   saveError: string | null;
@@ -356,7 +360,7 @@ function CustomJobEditForm({
   const [salaryMax, setSalaryMax] = useState(pool.salaryMax?.toString() ?? "");
   const [currency, setCurrency] = useState(pool.currency ?? "");
   const [skills, setSkills] = useState(pool.skills.join(", "));
-  const [description, setDescription] = useState(pool.description);
+  const [editDescription, setEditDescription] = useState(description ?? "");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -365,7 +369,7 @@ function CustomJobEditForm({
       profileId: job.profileId,
       title: title.trim(),
       company: company.trim(),
-      description: description.trim(),
+      description: editDescription.trim(),
       location: location.trim() || null,
       locationType: locationType || null,
       url: url.trim() || null,
@@ -447,8 +451,8 @@ function CustomJobEditForm({
       <div>
         <label className={labelCls}>Description *</label>
         <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          value={editDescription}
+          onChange={(e) => setEditDescription(e.target.value)}
           required
           rows={10}
           className={`${inputCls} resize-y font-mono text-xs leading-relaxed`}

@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { getActiveProfile } from "@/lib/get-active-profile";
 import { getFollowUpCount } from "@/app/(dashboard)/pipeline/actions";
+import { jobPoolSummarySelect } from "@/types";
 
 /**
  * Fetches all dashboard data for the authenticated user.
@@ -38,12 +39,17 @@ export async function fetchDashboardData() {
       }),
       prisma.job.findMany({
         where: { profileId: activeProfile.id },
-        include: { jobPool: true, application: { select: { status: true } } },
+        include: {
+          jobPool: { select: jobPoolSummarySelect },
+          application: { select: { status: true } },
+        },
         orderBy: { createdAt: "desc" },
       }),
       prisma.application.findMany({
         where: { profileId: activeProfile.id },
-        include: { job: { include: { jobPool: true } } },
+        include: {
+          job: { include: { jobPool: { select: jobPoolSummarySelect } } },
+        },
         orderBy: { updatedAt: "desc" },
       }),
       getFollowUpCount(userId),

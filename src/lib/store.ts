@@ -589,10 +589,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
         userId: state.userId,
         activeProfile: state.activeProfile,
         profiles: state.profiles,
-        jobs: state.jobs.map((j) => ({
-          ...j,
-          jobPool: { ...j.jobPool, rawData: null },
-        })),
+        jobs: state.jobs,
         applications: state.applications,
         followUpCount: state.followUpCount,
         usage: state.usage,

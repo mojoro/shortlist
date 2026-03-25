@@ -13,6 +13,7 @@ import { buildAnalysisSystemPrompt, parseAiAnalysisResponse } from "@/lib/ai-ana
 import { checkRateLimit } from "@/lib/rate-limit";
 import { updateCustomJobSchema } from "@/lib/validations";
 import type { SortOption } from "@/lib/jobs";
+import { jobPoolSummarySelect } from "@/types";
 import type { JobWithApplication } from "@/types";
 
 export async function getMoreJobs(
@@ -34,7 +35,7 @@ export async function getMoreJobs(
 
   const jobs = await prisma.job.findMany({
     where: buildWhereClause(profileId, filter),
-    include: { jobPool: true, application: { select: { status: true } } },
+    include: { jobPool: { select: jobPoolSummarySelect }, application: { select: { status: true } } },
     orderBy: buildOrderBy(safeSort),
     take: 25,
     cursor: { id: cursor },
