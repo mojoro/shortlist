@@ -228,7 +228,7 @@ export async function adminCopyProfileToAdmin(
     }
 
     return created;
-  });
+  }, { timeout: 30000 });
 
   revalidatePath("/admin/users");
   return { profileId: newProfile.id, jobsCopied, applicationsCopied };
