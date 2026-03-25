@@ -497,6 +497,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           recruiterName: app.recruiterName,
           recruiterEmail: app.recruiterEmail,
         };
+        const prevFollowUpCount = get().followUpCount;
 
         set({
           applications: updateApp(get().applications, appId, (a) => {
@@ -522,6 +523,20 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           }),
         });
 
+        // Recalculate followUpCount when followUpAt changes
+        if (fields.followUpAt !== undefined) {
+          const now = new Date();
+          now.setUTCHours(23, 59, 59, 999);
+          const TERMINAL = new Set(["ACCEPTED", "REJECTED", "WITHDRAWN", "GHOSTED"]);
+          const count = get().applications.filter(
+            (a) =>
+              a.followUpAt &&
+              new Date(a.followUpAt) <= now &&
+              !TERMINAL.has(a.status),
+          ).length;
+          set({ followUpCount: count });
+        }
+
         retryServerAction(() => serverUpdateAppDetail(appId, fields)).then(
           (ok) => {
             if (!ok) {
@@ -531,6 +546,10 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
                   ...prevSnapshot,
                 })),
               });
+              // Restore previous followUpCount on rollback
+              if (fields.followUpAt !== undefined) {
+                set({ followUpCount: prevFollowUpCount });
+              }
             }
           },
         );
@@ -603,4 +622,3 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
     },
   ),
 );
-
