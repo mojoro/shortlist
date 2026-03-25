@@ -355,12 +355,13 @@ export function JobFeed({
   }
 
   // ── Build flat virtual items array ─────────────────────────────────────
+  const jobIndexMap = new Map(jobs.map((j, i) => [j.id, i]));
   const virtualItems: VirtualItem[] = [];
   if (sort === "newest") {
     for (const { bucket, jobs: bucketJobs } of groupJobsByDate(jobs)) {
       virtualItems.push({ type: "divider", label: bucket });
       for (const job of bucketJobs) {
-        virtualItems.push({ type: "job", job, jobIndex: jobs.indexOf(job) });
+        virtualItems.push({ type: "job", job, jobIndex: jobIndexMap.get(job.id) ?? 0 });
       }
     }
   } else {
