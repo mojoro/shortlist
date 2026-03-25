@@ -1,16 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import type { ApplicationStatus } from "@prisma/client";
-import type { ApplicationWithJob, FieldOverrides } from "@/types";
-import { useDashboardStore } from "@/lib/store";
+import type { ApplicationWithJob } from "@/types";
 import { ApplicationDrawer } from "@/components/pipeline/ApplicationDrawer";
-import {
-  TERMINAL_STATUSES,
-  STATUS_LABELS,
-  getDefaultFields,
-} from "@/components/pipeline/shared";
+import { TERMINAL_STATUSES } from "@/components/pipeline/shared";
+import { usePipelineEditing } from "@/components/pipeline/use-pipeline-editing";
 import { useKanbanDnd } from "./use-kanban-dnd";
 import { KANBAN_COLUMNS, getClosedLabel, groupByStatus } from "./constants";
 import { KanbanColumn } from "./KanbanColumn";
@@ -32,8 +28,17 @@ export function KanbanBoard({
   activeApplications,
   closedApplications,
 }: KanbanBoardProps) {
-  const storeUpdateAppStatus = useDashboardStore((s) => s.updateAppStatus);
-  const storeUpdateAppDetail = useDashboardStore((s) => s.updateAppDetail);
+  const allApps = [...activeApplications, ...closedApplications];
+  const {
+    displayApps,
+    getFields,
+    handleFieldChange,
+    handleStatusChange,
+    handleUndo,
+    handleUndoDismiss,
+    undoState,
+    storeUpdateAppStatus,
+  } = usePipelineEditing(allApps);
 
   // Mobile tab
   const [mobileTab, setMobileTab] = useState<ApplicationStatus>("INTERESTED");
@@ -47,34 +52,6 @@ export function KanbanBoard({
   // Closed section
   const [closedOpen, setClosedOpen] = useState(false);
 
-  // Terminal overrides (undo toast)
-  const [terminalOverrides, setTerminalOverrides] = useState<
-    Map<string, ApplicationStatus>
-  >(new Map());
-  const [undoState, setUndoState] = useState<{
-    applicationId: string;
-    previousStatus: ApplicationStatus;
-    newStatus: ApplicationStatus;
-    label: string;
-    timeoutId: ReturnType<typeof setTimeout>;
-  } | null>(null);
-
-  // Field overrides for drawer editing
-  const [fieldOverrides, setFieldOverrides] = useState<
-    Map<string, FieldOverrides>
-  >(new Map());
-  const pendingSaves = useRef<Map<string, FieldOverrides>>(new Map());
-  const saveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
-    new Map(),
-  );
-
-  // Apply terminal overrides
-  const allApps = [...activeApplications, ...closedApplications];
-  const displayApps = allApps.map((a) =>
-    terminalOverrides.has(a.id)
-      ? { ...a, status: terminalOverrides.get(a.id)! }
-      : a,
-  );
   const displayActive = displayApps.filter(
     (a) => !TERMINAL_STATUSES.has(a.status),
   );
@@ -91,7 +68,7 @@ export function KanbanBoard({
     if (!app || app.status === newStatus) return;
 
     if (TERMINAL_STATUSES.has(newStatus)) {
-      handleTerminalTransition(appId, app.status, newStatus);
+      handleStatusChange(appId, newStatus);
     } else {
       storeUpdateAppStatus(appId, newStatus);
     }
@@ -99,146 +76,9 @@ export function KanbanBoard({
 
   const dnd = useKanbanDnd(handleDrop);
 
-  function handleTerminalTransition(
-    applicationId: string,
-    previousStatus: ApplicationStatus,
-    newStatus: ApplicationStatus,
-  ) {
-    // Dismiss existing undo
-    if (undoState) {
-      clearTimeout(undoState.timeoutId);
-      setTerminalOverrides((prev) => {
-        const next = new Map(prev);
-        next.delete(undoState.applicationId);
-        return next;
-      });
-      storeUpdateAppStatus(undoState.applicationId, undoState.newStatus);
-      setUndoState(null);
-    }
-
-    setTerminalOverrides((prev) =>
-      new Map(prev).set(applicationId, newStatus),
-    );
-
-    const timeoutId = setTimeout(() => {
-      setUndoState(null);
-      setTerminalOverrides((prev) => {
-        const next = new Map(prev);
-        next.delete(applicationId);
-        return next;
-      });
-      storeUpdateAppStatus(applicationId, newStatus);
-    }, 5000);
-
-    setUndoState({
-      applicationId,
-      previousStatus,
-      newStatus,
-      label: STATUS_LABELS[newStatus],
-      timeoutId,
-    });
-  }
-
-  function handleUndo() {
-    if (!undoState) return;
-    clearTimeout(undoState.timeoutId);
-    setTerminalOverrides((prev) => {
-      const next = new Map(prev);
-      next.delete(undoState.applicationId);
-      return next;
-    });
-    setUndoState(null);
-  }
-
-  function handleUndoDismiss() {
-    if (!undoState) return;
-    clearTimeout(undoState.timeoutId);
-    const { applicationId, newStatus } = undoState;
-    setTerminalOverrides((prev) => {
-      const next = new Map(prev);
-      next.delete(applicationId);
-      return next;
-    });
-    setUndoState(null);
-    storeUpdateAppStatus(applicationId, newStatus);
-  }
-
-  // Field overrides for drawer
-  function getFields(app: ApplicationWithJob): FieldOverrides {
-    return fieldOverrides.get(app.id) ?? getDefaultFields(app);
-  }
-
-  function handleFieldChange(
-    appId: string,
-    field: keyof FieldOverrides,
-    value: string,
-  ) {
-    const app = allApps.find((a) => a.id === appId);
-    const defaults = app
-      ? getDefaultFields(app)
-      : {
-          notes: "",
-          appliedAt: "",
-          followUpAt: "",
-          recruiterName: "",
-          recruiterEmail: "",
-        };
-
-    setFieldOverrides((prev) => {
-      const next = new Map(prev);
-      const current = prev.get(appId) ?? defaults;
-      next.set(appId, { ...current, [field]: value });
-      return next;
-    });
-
-    const currentPending = pendingSaves.current.get(appId) ?? defaults;
-    pendingSaves.current.set(appId, { ...currentPending, [field]: value });
-
-    const existing = saveTimers.current.get(appId);
-    if (existing) clearTimeout(existing);
-
-    const timer = setTimeout(() => {
-      saveTimers.current.delete(appId);
-      const fields = pendingSaves.current.get(appId);
-      if (!fields) return;
-      pendingSaves.current.delete(appId);
-      storeUpdateAppDetail(appId, {
-        notes: fields.notes,
-        appliedAt: fields.appliedAt,
-        followUpAt: fields.followUpAt,
-        recruiterName: fields.recruiterName,
-        recruiterEmail: fields.recruiterEmail,
-      });
-      // Clear override — store now holds the optimistic value.
-      // If a server revert happens later, the UI will reflect it.
-      setFieldOverrides((prev) => {
-        const next = new Map(prev);
-        next.delete(appId);
-        return next;
-      });
-    }, 1500);
-
-    saveTimers.current.set(appId, timer);
-  }
-
   // Notes change from card (not drawer)
   function handleCardNotesChange(appId: string, notes: string) {
     handleFieldChange(appId, "notes", notes);
-  }
-
-  // Status change from drawer
-  function handleStatusChange(
-    applicationId: string,
-    newStatus: ApplicationStatus,
-  ) {
-    const app = displayApps.find((a) => a.id === applicationId);
-    if (!app) return;
-
-    if (TERMINAL_STATUSES.has(newStatus)) {
-      handleTerminalTransition(applicationId, app.status, newStatus);
-    } else {
-      storeUpdateAppStatus(applicationId, newStatus);
-    }
   }
 
   // Resolve drawer/PDF apps
@@ -259,7 +99,7 @@ export function KanbanBoard({
   return (
     <>
       <div data-testid="kanban-board">
-        {/* ── Desktop: horizontal columns ── */}
+        {/* -- Desktop: horizontal columns -- */}
         <div className="hidden sm:flex sm:gap-3 sm:pb-2">
           {KANBAN_COLUMNS.map((col) => (
             <KanbanColumn
@@ -283,7 +123,7 @@ export function KanbanBoard({
           ))}
         </div>
 
-        {/* ── Mobile: tab per column ── */}
+        {/* -- Mobile: tab per column -- */}
         <div className="sm:hidden">
           {/* Tab bar */}
           <nav
@@ -335,7 +175,7 @@ export function KanbanBoard({
           />
         </div>
 
-        {/* ── Closed section ── */}
+        {/* -- Closed section -- */}
         {displayClosed.length > 0 && (
           <div className="mt-6">
             <button
