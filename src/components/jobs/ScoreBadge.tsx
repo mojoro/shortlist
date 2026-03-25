@@ -1,3 +1,5 @@
+import { getScoreLabel, getScoreShortLabel } from "@/lib/score-utils";
+
 interface ScoreBadgeProps {
   score: number | null;
 }
@@ -11,10 +13,10 @@ function getBadgeStyle(score: number | null): {
     return { className: "bg-[var(--border)] text-[var(--text-muted)]", value: "—", label: null };
   }
   if (score >= 90)
-    return { className: "bg-green-600 text-white", value: String(score), label: "Strong" };
+    return { className: "bg-green-600 text-white", value: String(score), label: getScoreShortLabel(score) };
   if (score >= 75)
-    return { className: "bg-amber-500 text-white", value: String(score), label: "Good" };
-  return { className: "bg-red-600 text-white", value: String(score), label: "Weak" };
+    return { className: "bg-amber-500 text-white", value: String(score), label: getScoreShortLabel(score) };
+  return { className: "bg-red-600 text-white", value: String(score), label: getScoreShortLabel(score) };
 }
 
 export function ScoreBadge({ score }: ScoreBadgeProps) {
@@ -22,11 +24,7 @@ export function ScoreBadge({ score }: ScoreBadgeProps) {
   const ariaLabel =
     score === null
       ? "Not yet scored"
-      : score >= 90
-        ? `${score} — Strong match`
-        : score >= 75
-          ? `${score} — Good match`
-          : `${score} — Weak match`;
+      : `${score} — ${getScoreLabel(score)}`;
 
   return (
     <span
