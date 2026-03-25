@@ -107,6 +107,13 @@ export async function adminCopyProfileToAdmin(
   let applicationsCopied = 0;
 
   const newProfile = await prisma.$transaction(async (tx) => {
+    // Ensure admin user row exists (may not if they never onboarded)
+    await tx.user.upsert({
+      where: { id: adminUserId },
+      create: { id: adminUserId },
+      update: {},
+    });
+
     // Deactivate all existing admin profiles
     await tx.profile.updateMany({
       where: { userId: adminUserId },
