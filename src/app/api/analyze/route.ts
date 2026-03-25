@@ -1,4 +1,5 @@
 import { appendFileSync } from "fs";
+import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { openrouter } from "@/lib/openrouter";
 import { getModels } from "@/lib/models";
@@ -34,6 +35,18 @@ export async function POST(req: Request) {
 
     if (process.env.NODE_ENV === "development") {
       console.log(`[/api/analyze] Entry — profileId: ${profileId}`);
+    }
+
+    // Defense-in-depth: verify profile ownership when called by an authenticated user
+    const { userId } = await auth();
+    if (userId) {
+      const owned = await prisma.profile.findFirst({
+        where: { id: profileId, userId },
+        select: { id: true },
+      });
+      if (!owned) {
+        return Response.json({ error: "Profile not found" }, { status: 404 });
+      }
     }
 
     const profile = await prisma.profile.findUnique({
