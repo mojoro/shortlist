@@ -7,6 +7,7 @@ import {
   updateApplicationStatusSchema,
   updateApplicationDetailSchema,
 } from "@/lib/validations";
+import { TERMINAL_STATUSES_ARRAY } from "@/lib/pipeline-constants";
 
 export async function updateApplicationStatus(
   applicationId: string,
@@ -188,7 +189,7 @@ export async function getFollowUpCount(userId: string): Promise<number> {
       profile: { userId },
       followUpAt: { lte: endOfToday },
       status: {
-        notIn: ["ACCEPTED", "REJECTED", "WITHDRAWN", "GHOSTED"],
+        notIn: TERMINAL_STATUSES_ARRAY,
       },
     },
   });

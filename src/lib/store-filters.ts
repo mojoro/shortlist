@@ -1,4 +1,6 @@
+import type { ApplicationStatus } from "@prisma/client";
 import type { JobWithApplication, ApplicationWithJob } from "@/types";
+import { TERMINAL_STATUSES } from "@/lib/pipeline-constants";
 
 export type Stats = {
   allCount: number;
@@ -155,13 +157,6 @@ export function computeStats(jobs: JobWithApplication[]): Stats {
   };
 }
 
-const TERMINAL_STATUSES = new Set([
-  "ACCEPTED",
-  "REJECTED",
-  "WITHDRAWN",
-  "GHOSTED",
-]);
-
 /**
  * Sort applications for the pipeline view.
  */
@@ -222,5 +217,5 @@ export function sortApplications(
  * Check if an application status is terminal (closed).
  */
 export function isTerminalStatus(status: string): boolean {
-  return TERMINAL_STATUSES.has(status);
+  return TERMINAL_STATUSES.has(status as ApplicationStatus);
 }
