@@ -108,41 +108,34 @@ function Popup() {
       let content: PageContent | null = null;
 
       try {
-        const result = await chrome.tabs.sendMessage(tab.id, {
-          type: "GET_PAGE_CONTENT",
+        const [injected] = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: () => {
+            const el =
+              document.querySelector("[role='main'] article") ??
+              document.querySelector("[role='main']") ??
+              document.querySelector("main") ??
+              document.querySelector("article") ??
+              document.body;
+            const clone = el.cloneNode(true) as HTMLElement;
+            clone
+              .querySelectorAll(
+                "script, style, nav, footer, header, iframe, noscript, " +
+                  "svg, img, video, audio, canvas, " +
+                  "[role='navigation'], [role='banner'], [role='contentinfo'], " +
+                  "[aria-hidden='true']",
+              )
+              .forEach((n) => n.remove());
+            return {
+              url: window.location.href,
+              html: clone.innerHTML.slice(0, 50000),
+              title: document.title,
+            };
+          },
         });
-        if (result?.content) content = result.content;
-      } catch {}
-
-      if (!content) {
-        try {
-          const [injected] = await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            func: () => {
-              const el =
-                document.querySelector("[role='main'] article") ??
-                document.querySelector("[role='main']") ??
-                document.querySelector("main") ??
-                document.querySelector("article") ??
-                document.body;
-              const clone = el.cloneNode(true) as HTMLElement;
-              clone
-                .querySelectorAll(
-                  "script, style, nav, footer, header, iframe, noscript, " +
-                    "svg, img, video, audio, canvas, " +
-                    "[role='navigation'], [role='banner'], [role='contentinfo'], " +
-                    "[aria-hidden='true']",
-                )
-                .forEach((n) => n.remove());
-              return {
-                url: window.location.href,
-                html: clone.innerHTML.slice(0, 50000),
-                title: document.title,
-              };
-            },
-          });
-          if (injected?.result) content = injected.result;
-        } catch {}
+        if (injected?.result) content = injected.result;
+      } catch {
+        // Page is restricted (chrome://, about:, etc.)
       }
 
       if (!content || content.html.length < 50) {
