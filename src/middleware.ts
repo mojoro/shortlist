@@ -129,7 +129,12 @@ export default clerkMiddleware(async (auth, req) => {
             console.log(`[middleware] DB confirms onboarded — setting cookie and proceeding for: ${req.nextUrl.pathname}`);
           }
           const response = NextResponse.next();
-          response.cookies.set("shortlist-onboarded", "true", { path: "/" });
+          response.cookies.set("shortlist-onboarded", "true", {
+            path: "/",
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+          });
           return response;
         }
       }
