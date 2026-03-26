@@ -110,28 +110,41 @@ export async function scrapeAdzuna(
 
   if (!appId || !appKey) return [];
 
-  const results: AdzunaRawJob[] = [];
+  // Run all search configs in parallel; pagination within each is sequential
+  const settled = await Promise.allSettled(
+    searches.map(async (search) => {
+      const searchResults: AdzunaRawJob[] = [];
+      let page = 1;
+      let searchFetched = 0;
 
-  for (const search of searches) {
-    let page = 1;
-    let searchFetched = 0;
+      while (page <= MAX_PAGES) {
+        const data = await fetchPage(search, page, appId, appKey);
+        if (!data || data.results.length === 0) break;
 
-    while (page <= MAX_PAGES) {
-      const data = await fetchPage(search, page, appId, appKey);
-      if (!data || data.results.length === 0) break;
+        for (const job of data.results) {
+          searchResults.push({
+            raw: job,
+            country: search.country,
+            keyword: search.keyword,
+          });
+        }
+        searchFetched += data.results.length;
 
-      for (const job of data.results) {
-        results.push({
-          raw: job,
-          country: search.country,
-          keyword: search.keyword,
-        });
+        // Stop if we've fetched all available results for this search
+        if (searchFetched >= data.count || data.results.length < 50) break;
+        page++;
       }
-      searchFetched += data.results.length;
 
-      // Stop if we've fetched all available results for this search
-      if (searchFetched >= data.count || data.results.length < 50) break;
-      page++;
+      return searchResults;
+    }),
+  );
+
+  const results: AdzunaRawJob[] = [];
+  for (const result of settled) {
+    if (result.status === "fulfilled") {
+      results.push(...result.value);
+    } else {
+      console.error("[adzuna] Search failed:", result.reason);
     }
   }
 

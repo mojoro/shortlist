@@ -616,8 +616,8 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
         }
         return localStorage;
       }),
-      // Exclude rawData (scraped HTML, can be 10s of KB per job)
-      // and non-serialisable sync flags — everything else persists
+      // Non-serialisable sync flags excluded — everything else persists.
+      // jobPool is already a summary select (no description/rawData), so no stripping needed.
       partialize: (state) => ({
         userId: state.userId,
         activeProfile: state.activeProfile,

@@ -167,8 +167,8 @@ export async function findMatchingPoolIds(
 
   // Exclude jobs already matched to this profile
   conditions.unshift(Prisma.sql`
-    jp.id NOT IN (
-      SELECT j."jobPoolId" FROM jobs j WHERE j."profileId" = ${profileId}
+    NOT EXISTS (
+      SELECT 1 FROM jobs j WHERE j."jobPoolId" = jp.id AND j."profileId" = ${profileId}
     )
   `);
 
@@ -232,9 +232,9 @@ export async function findStaleJobIds(
     JOIN job_pool jp ON jp.id = j."jobPoolId"
     WHERE j."profileId" = ${profileId}
       AND j."feedStatus" = 'NEW'
-      AND j.id NOT IN (SELECT "jobId" FROM applications WHERE "jobId" = j.id)
-      AND jp.id NOT IN (
-        SELECT jp2.id FROM job_pool jp2
+      AND NOT EXISTS (SELECT 1 FROM applications a WHERE a."jobId" = j.id)
+      AND NOT EXISTS (
+        SELECT 1 FROM job_pool jp2
         WHERE jp2.id = jp.id ${matchWhere}
       )
   `;

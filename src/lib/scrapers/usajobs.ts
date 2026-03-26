@@ -121,11 +121,10 @@ export async function scrapeUSAJobs(
   const email = env.USAJOBS_EMAIL;
   if (!apiKey || !email) return [];
 
-  const results: USAJobsRawJob[] = [];
-  const seenIds = new Set<string>();
-
-  for (const search of searches) {
-    try {
+  // Run all search configs in parallel; pagination within each is sequential
+  const settled = await Promise.allSettled(
+    searches.map(async (search) => {
+      const searchResults: USAJobsRawJob[] = [];
       let page = 1;
       let hasMore = true;
 
@@ -136,22 +135,32 @@ export async function scrapeUSAJobs(
         const items = data.SearchResult.SearchResultItems;
         for (const item of items) {
           const position = item.MatchedObjectDescriptor;
-          // Deduplicate across searches within this run
-          if (!seenIds.has(position.PositionID)) {
-            seenIds.add(position.PositionID);
-            results.push({ raw: position, keyword: search.keyword });
-          }
+          searchResults.push({ raw: position, keyword: search.keyword });
         }
 
         const totalResults = data.SearchResult.SearchResultCountAll;
         hasMore = page * RESULTS_PER_PAGE < totalResults;
         page++;
       }
-    } catch (err) {
-      console.error(
-        `[usajobs] Search failed for "${search.keyword}":`,
-        err instanceof Error ? err.message : err,
-      );
+
+      return searchResults;
+    }),
+  );
+
+  // Collect results and deduplicate across searches
+  const results: USAJobsRawJob[] = [];
+  const seenIds = new Set<string>();
+
+  for (const result of settled) {
+    if (result.status === "fulfilled") {
+      for (const job of result.value) {
+        if (!seenIds.has(job.raw.PositionID)) {
+          seenIds.add(job.raw.PositionID);
+          results.push(job);
+        }
+      }
+    } else {
+      console.error("[usajobs] Search failed:", result.reason);
     }
   }
 
