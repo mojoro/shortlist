@@ -7,6 +7,7 @@ import { env } from "@/env";
 import { analyzeSchema } from "@/lib/validations";
 import { buildAnalysisSystemPrompt, parseAiAnalysisResponse } from "@/lib/ai-analysis";
 import { logAiContext } from "@/lib/ai-logging";
+import { checkUsageLimit } from "@/lib/usage";
 
 export const maxDuration = 60;
 
@@ -57,25 +58,13 @@ export async function POST(req: Request) {
 
     const models = getModels(profile);
 
-    // Atomic usage limit check with row-level locking to prevent race conditions
-    try {
-      await prisma.$transaction(async (tx) => {
-        const u = await tx.usage.findUnique({
-          where: { userId: profile.userId },
-          select: { currentMonthInputTokens: true, monthlyLimitInputTokens: true },
-        });
-        if (u && u.currentMonthInputTokens >= u.monthlyLimitInputTokens) {
-          throw new Error("LIMIT_EXCEEDED");
-        }
-      });
-    } catch (err) {
-      if (err instanceof Error && err.message === "LIMIT_EXCEEDED") {
-        return Response.json(
-          { error: "Monthly AI usage limit reached." },
-          { status: 429 },
-        );
-      }
-      throw err;
+    // Usage limit check
+    const withinLimit = await checkUsageLimit(profile.userId);
+    if (!withinLimit) {
+      return Response.json(
+        { error: "Monthly AI usage limit reached." },
+        { status: 429 },
+      );
     }
 
     // Load unscored, visible jobs (include pool for content fields)

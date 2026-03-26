@@ -7,6 +7,8 @@ import {
   updateApplicationStatusSchema,
   updateApplicationDetailSchema,
 } from "@/lib/validations";
+import { TERMINAL_STATUSES_ARRAY } from "@/lib/pipeline-constants";
+import { requireProfile } from "@/lib/auth-helpers";
 
 export async function updateApplicationStatus(
   applicationId: string,
@@ -108,14 +110,7 @@ export async function createApplication(
   jobId: string,
   profileId: string
 ): Promise<string> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const profile = await prisma.profile.findFirst({
-    where: { id: profileId, userId },
-    select: { id: true },
-  });
-  if (!profile) throw new Error("Profile not found");
+  await requireProfile(profileId);
 
   // Verify the job belongs to this profile before creating an application
   const job = await prisma.job.findFirst({
@@ -188,7 +183,7 @@ export async function getFollowUpCount(userId: string): Promise<number> {
       profile: { userId },
       followUpAt: { lte: endOfToday },
       status: {
-        notIn: ["ACCEPTED", "REJECTED", "WITHDRAWN", "GHOSTED"],
+        notIn: TERMINAL_STATUSES_ARRAY,
       },
     },
   });

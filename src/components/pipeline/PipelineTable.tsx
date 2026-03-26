@@ -1,20 +1,19 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { format } from "date-fns";
 import type { ApplicationStatus } from "@prisma/client";
-import type { ApplicationWithJob, FieldOverrides } from "@/types";
+import type { ApplicationWithJob } from "@/types";
 import { StatusSelect } from "@/components/pipeline/StatusSelect";
 import { ApplicationDrawer } from "@/components/pipeline/ApplicationDrawer";
 import {
   TERMINAL_STATUSES,
-  STATUS_LABELS,
-  getDefaultFields,
   ScorePill,
 } from "@/components/pipeline/shared";
 import { useDashboardStore } from "@/lib/store";
+import { usePipelineEditing } from "@/components/pipeline/use-pipeline-editing";
 
 const ResumePDFModal = dynamic(
   () =>
@@ -43,40 +42,24 @@ export function PipelineTable({
   activeApplications,
   closedApplications,
 }: PipelineTableProps) {
-  const storeUpdateAppStatus = useDashboardStore((s) => s.updateAppStatus);
-  const storeUpdateAppDetail = useDashboardStore((s) => s.updateAppDetail);
   const storeBulkRemove = useDashboardStore((s) => s.bulkRemoveApps);
+
+  const allApps = [...activeApplications, ...closedApplications];
+  const {
+    displayApps,
+    getFields,
+    handleFieldChange,
+    handleStatusChange,
+    handleUndo,
+    handleUndoDismiss,
+    undoState,
+  } = usePipelineEditing(allApps);
 
   const [activeTab, setActiveTab] = useState<"active" | "closed">("active");
   const [openDrawerAppId, setOpenDrawerAppId] = useState<string | null>(null);
   const [pdfPreviewFor, setPdfPreviewFor] = useState<string | null>(null);
   const [editingNotesFor, setEditingNotesFor] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-
-  // Field overrides: display state for editable fields, keyed by appId
-  const [fieldOverrides, setFieldOverrides] = useState<Map<string, FieldOverrides>>(new Map());
-  // Pending saves: latest values for debounce callback (avoids stale closure)
-  const pendingSaves = useRef<Map<string, FieldOverrides>>(new Map());
-  const saveTimers   = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-
-  // Terminal overrides: shown in UI while undo toast is active
-  const [terminalOverrides, setTerminalOverrides] = useState<Map<string, ApplicationStatus>>(new Map());
-
-  // Undo toast state
-  const [undoState, setUndoState] = useState<{
-    applicationId:  string;
-    previousStatus: ApplicationStatus;
-    newStatus:      ApplicationStatus;
-    label:          string;
-    timeoutId:      ReturnType<typeof setTimeout>;
-  } | null>(null);
-
-  const allApps = [...activeApplications, ...closedApplications];
-
-  // Apply terminal overrides on top of store-provided apps
-  const displayApps = allApps.map((a) =>
-    terminalOverrides.has(a.id) ? { ...a, status: terminalOverrides.get(a.id)! } : a
-  );
 
   const displayedActive = displayApps.filter((a) => !TERMINAL_STATUSES.has(a.status));
   const displayedClosed = displayApps.filter((a) => TERMINAL_STATUSES.has(a.status));
@@ -90,119 +73,6 @@ export function PipelineTable({
     pdfPreviewFor != null
       ? displayApps.find((a) => a.id === pdfPreviewFor) ?? null
       : null;
-
-  function getFields(app: ApplicationWithJob): FieldOverrides {
-    return fieldOverrides.get(app.id) ?? getDefaultFields(app);
-  }
-
-  function handleFieldChange(appId: string, field: keyof FieldOverrides, value: string) {
-    const app = allApps.find((a) => a.id === appId);
-    const defaults = app ? getDefaultFields(app) : { notes: "", appliedAt: "", followUpAt: "", recruiterName: "", recruiterEmail: "" };
-
-    setFieldOverrides((prev) => {
-      const next = new Map(prev);
-      const current = prev.get(appId) ?? defaults;
-      next.set(appId, { ...current, [field]: value });
-      return next;
-    });
-
-    const currentPending = pendingSaves.current.get(appId) ?? defaults;
-    pendingSaves.current.set(appId, { ...currentPending, [field]: value });
-
-    const existing = saveTimers.current.get(appId);
-    if (existing) clearTimeout(existing);
-
-    const timer = setTimeout(() => {
-      saveTimers.current.delete(appId);
-      const fields = pendingSaves.current.get(appId);
-      if (!fields) return;
-      pendingSaves.current.delete(appId);
-      storeUpdateAppDetail(appId, {
-        notes:          fields.notes,
-        appliedAt:      fields.appliedAt,
-        followUpAt:     fields.followUpAt,
-        recruiterName:  fields.recruiterName,
-        recruiterEmail: fields.recruiterEmail,
-      });
-      // Clear override — store now holds the optimistic value.
-      // If a server revert happens later, the UI will reflect it.
-      setFieldOverrides((prev) => {
-        const next = new Map(prev);
-        next.delete(appId);
-        return next;
-      });
-    }, 1500);
-
-    saveTimers.current.set(appId, timer);
-  }
-
-  function handleStatusChange(applicationId: string, newStatus: ApplicationStatus) {
-    const app = displayApps.find((a) => a.id === applicationId);
-    if (!app) return;
-    const previousStatus = app.status;
-
-    if (TERMINAL_STATUSES.has(newStatus)) {
-      // Dismiss any existing undo toast — commit its status via the store
-      if (undoState) {
-        clearTimeout(undoState.timeoutId);
-        const { applicationId: prevId, newStatus: prevNew } = undoState;
-        setTerminalOverrides((prev) => {
-          const next = new Map(prev);
-          next.delete(prevId);
-          return next;
-        });
-        setUndoState(null);
-        storeUpdateAppStatus(prevId, prevNew);
-      }
-
-      // Apply terminal override for immediate UI update
-      setTerminalOverrides((prev) => new Map(prev).set(applicationId, newStatus));
-
-      const timeoutId = setTimeout(() => {
-        setUndoState(null);
-        setTerminalOverrides((prev) => {
-          const next = new Map(prev);
-          next.delete(applicationId);
-          return next;
-        });
-        storeUpdateAppStatus(applicationId, newStatus);
-      }, 5000);
-
-      setUndoState({
-        applicationId,
-        previousStatus,
-        newStatus,
-        label: STATUS_LABELS[newStatus],
-        timeoutId,
-      });
-    } else {
-      storeUpdateAppStatus(applicationId, newStatus);
-    }
-  }
-
-  function handleUndo() {
-    if (!undoState) return;
-    clearTimeout(undoState.timeoutId);
-    setTerminalOverrides((prev) => {
-      const next = new Map(prev);
-      next.delete(undoState.applicationId);
-      return next;
-    });
-    setUndoState(null);
-  }
-
-  function handleUndoDismiss() {
-    if (!undoState) return;
-    clearTimeout(undoState.timeoutId);
-    const { applicationId, newStatus } = undoState;
-    setTerminalOverrides((prev) => {
-      const next = new Map(prev);
-      next.delete(applicationId);
-      return next;
-    });
-    setUndoState(null);
-    storeUpdateAppStatus(applicationId, newStatus);
-  }
 
   const rows = activeTab === "active" ? displayedActive : displayedClosed;
 
@@ -416,7 +286,7 @@ export function PipelineTable({
                             ? format(new Date(app.decisionAt), "MMM d, yyyy")
                             : app.statusUpdatedAt
                             ? format(new Date(app.statusUpdatedAt), "MMM d, yyyy")
-                            : "—"}
+                            : "\u2014"}
                         </td>
                       )}
 
@@ -445,7 +315,7 @@ export function PipelineTable({
                             className="group flex w-full items-center gap-1 text-left text-[var(--text-muted)] hover:text-[var(--text)]"
                           >
                             <span className="block flex-1 truncate">
-                              {fields.notes ? fields.notes.slice(0, 60) : "—"}
+                              {fields.notes ? fields.notes.slice(0, 60) : "\u2014"}
                             </span>
                             <svg
                               width="11"
