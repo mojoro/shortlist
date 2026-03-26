@@ -2,13 +2,10 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { openrouter } from "@/lib/openrouter";
 import { getModels } from "@/lib/models";
-import { extractJobSchema } from "@/lib/validations";
-import TurndownService from "turndown";
+import { extractJobSchema, URL_RE } from "@/lib/validations";
+import { td } from "@/lib/html-to-markdown";
 
-const td = new TurndownService({ headingStyle: "atx", bulletListMarker: "-" });
 td.remove(["script", "style", "noscript", "iframe"]);
-
-const URL_RE = /^https?:\/\//i;
 
 /** Block SSRF by rejecting URLs that resolve to private/reserved IP ranges. */
 function isPrivateHostname(hostname: string): boolean {

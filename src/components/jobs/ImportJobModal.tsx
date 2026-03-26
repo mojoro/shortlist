@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useDashboardStore } from "@/lib/store";
+import { URL_RE } from "@/lib/validations";
 
 interface ExtractedFields {
   title:        string;
@@ -33,8 +34,6 @@ const EMPTY_FIELDS: ExtractedFields = {
   currency:     "",
   skills:       [],
 };
-
-const URL_RE = /^https?:\/\//i;
 
 const LOCATION_TYPE_LABELS: Record<string, string> = {
   REMOTE: "Remote",

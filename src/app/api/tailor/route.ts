@@ -1,16 +1,15 @@
 import { auth } from "@clerk/nextjs/server";
-import { appendFileSync } from "fs";
 import { prisma } from "@/lib/prisma";
 import { openrouter } from "@/lib/openrouter";
 import { getModels } from "@/lib/models";
 import { tailorSchema } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { logAiContext } from "@/lib/ai-logging";
 
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
   const host = req.headers.get("host") ?? "";
-  const isLocalhost = host.startsWith("localhost") || host.startsWith("127.");
 
   try {
     const { userId } = await auth();
@@ -253,13 +252,7 @@ identify what would make it a 9.5/10 and implement that adjustment, but never us
     if (process.env.NODE_ENV === "development") {
       console.log(`[/api/tailor] Stream start — jobId: ${jobId}, hasCV: ${!!job.profile.curriculumVitae}, hasMasterResume: ${!!job.profile.masterResume}`);
     }
-    if (isLocalhost) {
-      const sep = "=".repeat(80);
-      appendFileSync(
-        "ai-context.log",
-        `\n${sep}\n[${new Date().toISOString()}] TAILOR — jobId: ${jobId}\n\n## SYSTEM\n${systemPrompt}\n\n## USER\n${userContent}\n`,
-      );
-    }
+    logAiContext(host, `TAILOR — jobId: ${jobId}`, job.jobPool.title, systemPrompt, userContent);
 
     const stream = await openrouter.chat.completions.create({
       model: models.tailor,

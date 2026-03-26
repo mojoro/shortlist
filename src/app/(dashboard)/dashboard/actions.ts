@@ -3,7 +3,6 @@
 import { auth } from "@clerk/nextjs/server";
 import type { AiStatus } from "@prisma/client";
 import { headers } from "next/headers";
-import { appendFileSync } from "fs";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { openrouter } from "@/lib/openrouter";
@@ -11,6 +10,7 @@ import { getModels } from "@/lib/models";
 import { buildWhereClause, buildOrderBy } from "@/lib/jobs";
 import { buildAnalysisSystemPrompt, parseAiAnalysisResponse } from "@/lib/ai-analysis";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { logAiContext } from "@/lib/ai-logging";
 import { updateCustomJobSchema } from "@/lib/validations";
 import type { SortOption } from "@/lib/jobs";
 import { jobPoolSummarySelect } from "@/types";
@@ -231,13 +231,7 @@ export async function analyzeJob(
 
   const h = await headers();
   const host = h.get("host") ?? "";
-  if (host.startsWith("localhost") || host.startsWith("127.")) {
-    const sep = "=".repeat(80);
-    appendFileSync(
-      "ai-context.log",
-      `\n${sep}\n[${new Date().toISOString()}] ANALYZE (action) — jobId: ${jobId}, title: "${job.jobPool.title}"\n\n## SYSTEM\n${systemPrompt}\n\n## USER\n${userMsg}\n`,
-    );
-  }
+  logAiContext(host, `ANALYZE (action) — jobId: ${jobId}`, job.jobPool.title, systemPrompt, userMsg);
 
   try {
     const response = await openrouter.chat.completions.create({

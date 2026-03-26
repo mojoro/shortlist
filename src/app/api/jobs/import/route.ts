@@ -2,10 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/env";
-import { importJobSchema } from "@/lib/validations";
+import { importJobSchema, URL_RE } from "@/lib/validations";
 import type { LocationType, JobType, ScraperSource } from "@prisma/client";
-
-const URL_RE = /^https?:\/\//i;
 
 export async function POST(req: Request) {
   const { userId } = await auth();
