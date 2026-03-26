@@ -1,4 +1,4 @@
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/env";
@@ -105,6 +105,7 @@ export async function POST(req: Request) {
     }
   }
 
+  revalidatePath("/dashboard");
   revalidateTag("dashboard-stats");
   return Response.json({ results });
 }

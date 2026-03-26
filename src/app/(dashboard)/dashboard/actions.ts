@@ -171,6 +171,21 @@ export async function batchSaveJobs(
     where: { id: { in: jobIds }, profileId },
     data: { feedStatus: save ? "SAVED" : "NEW" },
   });
+
+  // Create Application records for batch-saved jobs (matches toggleSaveJob behavior)
+  if (save) {
+    await prisma.$transaction(
+      jobIds.map((id) =>
+        prisma.application.upsert({
+          where: { jobId: id },
+          create: { jobId: id, profileId, status: "INTERESTED", statusUpdatedAt: new Date() },
+          update: {},
+        })
+      )
+    );
+    revalidatePath("/pipeline");
+  }
+
   revalidatePath("/dashboard");
   revalidateTag("dashboard-stats");
 }
@@ -401,6 +416,9 @@ export async function updateJobNotes(
     data: { userNotes: notes.trim() || null },
   });
   if (updated.count === 0) throw new Error("Job not found");
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/jobs/${jobId}`);
 }
 
 // ─── Load more matches ────────────────────────────────────────────────────────
