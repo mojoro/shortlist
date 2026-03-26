@@ -6,7 +6,7 @@ import { TailorPanel } from "@/components/tailor/TailorPanel";
 import type { Metadata } from "next";
 
 const getTailorJob = cache(async (jobId: string) => {
-  return prisma.job.findFirst({
+  return prisma.job.findUnique({
     where: { id: jobId },
     include: {
       jobPool: true,

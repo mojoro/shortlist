@@ -1,5 +1,4 @@
 import { auth } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 // Internal endpoint called by middleware to check if a user's account is disabled.
@@ -19,5 +18,5 @@ export async function GET(): Promise<Response> {
     select: { disabledAt: true },
   });
 
-  return NextResponse.json({ disabled: Boolean(user?.disabledAt) });
+  return Response.json({ disabled: Boolean(user?.disabledAt) });
 }
