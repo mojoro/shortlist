@@ -18,9 +18,15 @@ const isPublicRoute = createRouteMatcher([
 
 const EXTENSION_CORS_PATHS = ["/api/extension/", "/api/jobs/"];
 
+// Only allow CORS from the published Chrome extension — not any arbitrary extension.
+// Middleware runs in Edge runtime and can't import the env module; process.env is correct here.
+const ALLOWED_EXTENSION_ORIGIN = process.env.CHROME_EXTENSION_ID
+  ? `chrome-extension://${process.env.CHROME_EXTENSION_ID}`
+  : null;
+
 function needsExtensionCors(req: NextRequest): string | null {
   const origin = req.headers.get("origin");
-  if (!origin?.startsWith("chrome-extension://")) return null;
+  if (!origin || !ALLOWED_EXTENSION_ORIGIN || origin !== ALLOWED_EXTENSION_ORIGIN) return null;
   const path = req.nextUrl.pathname;
   if (EXTENSION_CORS_PATHS.some((p) => path.startsWith(p))) return origin;
   return null;

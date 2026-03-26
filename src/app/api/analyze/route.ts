@@ -44,13 +44,25 @@ export async function POST(req: Request) {
 
     const models = getModels(profile);
 
-    // Usage limit check
-    const usage = profile.user.usage;
-    if (usage && usage.currentMonthInputTokens >= usage.monthlyLimitInputTokens) {
-      return Response.json(
-        { error: "Monthly AI usage limit reached." },
-        { status: 429 },
-      );
+    // Atomic usage limit check with row-level locking to prevent race conditions
+    try {
+      await prisma.$transaction(async (tx) => {
+        const u = await tx.usage.findUnique({
+          where: { userId: profile.userId },
+          select: { currentMonthInputTokens: true, monthlyLimitInputTokens: true },
+        });
+        if (u && u.currentMonthInputTokens >= u.monthlyLimitInputTokens) {
+          throw new Error("LIMIT_EXCEEDED");
+        }
+      });
+    } catch (err) {
+      if (err instanceof Error && err.message === "LIMIT_EXCEEDED") {
+        return Response.json(
+          { error: "Monthly AI usage limit reached." },
+          { status: 429 },
+        );
+      }
+      throw err;
     }
 
     // Load unscored, visible jobs (include pool for content fields)
@@ -99,8 +111,6 @@ export async function POST(req: Request) {
     }
 
     const systemPrompt = buildAnalysisSystemPrompt(profile);
-    let totalInputTokens  = 0;
-    let totalOutputTokens = 0;
     let jobsScored        = 0;
 
     for (let i = 0; i < toScore.length; i += BATCH_SIZE) {
@@ -137,8 +147,8 @@ export async function POST(req: Request) {
               max_completion_tokens: 1500,
             });
 
-            totalInputTokens  += response.usage?.prompt_tokens    ?? 0;
-            totalOutputTokens += response.usage?.completion_tokens ?? 0;
+            const inputTokens  = response.usage?.prompt_tokens    ?? 0;
+            const outputTokens = response.usage?.completion_tokens ?? 0;
 
             const text   = response.choices[0]?.message?.content ?? "";
             const result = parseAiAnalysisResponse(text);
@@ -169,6 +179,28 @@ export async function POST(req: Request) {
               },
             });
 
+            // Increment usage after each job to avoid undercounting on crash
+            if (inputTokens > 0) {
+              await prisma.usage.upsert({
+                where:  { userId: profile.userId },
+                create: {
+                  userId:                   profile.userId,
+                  totalInputTokens:         inputTokens,
+                  totalOutputTokens:        outputTokens,
+                  currentMonthInputTokens:  inputTokens,
+                  currentMonthOutputTokens: outputTokens,
+                  analysisCallCount:        1,
+                },
+                update: {
+                  totalInputTokens:         { increment: inputTokens },
+                  totalOutputTokens:        { increment: outputTokens },
+                  currentMonthInputTokens:  { increment: inputTokens },
+                  currentMonthOutputTokens: { increment: outputTokens },
+                  analysisCallCount:        { increment: 1 },
+                },
+              });
+            }
+
             jobsScored++;
           } catch (err) {
             console.error(`[/api/analyze] Error scoring job ${job.id}:`, err);
@@ -185,30 +217,8 @@ export async function POST(req: Request) {
       }
     }
 
-    // Increment usage counters
-    if (totalInputTokens > 0) {
-      await prisma.usage.upsert({
-        where:  { userId: profile.userId },
-        create: {
-          userId:                   profile.userId,
-          totalInputTokens,
-          totalOutputTokens,
-          currentMonthInputTokens:  totalInputTokens,
-          currentMonthOutputTokens: totalOutputTokens,
-          analysisCallCount:        jobsScored,
-        },
-        update: {
-          totalInputTokens:         { increment: totalInputTokens },
-          totalOutputTokens:        { increment: totalOutputTokens },
-          currentMonthInputTokens:  { increment: totalInputTokens },
-          currentMonthOutputTokens: { increment: totalOutputTokens },
-          analysisCallCount:        { increment: jobsScored },
-        },
-      });
-    }
-
     if (process.env.NODE_ENV === "development") {
-      console.log(`[/api/analyze] Complete — jobsScored: ${jobsScored}, autoHidden: ${toHide.length}, inputTokens: ${totalInputTokens}, outputTokens: ${totalOutputTokens}`);
+      console.log(`[/api/analyze] Complete — jobsScored: ${jobsScored}, autoHidden: ${toHide.length}`);
     }
 
     return Response.json({ jobsScored: jobsScored + toHide.length });

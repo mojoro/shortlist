@@ -202,9 +202,22 @@ export async function analyzeJob(
   const { allowed } = checkRateLimit(userId, "analyze", 10);
   if (!allowed) return { error: "UNKNOWN" as const };
 
-  const usage = profile.user.usage;
-  if (usage && usage.currentMonthInputTokens >= usage.monthlyLimitInputTokens) {
-    return { error: "CREDITS" };
+  // Atomic usage limit check with row-level locking to prevent race conditions
+  try {
+    await prisma.$transaction(async (tx) => {
+      const u = await tx.usage.findUnique({
+        where: { userId },
+        select: { currentMonthInputTokens: true, monthlyLimitInputTokens: true },
+      });
+      if (u && u.currentMonthInputTokens >= u.monthlyLimitInputTokens) {
+        throw new Error("LIMIT_EXCEEDED");
+      }
+    });
+  } catch (err) {
+    if (err instanceof Error && err.message === "LIMIT_EXCEEDED") {
+      return { error: "CREDITS" };
+    }
+    throw err;
   }
 
   const job = await prisma.job.findFirst({
