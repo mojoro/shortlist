@@ -348,6 +348,15 @@ export async function completeOnboarding(
     },
   });
 
+  // Set the onboarded cookie server-side (HttpOnly — not client-settable)
+  const cookieStore = await cookies();
+  cookieStore.set("shortlist-onboarded", "true", {
+    path: "/",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+  });
+
   // Pipeline runs in the background after dashboard loads — not here.
   // This keeps onboarding fast (< 1 second).
   revalidatePath("/dashboard");

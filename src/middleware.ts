@@ -135,7 +135,12 @@ export default clerkMiddleware(async (auth, req) => {
             console.log(`[middleware] DB confirms onboarded — setting cookie and proceeding for: ${req.nextUrl.pathname}`);
           }
           const response = NextResponse.next();
-          response.cookies.set("shortlist-onboarded", "true", { path: "/" });
+          response.cookies.set("shortlist-onboarded", "true", {
+            path: "/",
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+          });
           return response;
         }
       }
@@ -157,7 +162,13 @@ export default clerkMiddleware(async (auth, req) => {
 
   const response = NextResponse.next();
   if (!activeCheck) {
-    response.cookies.set("shortlist-active", "true", { path: "/", maxAge: 300 });
+    response.cookies.set("shortlist-active", "true", {
+      path: "/",
+      maxAge: 60,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
     // Fire-and-forget activity tracking
     const trackUrl = new URL("/api/track-activity", req.url);
     fetch(trackUrl.toString(), {
