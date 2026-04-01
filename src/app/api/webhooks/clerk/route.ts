@@ -36,6 +36,13 @@ export async function POST(req: NextRequest) {
         create: { id, email },
         update: { email },
       });
+
+      // Ensure a Usage row exists so AI features work immediately
+      await prisma.usage.upsert({
+        where: { userId: id },
+        create: { userId: id },
+        update: {},
+      });
     }
 
     if (eventType === "user.updated") {
