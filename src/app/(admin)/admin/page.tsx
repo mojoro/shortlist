@@ -1,6 +1,9 @@
 import { formatDistanceToNow } from "date-fns";
+import type { Metadata } from "next";
 
 import { AdminStatCard } from "@/components/admin/AdminStatCard";
+
+export const metadata: Metadata = { title: "Admin Overview" };
 import {
   getAdminOverviewStats,
   getRecentScrapeRuns,

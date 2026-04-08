@@ -1,4 +1,5 @@
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/env";
 import { matchSchema } from "@/lib/validations";
@@ -17,6 +18,18 @@ export async function POST(req: Request) {
   const parsed = matchSchema.safeParse(body ?? {});
   if (!parsed.success) {
     return Response.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  // Defense-in-depth: verify profile ownership when called by an authenticated user
+  const { userId } = await auth();
+  if (userId && parsed.data.profileId) {
+    const owned = await prisma.profile.findFirst({
+      where: { id: parsed.data.profileId, userId },
+      select: { id: true },
+    });
+    if (!owned) {
+      return Response.json({ error: "Profile not found" }, { status: 404 });
+    }
   }
 
   // Load profiles — either a specific one or all enabled
@@ -92,6 +105,7 @@ export async function POST(req: Request) {
     }
   }
 
+  revalidatePath("/dashboard");
   revalidateTag("dashboard-stats");
   return Response.json({ results });
 }

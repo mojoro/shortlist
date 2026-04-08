@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { APP_CONFIG } from "@/config/app";
+import { env } from "@/env";
 import { AppNav } from "@/components/layout/AppNav";
 import { DashboardDataProvider } from "@/components/providers/DashboardDataProvider";
 
@@ -20,7 +21,7 @@ export default async function DashboardLayout({
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  const isAdmin = userId === process.env.ADMIN_USER_ID;
+  const isAdmin = userId === env.ADMIN_USER_ID;
 
   // No data fetching here — DashboardDataProvider handles it client-side.
   // The shell renders immediately; data arrives from localStorage (instant

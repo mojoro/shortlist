@@ -1,16 +1,16 @@
 import { auth } from "@clerk/nextjs/server";
-import { appendFileSync } from "fs";
 import { prisma } from "@/lib/prisma";
 import { openrouter } from "@/lib/openrouter";
 import { getModels } from "@/lib/models";
 import { tailorSchema } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { logAiContext } from "@/lib/ai-logging";
+import { incrementUsage, checkUsageLimit } from "@/lib/usage";
 
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
   const host = req.headers.get("host") ?? "";
-  const isLocalhost = host.startsWith("localhost") || host.startsWith("127.");
 
   try {
     const { userId } = await auth();
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       console.log(`[/api/tailor] Entry — userId: ${userId}, jobId: ${jobId}`);
     }
 
-    const job = await prisma.job.findFirst({
+    const job = await prisma.job.findUnique({
       where: { id: jobId },
       include: {
         jobPool: true,
@@ -88,11 +88,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const usage = await prisma.usage.findUnique({ where: { userId } });
-    if (
-      usage &&
-      usage.currentMonthInputTokens >= usage.monthlyLimitInputTokens
-    ) {
+    const withinLimit = await checkUsageLimit(userId);
+    if (!withinLimit) {
       return Response.json(
         { error: "Monthly AI usage limit reached. Try again next month." },
         { status: 429 }
@@ -243,13 +240,7 @@ identify what would make it a 9.5/10 and implement that adjustment, but never us
     if (process.env.NODE_ENV === "development") {
       console.log(`[/api/tailor] Stream start — jobId: ${jobId}, hasCV: ${!!job.profile.curriculumVitae}, hasMasterResume: ${!!job.profile.masterResume}`);
     }
-    if (isLocalhost) {
-      const sep = "=".repeat(80);
-      appendFileSync(
-        "ai-context.log",
-        `\n${sep}\n[${new Date().toISOString()}] TAILOR — jobId: ${jobId}\n\n## SYSTEM\n${systemPrompt}\n\n## USER\n${userContent}\n`,
-      );
-    }
+    logAiContext(host, `TAILOR — jobId: ${jobId}`, job.jobPool.title, systemPrompt, userContent);
 
     const stream = await openrouter.chat.completions.create({
       model: models.tailor,
@@ -259,7 +250,7 @@ identify what would make it a 9.5/10 and implement that adjustment, but never us
         { role: "system", content: systemPrompt },
         { role: "user", content: userContent },
       ],
-      max_tokens: 8000,
+      max_completion_tokens: 12000,
     });
 
     let inputTokens = 0;
@@ -283,26 +274,7 @@ identify what would make it a 9.5/10 and implement that adjustment, but never us
           }
           controller.close();
           // Increment usage counters — non-blocking, best-effort
-          prisma.usage
-            .upsert({
-              where: { userId },
-              create: {
-                userId,
-                totalInputTokens: inputTokens,
-                totalOutputTokens: outputTokens,
-                currentMonthInputTokens: inputTokens,
-                currentMonthOutputTokens: outputTokens,
-                tailorCallCount: 1,
-              },
-              update: {
-                totalInputTokens: { increment: inputTokens },
-                totalOutputTokens: { increment: outputTokens },
-                currentMonthInputTokens: { increment: inputTokens },
-                currentMonthOutputTokens: { increment: outputTokens },
-                tailorCallCount: { increment: 1 },
-              },
-            })
-            .catch(console.error);
+          incrementUsage(userId, inputTokens, outputTokens, "tailor").catch(console.error);
         }
       },
     });

@@ -36,6 +36,13 @@ export async function POST(req: NextRequest) {
         create: { id, email },
         update: { email },
       });
+
+      // Ensure a Usage row exists so AI features work immediately
+      await prisma.usage.upsert({
+        where: { userId: id },
+        create: { userId: id },
+        update: {},
+      });
     }
 
     if (eventType === "user.updated") {
@@ -55,8 +62,9 @@ export async function POST(req: NextRequest) {
       // Cascade delete handles profiles, jobs, applications, etc.
       // The DeleteAccountSection handles usage archival for self-deletion.
       // Webhook-triggered deletion (e.g., admin action in Clerk) just cleans up.
-      await prisma.user.delete({ where: { id } }).catch(() => {
-        // User may not exist in our DB — ignore
+      await prisma.user.delete({ where: { id } }).catch((err) => {
+        // User may not exist in our DB — log but don't fail the webhook
+        console.error("[clerk-webhook] Failed to process user.deleted:", err);
       });
     }
 

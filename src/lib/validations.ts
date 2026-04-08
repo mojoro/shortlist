@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// ── Shared constants ───────────────────────────────────────────────────────
+export const URL_RE = /^https?:\/\//i;
+
 // ── Tailor generation ──────────────────────────────────────────────────────
 export const tailorSchema = z.object({
   jobId: z.string().cuid(),
@@ -26,7 +29,7 @@ export const updateApplicationStatusSchema = z.object({
 
 // ── AI analysis trigger ────────────────────────────────────────────────────
 export const analyzeSchema = z.object({
-  profileId: z.string().min(1),
+  profileId: z.string().cuid(),
 });
 
 // ── Match route ────────────────────────────────────────────────────────────

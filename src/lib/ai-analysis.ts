@@ -6,7 +6,30 @@ export interface AiAnalysisResult {
   gapPoints: string[];
 }
 
-function isValidResult(parsed: unknown): boolean {
+/**
+ * Generic JSON extraction from AI text responses.
+ * Tries direct parse first, then falls back to extracting the first `{...}` block.
+ */
+export function parseAiJsonResponse<T>(
+  text: string,
+  validate: (parsed: unknown) => parsed is T,
+): T | null {
+  try {
+    const direct = JSON.parse(text.trim());
+    if (validate(direct)) return direct;
+  } catch {}
+
+  try {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    const parsed = JSON.parse(match[0]);
+    if (validate(parsed)) return parsed;
+  } catch {}
+
+  return null;
+}
+
+function isValidAnalysisResult(parsed: unknown): parsed is AiAnalysisResult {
   if (typeof parsed !== "object" || parsed === null) return false;
   const p = parsed as Record<string, unknown>;
   return (
@@ -19,19 +42,7 @@ function isValidResult(parsed: unknown): boolean {
 }
 
 export function parseAiAnalysisResponse(text: string): AiAnalysisResult | null {
-  try {
-    const direct = JSON.parse(text.trim());
-    if (isValidResult(direct)) return direct as AiAnalysisResult;
-  } catch {}
-
-  try {
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return null;
-    const parsed = JSON.parse(match[0]);
-    if (isValidResult(parsed)) return parsed as AiAnalysisResult;
-  } catch {}
-
-  return null;
+  return parseAiJsonResponse(text, isValidAnalysisResult);
 }
 
 export function buildAnalysisSystemPrompt(profile: {

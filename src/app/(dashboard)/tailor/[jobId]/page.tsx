@@ -6,7 +6,7 @@ import { TailorPanel } from "@/components/tailor/TailorPanel";
 import type { Metadata } from "next";
 
 const getTailorJob = cache(async (jobId: string) => {
-  return prisma.job.findFirst({
+  return prisma.job.findUnique({
     where: { id: jobId },
     include: {
       jobPool: true,
@@ -24,11 +24,11 @@ const getTailorJob = cache(async (jobId: string) => {
   });
 });
 
-interface Props {
+interface PageProps {
   params: Promise<{ jobId: string }>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { jobId } = await params;
   const { userId } = await auth();
   if (!userId) return { title: "Tailor resume" };
@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: `Tailor — ${job.jobPool.title} at ${job.jobPool.company}` };
 }
 
-export default async function TailorPage({ params }: Props) {
+export default async function TailorPage({ params }: PageProps) {
   const { jobId } = await params;
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");

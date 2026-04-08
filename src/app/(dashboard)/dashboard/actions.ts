@@ -3,7 +3,6 @@
 import { auth } from "@clerk/nextjs/server";
 import type { AiStatus } from "@prisma/client";
 import { headers } from "next/headers";
-import { appendFileSync } from "fs";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { openrouter } from "@/lib/openrouter";
@@ -11,8 +10,12 @@ import { getModels } from "@/lib/models";
 import { buildWhereClause, buildOrderBy } from "@/lib/jobs";
 import { buildAnalysisSystemPrompt, parseAiAnalysisResponse } from "@/lib/ai-analysis";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { logAiContext } from "@/lib/ai-logging";
+import { incrementUsage, checkUsageLimit } from "@/lib/usage";
+import { requireProfile, requireProfileWithUsage } from "@/lib/auth-helpers";
 import { updateCustomJobSchema } from "@/lib/validations";
 import type { SortOption } from "@/lib/jobs";
+import { jobPoolSummarySelect } from "@/types";
 import type { JobWithApplication } from "@/types";
 
 export async function getMoreJobs(
@@ -21,20 +24,13 @@ export async function getMoreJobs(
   filter: string,
   sort: string,
 ): Promise<{ jobs: JobWithApplication[]; nextCursor: string | null }> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  // Verify the profileId belongs to the authenticated user
-  const profile = await prisma.profile.findFirst({
-    where: { id: profileId, userId },
-  });
-  if (!profile) throw new Error("Profile not found");
+  await requireProfile(profileId);
 
   const safeSort: SortOption = sort === "newest" ? "newest" : "match";
 
   const jobs = await prisma.job.findMany({
     where: buildWhereClause(profileId, filter),
-    include: { jobPool: true, application: { select: { status: true } } },
+    include: { jobPool: { select: jobPoolSummarySelect }, application: { select: { status: true } } },
     orderBy: buildOrderBy(safeSort),
     take: 25,
     cursor: { id: cursor },
@@ -52,13 +48,7 @@ export async function toggleSaveJob(
   profileId: string,
   save: boolean
 ): Promise<{ applicationId?: string }> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const profile = await prisma.profile.findFirst({
-    where: { id: profileId, userId },
-  });
-  if (!profile) throw new Error("Profile not found");
+  await requireProfile(profileId);
 
   // Scope to profileId to prevent cross-user mutation (IDOR)
   const updated = await prisma.job.updateMany({
@@ -89,13 +79,7 @@ export async function ignoreJob(
   jobId: string,
   profileId: string
 ): Promise<void> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const profile = await prisma.profile.findFirst({
-    where: { id: profileId, userId },
-  });
-  if (!profile) throw new Error("Profile not found");
+  await requireProfile(profileId);
 
   const updated = await prisma.job.updateMany({
     where: { id: jobId, profileId },
@@ -111,13 +95,7 @@ export async function unignoreJob(
   profileId: string,
   restoreStatus: string
 ): Promise<void> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const profile = await prisma.profile.findFirst({
-    where: { id: profileId, userId },
-  });
-  if (!profile) throw new Error("Profile not found");
+  await requireProfile(profileId);
 
   const validStatuses = ["NEW", "SAVED"] as const;
   const feedStatus = (validStatuses as readonly string[]).includes(restoreStatus)
@@ -137,13 +115,7 @@ export async function batchIgnoreJobs(
   jobIds: string[],
   profileId: string
 ): Promise<void> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const profile = await prisma.profile.findFirst({
-    where: { id: profileId, userId },
-  });
-  if (!profile) throw new Error("Profile not found");
+  await requireProfile(profileId);
 
   await prisma.job.updateMany({
     where: { id: { in: jobIds }, profileId },
@@ -158,18 +130,27 @@ export async function batchSaveJobs(
   profileId: string,
   save: boolean
 ): Promise<void> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const profile = await prisma.profile.findFirst({
-    where: { id: profileId, userId },
-  });
-  if (!profile) throw new Error("Profile not found");
+  await requireProfile(profileId);
 
   await prisma.job.updateMany({
     where: { id: { in: jobIds }, profileId },
     data: { feedStatus: save ? "SAVED" : "NEW" },
   });
+
+  // Create Application records for batch-saved jobs (matches toggleSaveJob behavior)
+  if (save) {
+    await prisma.$transaction(
+      jobIds.map((id) =>
+        prisma.application.upsert({
+          where: { jobId: id },
+          create: { jobId: id, profileId, status: "INTERESTED", statusUpdatedAt: new Date() },
+          update: {},
+        })
+      )
+    );
+    revalidatePath("/pipeline");
+  }
+
   revalidatePath("/dashboard");
   revalidateTag("dashboard-stats");
 }
@@ -187,22 +168,15 @@ export async function analyzeJob(
   jobId: string,
   profileId: string,
 ): Promise<{ error: "CREDITS" | "UNKNOWN" } | JobScoreUpdate> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const profile = await prisma.profile.findFirst({
-    where: { id: profileId, userId },
-    include: { user: { include: { usage: true } } },
-  });
-  if (!profile) throw new Error("Profile not found");
+  const { userId, profile } = await requireProfile(profileId);
 
   const models = getModels(profile);
 
   const { allowed } = checkRateLimit(userId, "analyze", 10);
   if (!allowed) return { error: "UNKNOWN" as const };
 
-  const usage = profile.user.usage;
-  if (usage && usage.currentMonthInputTokens >= usage.monthlyLimitInputTokens) {
+  const withinLimit = await checkUsageLimit(userId);
+  if (!withinLimit) {
     return { error: "CREDITS" };
   }
 
@@ -217,13 +191,7 @@ export async function analyzeJob(
 
   const h = await headers();
   const host = h.get("host") ?? "";
-  if (host.startsWith("localhost") || host.startsWith("127.")) {
-    const sep = "=".repeat(80);
-    appendFileSync(
-      "ai-context.log",
-      `\n${sep}\n[${new Date().toISOString()}] ANALYZE (action) — jobId: ${jobId}, title: "${job.jobPool.title}"\n\n## SYSTEM\n${systemPrompt}\n\n## USER\n${userMsg}\n`,
-    );
-  }
+  logAiContext(host, `ANALYZE (action) — jobId: ${jobId}`, job.jobPool.title, systemPrompt, userMsg);
 
   try {
     const response = await openrouter.chat.completions.create({
@@ -232,7 +200,7 @@ export async function analyzeJob(
         { role: "system", content: systemPrompt },
         { role: "user", content: userMsg },
       ],
-      max_tokens: 1500,
+      max_completion_tokens: 1500,
     });
 
     const text   = response.choices[0]?.message?.content ?? "";
@@ -257,26 +225,7 @@ export async function analyzeJob(
 
     const inputTokens  = response.usage?.prompt_tokens    ?? 0;
     const outputTokens = response.usage?.completion_tokens ?? 0;
-    if (inputTokens > 0) {
-      await prisma.usage.upsert({
-        where:  { userId },
-        create: {
-          userId,
-          totalInputTokens:         inputTokens,
-          totalOutputTokens:        outputTokens,
-          currentMonthInputTokens:  inputTokens,
-          currentMonthOutputTokens: outputTokens,
-          analysisCallCount:        1,
-        },
-        update: {
-          totalInputTokens:         { increment: inputTokens },
-          totalOutputTokens:        { increment: outputTokens },
-          currentMonthInputTokens:  { increment: inputTokens },
-          currentMonthOutputTokens: { increment: outputTokens },
-          analysisCallCount:        { increment: 1 },
-        },
-      });
-    }
+    await incrementUsage(userId, inputTokens, outputTokens, "analysis");
 
     revalidatePath("/dashboard");
     return {
@@ -297,13 +246,7 @@ export async function discardAnalysis(
   jobId: string,
   profileId: string,
 ): Promise<void> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const profile = await prisma.profile.findFirst({
-    where: { id: profileId, userId },
-  });
-  if (!profile) throw new Error("Profile not found");
+  await requireProfile(profileId);
 
   const job = await prisma.job.findFirst({ where: { id: jobId, profileId } });
   if (!job) throw new Error("Job not found");
@@ -330,12 +273,12 @@ export async function discardAnalysis(
 
 export async function updateCustomJob(
   data: unknown
-): Promise<{ error?: string }> {
+): Promise<void> {
   const { userId } = await auth();
-  if (!userId) return { error: "Unauthorized" };
+  if (!userId) throw new Error("Unauthorized");
 
   const parsed = updateCustomJobSchema.safeParse(data);
-  if (!parsed.success) return { error: "Invalid request" };
+  if (!parsed.success) throw new Error("Invalid request");
 
   const { jobId, profileId, title, company, description, location,
     locationType, url, jobType, salaryMin, salaryMax, currency, skills } = parsed.data;
@@ -348,10 +291,10 @@ export async function updateCustomJob(
       jobPool: { select: { source: true, id: true } },
     },
   });
-  if (!job || job.profile.userId !== userId) return { error: "Not found" };
+  if (!job || job.profile.userId !== userId) throw new Error("Not found");
 
   // Only CUSTOM-sourced jobs can be edited
-  if (job.jobPool.source !== "CUSTOM") return { error: "Only imported jobs can be edited" };
+  if (job.jobPool.source !== "CUSTOM") throw new Error("Only imported jobs can be edited");
 
   await prisma.jobPool.update({
     where: { id: job.jobPool.id },
@@ -372,7 +315,6 @@ export async function updateCustomJob(
 
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath("/dashboard");
-  return {};
 }
 
 export async function updateJobNotes(
@@ -380,19 +322,16 @@ export async function updateJobNotes(
   profileId: string,
   notes: string
 ): Promise<void> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const profile = await prisma.profile.findFirst({
-    where: { id: profileId, userId },
-  });
-  if (!profile) throw new Error("Profile not found");
+  await requireProfile(profileId);
 
   const updated = await prisma.job.updateMany({
     where: { id: jobId, profileId },
     data: { userNotes: notes.trim() || null },
   });
   if (updated.count === 0) throw new Error("Job not found");
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/jobs/${jobId}`);
 }
 
 // ─── Load more matches ────────────────────────────────────────────────────────
@@ -400,13 +339,7 @@ export async function updateJobNotes(
 export async function loadMoreMatches(
   profileId: string,
 ): Promise<{ added: number; remaining: number }> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const profile = await prisma.profile.findFirst({
-    where: { id: profileId, userId },
-  });
-  if (!profile) return { added: 0, remaining: 0 };
+  const { profile } = await requireProfile(profileId);
 
   const { runMatchPipelineForProfile } = await import("@/lib/match-pipeline");
   const result = await runMatchPipelineForProfile(profileId, profile);

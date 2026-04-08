@@ -1,11 +1,33 @@
 import { Prisma } from "@prisma/client";
 
 /**
- * A job from the feed query — includes the pool entry (content) and application status.
+ * Fields selected from JobPool for dashboard/pipeline display.
+ * Excludes heavy columns (description, rawData) that are only needed on the detail page.
+ */
+export const jobPoolSummarySelect = {
+  id: true,
+  title: true,
+  company: true,
+  location: true,
+  locationType: true,
+  url: true,
+  source: true,
+  postedAt: true,
+  skills: true,
+  salary: true,
+  salaryMin: true,
+  salaryMax: true,
+  currency: true,
+  jobType: true,
+  country: true,
+} satisfies Prisma.JobPoolSelect;
+
+/**
+ * A job from the feed query — includes pool summary (no description/rawData) and application status.
  */
 export type JobWithApplication = Prisma.JobGetPayload<{
   include: {
-    jobPool: true;
+    jobPool: { select: typeof jobPoolSummarySelect };
     application: { select: { status: true } };
   };
 }>;
@@ -22,12 +44,12 @@ export type FieldOverrides = {
 };
 
 /**
- * A full application with its job and pool fields — used by the pipeline table and drawer.
+ * A full application with its job and pool summary — used by the pipeline table and drawer.
  */
 export type ApplicationWithJob = Prisma.ApplicationGetPayload<{
   include: {
     job: {
-      include: { jobPool: true };
+      include: { jobPool: { select: typeof jobPoolSummarySelect } };
     };
   };
 }>;

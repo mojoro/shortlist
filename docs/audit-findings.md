@@ -8,7 +8,8 @@ files, line references, root cause, and fix instructions. A cleared session can
 work through these top-to-bottom.
 
 > **CRITICAL items (1–4) were fixed in PR `fix/critical-security-fixes`.**
-> Start from HIGH (#5) onward.
+> **HIGH items #5 and #6 also fixed** on the same branch.
+> Start from HIGH (#7) onward.
 
 ---
 
@@ -19,6 +20,31 @@ work through these top-to-bottom.
 3. Each finding is one atomic commit. Commit after each fix.
 4. Run `pnpm tsc --noEmit` after each change.
 5. Group related findings into one branch/PR where noted.
+
+### Parallelization Guide
+
+The remaining findings can be split across independent agents/branches:
+
+| Agent | Branch | Findings | Files touched |
+|-------|--------|----------|---------------|
+| **A: Remaining HIGH** | `fix/critical-security-fixes` (continue) | #7–#11 | `store.ts`, `tailor/save/route.ts`, `ImportJobModal.tsx`, `analyze/route.ts`, `tailor/route.ts`, `middleware.ts` |
+| **B: Redundancies** | `refactor/extract-shared-helpers` | #12–#18 | New: `src/lib/usage.ts`, `src/lib/auth-helpers.ts`, `src/components/pipeline/use-pipeline-editing.ts`, `src/lib/pipeline-constants.ts`. Modified: all API routes, server actions, pipeline components |
+| **C: Inconsistencies** | `fix/consistency-cleanup` | #19–#26 | `tailor/route.ts`, `extract/route.ts`, `dashboard/actions.ts`, `pipeline/actions.ts`, `validations.ts`, admin actions, `(dashboard)/layout.tsx` |
+| **D: Performance** | `perf/query-optimization` | #27–#33 | New migration, `match-sql.ts`, `adzuna.ts`, `usajobs.ts`, `actions-sync.ts`, `JobFeed.tsx`, `scrape/route.ts` |
+| **E: Data Syncing** | `fix/sync-gaps` | #34–#39 | `dashboard/actions.ts`, `scrape/route.ts`, `analyze/route.ts`, `match-pipeline.ts`, `store.ts`, `ProfileSwitcher.tsx` |
+| **F: Security** | `fix/security-hardening` | #40–#43 | `OnboardingWizard.tsx`, `middleware.ts`, `rate-limit.ts`, `analyze/route.ts`, `match/route.ts` |
+| **G: Low cleanup** | `chore/opportunistic-cleanup` | #44–#60 | Scattered small changes across many files |
+
+**Conflict zones:** Agents A, B, C, and E all touch `dashboard/actions.ts` and `store.ts`. Run A first, then B+C+D+E+F+G can run in parallel if they each create their own branch. Merge A first, then rebase others.
+
+**Safest parallel split:** D (performance), F (security), and G (cleanup) have minimal overlap with each other and the rest. B (redundancies) and C (inconsistencies) touch many of the same files but different lines.
+
+### Important context for agents
+
+- **`retryServerAction<T>` now returns `T | null`** (not `boolean`). Callers must check `result === null` for failure (not `!result`), because `void` actions return `undefined` on success which is falsy.
+- **`JobWithApplication` type changed.** `jobPool` is now a select subset (no `description`, no `rawData`). The `jobPoolSummarySelect` constant in `src/types/index.ts` defines the selected fields. Any code needing `description` must fetch it separately (see job detail page pattern: server component passes `description` prop).
+- **`ApplicationWithJob` type also changed** — its nested `job.jobPool` uses the same summary select.
+- **Store `partialize`** no longer strips `rawData` manually since the data never arrives from the server.
 
 ---
 
@@ -69,57 +95,22 @@ now fail if any client component imports this module.
 
 ### 5. Over-fetching `jobPool.description` + `rawData` on every dashboard load
 
-**Files:** `src/app/(dashboard)/actions-sync.ts:39-48`
+**Status: FIXED**
 
-**Problem:** `include: { jobPool: true }` fetches ALL columns including
-`description` (5-20KB) and `rawData` (10-50KB) per job. For 200 jobs = 2-10MB
-per page load. This data is never displayed on the dashboard.
-
-**Fix:**
-1. In `fetchDashboardData()`, replace `include: { jobPool: true }` with:
-   ```ts
-   include: {
-     jobPool: {
-       select: {
-         id: true, title: true, company: true, location: true,
-         locationType: true, url: true, source: true, postedAt: true,
-         skills: true, salaryMin: true, salaryMax: true, currency: true,
-         jobType: true, country: true,
-       },
-     },
-     application: { select: { status: true } },
-   }
-   ```
-2. Do the same for the applications query's nested `job.jobPool`.
-3. In `src/lib/store.ts` `partialize` function (~line 594), also strip
-   `description` from persisted jobs (currently only strips `rawData`).
-4. Update the `JobWithApplication` type in `src/types/index.ts` if needed
-   (may need a `JobPoolSummary` type without `description`/`rawData`).
-
-**Impact:** Biggest single performance win — reduces dashboard data transfer
-by 80-90%.
+Created `jobPoolSummarySelect` constant in `src/types/index.ts`. Updated
+`fetchDashboardData()`, `getMoreJobs()`, and both type definitions to use
+selective `jobPool` queries excluding `description` and `rawData`. Job detail
+page now receives `description` as a server-component prop. Store `partialize`
+simplified since heavy fields are never fetched.
 
 ### 6. Optimistic application ID never replaced after `toggleSaveJob`
 
-**Files:** `src/lib/store.ts:230,273-274`
+**Status: FIXED**
 
-**Problem:** Saving a job creates an optimistic application with
-`id: "optimistic-{jobId}"`. The server returns `{ applicationId }` with the
-real DB ID, but the store never swaps it in. If the user immediately opens
-Pipeline and edits that application, server actions fail.
-
-**Fix:** In the `toggleSaveJob` store action's `.then()` callback (around line
-273), after the server action succeeds, update the application's ID:
-```ts
-// After successful save, replace optimistic ID with real one
-if (result.applicationId) {
-  set((state) => ({
-    applications: state.applications.map((app) =>
-      app.id === `optimistic-${jobId}` ? { ...app, id: result.applicationId! } : app
-    ),
-  }));
-}
-```
+`retryServerAction` is now generic (`<T>`) returning `T | null` instead of
+`boolean`. The `toggleSaveJob` callback captures the server response and swaps
+`optimistic-{jobId}` with the real `applicationId`. All other store callers
+updated to check `result === null` for failure.
 
 ### 7. `updateAppStatus` doesn't mirror server-side `feedStatus: ARCHIVED`
 

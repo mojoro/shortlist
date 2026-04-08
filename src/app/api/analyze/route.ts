@@ -1,10 +1,13 @@
-import { appendFileSync } from "fs";
+import { auth } from "@clerk/nextjs/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { openrouter } from "@/lib/openrouter";
 import { getModels } from "@/lib/models";
 import { env } from "@/env";
 import { analyzeSchema } from "@/lib/validations";
 import { buildAnalysisSystemPrompt, parseAiAnalysisResponse } from "@/lib/ai-analysis";
+import { logAiContext } from "@/lib/ai-logging";
+import { checkUsageLimit } from "@/lib/usage";
 
 export const maxDuration = 60;
 
@@ -18,7 +21,6 @@ export async function POST(req: Request) {
   }
 
   const host = req.headers.get("host") ?? "";
-  const isLocalhost = host.startsWith("localhost") || host.startsWith("127.");
 
   try {
     const body = await req.json().catch(() => null);
@@ -36,6 +38,18 @@ export async function POST(req: Request) {
       console.log(`[/api/analyze] Entry — profileId: ${profileId}`);
     }
 
+    // Defense-in-depth: verify profile ownership when called by an authenticated user
+    const { userId } = await auth();
+    if (userId) {
+      const owned = await prisma.profile.findFirst({
+        where: { id: profileId, userId },
+        select: { id: true },
+      });
+      if (!owned) {
+        return Response.json({ error: "Profile not found" }, { status: 404 });
+      }
+    }
+
     const profile = await prisma.profile.findUnique({
       where: { id: profileId },
       include: { user: { include: { usage: true } } },
@@ -45,8 +59,8 @@ export async function POST(req: Request) {
     const models = getModels(profile);
 
     // Usage limit check
-    const usage = profile.user.usage;
-    if (usage && usage.currentMonthInputTokens >= usage.monthlyLimitInputTokens) {
+    const withinLimit = await checkUsageLimit(profile.userId);
+    if (!withinLimit) {
       return Response.json(
         { error: "Monthly AI usage limit reached." },
         { status: 429 },
@@ -99,8 +113,6 @@ export async function POST(req: Request) {
     }
 
     const systemPrompt = buildAnalysisSystemPrompt(profile);
-    let totalInputTokens  = 0;
-    let totalOutputTokens = 0;
     let jobsScored        = 0;
 
     for (let i = 0; i < toScore.length; i += BATCH_SIZE) {
@@ -115,14 +127,13 @@ export async function POST(req: Request) {
           if (process.env.NODE_ENV === "development") {
             console.log(`[/api/analyze] Scoring job — id: ${job.id}, title: "${job.jobPool.title}"`);
           }
-          if (isLocalhost) {
-            const userMsg = `## ${job.jobPool.title} at ${job.jobPool.company}\n\n${job.jobPool.description.slice(0, 8000)}`;
-            const sep = "=".repeat(80);
-            appendFileSync(
-              "ai-context.log",
-              `\n${sep}\n[${new Date().toISOString()}] ANALYZE — jobId: ${job.id}, title: "${job.jobPool.title}"\n\n## SYSTEM\n${systemPrompt}\n\n## USER\n${userMsg}\n`,
-            );
-          }
+          logAiContext(
+            host,
+            `ANALYZE — jobId: ${job.id}`,
+            job.jobPool.title,
+            systemPrompt,
+            `## ${job.jobPool.title} at ${job.jobPool.company}\n\n${job.jobPool.description.slice(0, 8000)}`,
+          );
 
           try {
             const response = await openrouter.chat.completions.create({
@@ -137,8 +148,8 @@ export async function POST(req: Request) {
               max_completion_tokens: 1500,
             });
 
-            totalInputTokens  += response.usage?.prompt_tokens    ?? 0;
-            totalOutputTokens += response.usage?.completion_tokens ?? 0;
+            const inputTokens  = response.usage?.prompt_tokens    ?? 0;
+            const outputTokens = response.usage?.completion_tokens ?? 0;
 
             const text   = response.choices[0]?.message?.content ?? "";
             const result = parseAiAnalysisResponse(text);
@@ -169,6 +180,28 @@ export async function POST(req: Request) {
               },
             });
 
+            // Increment usage after each job to avoid undercounting on crash
+            if (inputTokens > 0) {
+              await prisma.usage.upsert({
+                where:  { userId: profile.userId },
+                create: {
+                  userId:                   profile.userId,
+                  totalInputTokens:         inputTokens,
+                  totalOutputTokens:        outputTokens,
+                  currentMonthInputTokens:  inputTokens,
+                  currentMonthOutputTokens: outputTokens,
+                  analysisCallCount:        1,
+                },
+                update: {
+                  totalInputTokens:         { increment: inputTokens },
+                  totalOutputTokens:        { increment: outputTokens },
+                  currentMonthInputTokens:  { increment: inputTokens },
+                  currentMonthOutputTokens: { increment: outputTokens },
+                  analysisCallCount:        { increment: 1 },
+                },
+              });
+            }
+
             jobsScored++;
           } catch (err) {
             console.error(`[/api/analyze] Error scoring job ${job.id}:`, err);
@@ -185,32 +218,11 @@ export async function POST(req: Request) {
       }
     }
 
-    // Increment usage counters
-    if (totalInputTokens > 0) {
-      await prisma.usage.upsert({
-        where:  { userId: profile.userId },
-        create: {
-          userId:                   profile.userId,
-          totalInputTokens,
-          totalOutputTokens,
-          currentMonthInputTokens:  totalInputTokens,
-          currentMonthOutputTokens: totalOutputTokens,
-          analysisCallCount:        jobsScored,
-        },
-        update: {
-          totalInputTokens:         { increment: totalInputTokens },
-          totalOutputTokens:        { increment: totalOutputTokens },
-          currentMonthInputTokens:  { increment: totalInputTokens },
-          currentMonthOutputTokens: { increment: totalOutputTokens },
-          analysisCallCount:        { increment: jobsScored },
-        },
-      });
-    }
-
     if (process.env.NODE_ENV === "development") {
-      console.log(`[/api/analyze] Complete — jobsScored: ${jobsScored}, autoHidden: ${toHide.length}, inputTokens: ${totalInputTokens}, outputTokens: ${totalOutputTokens}`);
+      console.log(`[/api/analyze] Complete — jobsScored: ${jobsScored}, autoHidden: ${toHide.length}`);
     }
 
+    revalidatePath("/dashboard");
     return Response.json({ jobsScored: jobsScored + toHide.length });
   } catch (err) {
     console.error("[/api/analyze]", err);

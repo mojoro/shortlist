@@ -60,6 +60,7 @@ export interface DashboardState {
   hydrated: boolean;
   lastSyncedAt: number;
   isSyncing: boolean;
+  _syncGeneration: number;
 }
 
 export interface DashboardActions {
@@ -114,17 +115,16 @@ function updateApp(
 
 /**
  * Retry a server action with exponential backoff.
- * Returns true if the action succeeded, false if all retries exhausted.
+ * Returns the action result on success, or null if all retries exhausted.
  */
-async function retryServerAction(
-  fn: () => Promise<unknown>,
+async function retryServerAction<T>(
+  fn: () => Promise<T>,
   retries = 3,
   baseDelay = 1000,
-): Promise<boolean> {
+): Promise<T | null> {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      await fn();
-      return true;
+      return await fn();
     } catch (err) {
       if (attempt < retries - 1) {
         await new Promise((r) => setTimeout(r, baseDelay * 2 ** attempt));
@@ -133,7 +133,7 @@ async function retryServerAction(
       }
     }
   }
-  return false;
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -155,6 +155,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
       hydrated: false,
       lastSyncedAt: 0,
       isSyncing: false,
+      _syncGeneration: 0,
 
       // ------------------------------------------------------------------
       // Hydrate — called with server-fetched data
@@ -171,6 +172,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           pendingMatchCount: data.pendingMatchCount,
           hydrated: true,
           lastSyncedAt: Date.now(),
+          _syncGeneration: get()._syncGeneration + 1,
         });
       },
 
@@ -251,16 +253,17 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           });
         }
 
+        const gen = get()._syncGeneration;
         retryServerAction(() => serverToggleSave(jobId, profileId, save)).then(
-          (ok) => {
-            if (!ok) {
+          (result) => {
+            if (get()._syncGeneration !== gen) return; // stale — profile switched
+            if (result === null) {
               set({
                 jobs: updateJob(get().jobs, jobId, (j) => ({
                   ...j,
                   feedStatus: prevStatus,
                 })),
               });
-              // Revert the optimistic application
               if (save && !hadApplication) {
                 set({
                   applications: get().applications.filter(
@@ -270,7 +273,16 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
               }
               return;
             }
-            // Replace optimistic ID with real one from server on next sync
+            // Replace optimistic ID with real one from server
+            if (result.applicationId) {
+              set({
+                applications: get().applications.map((a) =>
+                  a.id === `optimistic-${jobId}`
+                    ? { ...a, id: result.applicationId! }
+                    : a,
+                ),
+              });
+            }
           },
         );
       },
@@ -287,8 +299,10 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           })),
         });
 
-        retryServerAction(() => serverIgnore(jobId, profileId)).then((ok) => {
-          if (!ok) {
+        const gen = get()._syncGeneration;
+        retryServerAction(() => serverIgnore(jobId, profileId)).then((result) => {
+          if (get()._syncGeneration !== gen) return;
+          if (result === null) {
             set({
               jobs: updateJob(get().jobs, jobId, (j) => ({
                 ...j,
@@ -310,10 +324,12 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           jobs: updateJob(get().jobs, jobId, (j) => ({ ...j, feedStatus })),
         });
 
+        const gen = get()._syncGeneration;
         retryServerAction(() =>
           serverUnignore(jobId, profileId, restoreStatus),
-        ).then((ok) => {
-          if (!ok) {
+        ).then((result) => {
+          if (get()._syncGeneration !== gen) return;
+          if (result === null) {
             set({
               jobs: updateJob(get().jobs, jobId, (j) => ({
                 ...j,
@@ -338,9 +354,11 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           ),
         });
 
+        const gen = get()._syncGeneration;
         retryServerAction(() => serverBatchIgnore(jobIds, profileId)).then(
-          (ok) => {
-            if (!ok) {
+          (result) => {
+            if (get()._syncGeneration !== gen) return;
+            if (result === null) {
               set({
                 jobs: get().jobs.map((j) => {
                   const prev = prevStatuses.get(j.id);
@@ -367,10 +385,12 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           ),
         });
 
+        const gen = get()._syncGeneration;
         retryServerAction(() =>
           serverBatchSave(jobIds, profileId, save),
-        ).then((ok) => {
-          if (!ok) {
+        ).then((result) => {
+          if (get()._syncGeneration !== gen) return;
+          if (result === null) {
             set({
               jobs: get().jobs.map((j) => {
                 const prev = prevStatuses.get(j.id);
@@ -436,10 +456,12 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
         const profileId = get().activeProfile?.id;
         if (!profileId) return;
 
+        const gen = get()._syncGeneration;
         retryServerAction(() =>
           serverUpdateNotes(jobId, profileId, notes),
-        ).then((ok) => {
-          if (!ok) {
+        ).then((result) => {
+          if (get()._syncGeneration !== gen) return;
+          if (result === null) {
             set({
               jobs: updateJob(get().jobs, jobId, (j) => ({
                 ...j,
@@ -460,6 +482,9 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
         const prevUpdatedAt = app.statusUpdatedAt;
         const prevAppliedAt = app.appliedAt;
 
+        // Capture jobId before optimistic update for feedStatus mirror
+        const jobId = app.jobId;
+
         set({
           applications: updateApp(get().applications, appId, (a) => ({
             ...a,
@@ -471,9 +496,23 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           })),
         });
 
+        // Mirror server-side behavior: archive job from feed when APPLIED
+        const prevFeedStatus = get().jobs.find((j) => j.id === jobId)?.feedStatus;
+        if (status === "APPLIED") {
+          set({
+            jobs: get().jobs.map((j) =>
+              j.id === jobId && (j.feedStatus === "NEW" || j.feedStatus === "SAVED")
+                ? { ...j, feedStatus: "ARCHIVED" as const }
+                : j
+            ),
+          });
+        }
+
+        const gen = get()._syncGeneration;
         retryServerAction(() => serverUpdateAppStatus(appId, status)).then(
-          (ok) => {
-            if (!ok) {
+          (result) => {
+            if (get()._syncGeneration !== gen) return;
+            if (result === null) {
               set({
                 applications: updateApp(get().applications, appId, (a) => ({
                   ...a,
@@ -482,6 +521,15 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
                   appliedAt: prevAppliedAt,
                 })),
               });
+              // Revert the feed status change on failure
+              if (status === "APPLIED" && prevFeedStatus) {
+                set({
+                  jobs: updateJob(get().jobs, jobId, (j) => ({
+                    ...j,
+                    feedStatus: prevFeedStatus,
+                  })),
+                });
+              }
             }
           },
         );
@@ -497,6 +545,7 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           recruiterName: app.recruiterName,
           recruiterEmail: app.recruiterEmail,
         };
+        const prevFollowUpCount = get().followUpCount;
 
         set({
           applications: updateApp(get().applications, appId, (a) => {
@@ -522,15 +571,35 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           }),
         });
 
+        // Recalculate followUpCount when followUpAt changes
+        if (fields.followUpAt !== undefined) {
+          const now = new Date();
+          now.setUTCHours(23, 59, 59, 999);
+          const TERMINAL = new Set(["ACCEPTED", "REJECTED", "WITHDRAWN", "GHOSTED"]);
+          const count = get().applications.filter(
+            (a) =>
+              a.followUpAt &&
+              new Date(a.followUpAt) <= now &&
+              !TERMINAL.has(a.status),
+          ).length;
+          set({ followUpCount: count });
+        }
+
+        const gen = get()._syncGeneration;
         retryServerAction(() => serverUpdateAppDetail(appId, fields)).then(
-          (ok) => {
-            if (!ok) {
+          (result) => {
+            if (get()._syncGeneration !== gen) return;
+            if (result === null) {
               set({
                 applications: updateApp(get().applications, appId, (a) => ({
                   ...a,
                   ...prevSnapshot,
                 })),
               });
+              // Restore previous followUpCount on rollback
+              if (fields.followUpAt !== undefined) {
+                set({ followUpCount: prevFollowUpCount });
+              }
             }
           },
         );
@@ -554,8 +623,10 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
           ),
         });
 
-        retryServerAction(() => serverBulkRemoveApps(appIds)).then((ok) => {
-          if (!ok) {
+        const gen = get()._syncGeneration;
+        retryServerAction(() => serverBulkRemoveApps(appIds)).then((result) => {
+          if (get()._syncGeneration !== gen) return;
+          if (result === null) {
             set({
               applications: [...get().applications, ...removedApps],
               jobs: get().jobs.map((j) => {
@@ -583,24 +654,20 @@ export const useDashboardStore = create<DashboardState & DashboardActions>()(
         }
         return localStorage;
       }),
-      // Exclude rawData (scraped HTML, can be 10s of KB per job)
-      // and non-serialisable sync flags — everything else persists
+      // Non-serialisable sync flags excluded — everything else persists.
+      // jobPool is already a summary select (no description/rawData), so no stripping needed.
       partialize: (state) => ({
         userId: state.userId,
         activeProfile: state.activeProfile,
         profiles: state.profiles,
-        jobs: state.jobs.map((j) => ({
-          ...j,
-          jobPool: { ...j.jobPool, rawData: null },
-        })),
+        jobs: state.jobs,
         applications: state.applications,
         followUpCount: state.followUpCount,
         usage: state.usage,
         pendingMatchCount: state.pendingMatchCount,
         lastSyncedAt: state.lastSyncedAt,
-        // hydrated / isSyncing intentionally excluded
+        // hydrated / isSyncing / _syncGeneration intentionally excluded
       }),
     },
   ),
 );
-

@@ -197,7 +197,6 @@ export function OnboardingWizard() {
         if (process.env.NODE_ENV === "development") {
           console.log("[OnboardingWizard] completeOnboarding response:", result);
         }
-        document.cookie = "shortlist-onboarded=true; path=/";
         router.push("/dashboard");
       } catch (err) {
         if (process.env.NODE_ENV === "development") {

@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import type { Metadata } from "next";
 
 import { getAdminFeedbackList } from "@/lib/admin-queries";
+
+export const metadata: Metadata = { title: "Feedback" };
 
 type FeedbackMetadata = {
   pathname?: string;

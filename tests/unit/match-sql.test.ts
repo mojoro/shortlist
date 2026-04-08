@@ -47,12 +47,11 @@ describe("roleToPatterns", () => {
   });
 });
 
-describe("rematchProfileSql contract", () => {
+describe("match-sql exports contract", () => {
   it("exported functions have the expected signatures", async () => {
     const mod = await import("@/lib/match-sql");
     expect(typeof mod.findMatchingPoolIds).toBe("function");
     expect(typeof mod.findStaleJobIds).toBe("function");
-    expect(typeof mod.rematchProfileSql).toBe("function");
   });
 });
 

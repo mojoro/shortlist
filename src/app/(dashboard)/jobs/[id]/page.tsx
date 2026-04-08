@@ -26,5 +26,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function JobDetailPage({ params }: PageProps) {
   const { id } = await params;
-  return <JobDetailClient jobId={id} />;
+  const job = await getJob(id);
+  return <JobDetailClient jobId={id} description={job?.jobPool.description ?? null} />;
 }

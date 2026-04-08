@@ -9,7 +9,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/webhooks/clerk",
   "/api/scrape",           // protected by CRON_SECRET instead
   "/api/analyze",          // protected by CRON_SECRET instead
-  "/api/dev/(.*)",         // dev routes — protected by CRON_SECRET
+  "/api/dev/(.*)",         // dev routes — protected by E2E_SEED env var check
   "/api/check-onboarding", // internal — called by this middleware; Clerk validates session
   "/api/check-disabled",   // internal — called by this middleware; Clerk validates session
   "/api/track-activity",   // internal — called by this middleware; Clerk validates session
@@ -18,9 +18,15 @@ const isPublicRoute = createRouteMatcher([
 
 const EXTENSION_CORS_PATHS = ["/api/extension/", "/api/jobs/"];
 
+// Only allow CORS from the published Chrome extension — not any arbitrary extension.
+// Middleware runs in Edge runtime and can't import the env module; process.env is correct here.
+const ALLOWED_EXTENSION_ORIGIN = process.env.CHROME_EXTENSION_ID
+  ? `chrome-extension://${process.env.CHROME_EXTENSION_ID}`
+  : null;
+
 function needsExtensionCors(req: NextRequest): string | null {
   const origin = req.headers.get("origin");
-  if (!origin?.startsWith("chrome-extension://")) return null;
+  if (!origin || !ALLOWED_EXTENSION_ORIGIN || origin !== ALLOWED_EXTENSION_ORIGIN) return null;
   const path = req.nextUrl.pathname;
   if (EXTENSION_CORS_PATHS.some((p) => path.startsWith(p))) return origin;
   return null;
@@ -129,7 +135,12 @@ export default clerkMiddleware(async (auth, req) => {
             console.log(`[middleware] DB confirms onboarded — setting cookie and proceeding for: ${req.nextUrl.pathname}`);
           }
           const response = NextResponse.next();
-          response.cookies.set("shortlist-onboarded", "true", { path: "/" });
+          response.cookies.set("shortlist-onboarded", "true", {
+            path: "/",
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+          });
           return response;
         }
       }
@@ -151,7 +162,13 @@ export default clerkMiddleware(async (auth, req) => {
 
   const response = NextResponse.next();
   if (!activeCheck) {
-    response.cookies.set("shortlist-active", "true", { path: "/", maxAge: 300 });
+    response.cookies.set("shortlist-active", "true", {
+      path: "/",
+      maxAge: 60,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
     // Fire-and-forget activity tracking
     const trackUrl = new URL("/api/track-activity", req.url);
     fetch(trackUrl.toString(), {

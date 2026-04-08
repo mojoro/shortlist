@@ -2,6 +2,7 @@ import { z } from "zod";
 import { openrouter } from "@/lib/openrouter";
 import { TRIAGE_MODEL } from "@/lib/models";
 import { prisma } from "@/lib/prisma";
+import { incrementUsage, checkUsageLimit } from "@/lib/usage";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -90,8 +91,8 @@ export async function triageBorderline(
   userId: string,
 ): Promise<TriageResult> {
   // 1. Usage check — conservative degradation if limit exceeded
-  const usage = await prisma.usage.findUnique({ where: { userId } });
-  if (usage && usage.currentMonthInputTokens >= usage.monthlyLimitInputTokens) {
+  const withinLimit = await checkUsageLimit(userId);
+  if (!withinLimit) {
     return {
       accepted: [],
       rejected: candidates.map((c) => c.id),
@@ -220,29 +221,7 @@ export async function triageBorderline(
   }
 
   // 7. Update usage after all batches complete
-  const batchCount = batches.length;
-  await prisma.usage.upsert({
-    where: { userId },
-    create: {
-      userId,
-      triageCallCount: batchCount,
-      triageInputTokens: totalInput,
-      triageOutputTokens: totalOutput,
-      totalInputTokens: totalInput,
-      totalOutputTokens: totalOutput,
-      currentMonthInputTokens: totalInput,
-      currentMonthOutputTokens: totalOutput,
-    },
-    update: {
-      triageCallCount: { increment: batchCount },
-      triageInputTokens: { increment: totalInput },
-      triageOutputTokens: { increment: totalOutput },
-      totalInputTokens: { increment: totalInput },
-      totalOutputTokens: { increment: totalOutput },
-      currentMonthInputTokens: { increment: totalInput },
-      currentMonthOutputTokens: { increment: totalOutput },
-    },
-  });
+  await incrementUsage(userId, totalInput, totalOutput, "triage", batches.length);
 
   return { accepted, rejected, tokensUsed: { input: totalInput, output: totalOutput } };
 }

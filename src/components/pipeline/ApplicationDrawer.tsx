@@ -7,6 +7,7 @@ import type { ApplicationStatus } from "@prisma/client";
 import type { ApplicationWithJob, FieldOverrides } from "@/types";
 import { StatusSelect } from "@/components/pipeline/StatusSelect";
 import { ScorePill } from "@/components/pipeline/shared";
+import { getScoreLabel } from "@/lib/score-utils";
 
 interface ApplicationDrawerProps {
   application: ApplicationWithJob;
@@ -115,8 +116,7 @@ export function ApplicationDrawer({
             <div className="mb-2 flex items-center gap-2">
               <ScorePill score={application.job.aiScore} />
               <span className="text-xs text-[var(--text-muted)]">
-                {application.job.aiScore >= 90 ? "Strong match" :
-                 application.job.aiScore >= 75 ? "Good match" : "Weak match"}
+                {getScoreLabel(application.job.aiScore)}
               </span>
             </div>
             {application.job.aiSummary && (

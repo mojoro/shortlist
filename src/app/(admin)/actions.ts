@@ -19,19 +19,21 @@ async function requireAdmin() {
 
 export async function adminAdjustUsageLimit(data: unknown) {
   await requireAdmin();
-  const parsed = adminAdjustUsageLimitSchema.parse(data);
+  const parsed = adminAdjustUsageLimitSchema.safeParse(data);
+  if (!parsed.success) throw new Error("Invalid input");
   await prisma.usage.update({
-    where: { userId: parsed.userId },
-    data: { monthlyLimitInputTokens: parsed.monthlyLimitInputTokens },
+    where: { userId: parsed.data.userId },
+    data: { monthlyLimitInputTokens: parsed.data.monthlyLimitInputTokens },
   });
   revalidatePath("/admin/users");
 }
 
 export async function adminDisableUser(data: unknown) {
   await requireAdmin();
-  const { userId } = adminUserIdSchema.parse(data);
+  const parsed = adminUserIdSchema.safeParse(data);
+  if (!parsed.success) throw new Error("Invalid input");
   await prisma.user.update({
-    where: { id: userId },
+    where: { id: parsed.data.userId },
     data: { disabledAt: new Date() },
   });
   revalidatePath("/admin/users");
@@ -39,9 +41,10 @@ export async function adminDisableUser(data: unknown) {
 
 export async function adminEnableUser(data: unknown) {
   await requireAdmin();
-  const { userId } = adminUserIdSchema.parse(data);
+  const parsed = adminUserIdSchema.safeParse(data);
+  if (!parsed.success) throw new Error("Invalid input");
   await prisma.user.update({
-    where: { id: userId },
+    where: { id: parsed.data.userId },
     data: { disabledAt: null },
   });
   revalidatePath("/admin/users");
@@ -49,9 +52,10 @@ export async function adminEnableUser(data: unknown) {
 
 export async function adminResetMonthlyUsage(data: unknown) {
   await requireAdmin();
-  const { userId } = adminUserIdSchema.parse(data);
+  const parsed = adminUserIdSchema.safeParse(data);
+  if (!parsed.success) throw new Error("Invalid input");
   await prisma.usage.update({
-    where: { userId },
+    where: { userId: parsed.data.userId },
     data: { currentMonthInputTokens: 0, currentMonthOutputTokens: 0 },
   });
   revalidatePath("/admin/users");
@@ -82,7 +86,9 @@ export async function adminCopyProfileToAdmin(
   data: unknown,
 ): Promise<{ profileId: string; jobsCopied: number; applicationsCopied: number }> {
   const adminUserId = await requireAdmin();
-  const { profileId, mode } = adminCopyProfileSchema.parse(data);
+  const parsed = adminCopyProfileSchema.safeParse(data);
+  if (!parsed.success) throw new Error("Invalid input");
+  const { profileId, mode } = parsed.data;
 
   const sourceProfile = await prisma.profile.findUnique({
     where: { id: profileId },

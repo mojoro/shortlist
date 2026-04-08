@@ -3,15 +3,9 @@
 import { format } from "date-fns";
 import type { ApplicationStatus } from "@prisma/client";
 import type { ApplicationWithJob, FieldOverrides } from "@/types";
+import { TERMINAL_STATUSES } from "@/lib/pipeline-constants";
 
-// ── Terminal status set ─────────────────────────────────────────────────────
-
-export const TERMINAL_STATUSES = new Set<ApplicationStatus>([
-  "ACCEPTED",
-  "REJECTED",
-  "WITHDRAWN",
-  "GHOSTED",
-]);
+export { TERMINAL_STATUSES };
 
 // ── Human-readable status labels ────────────────────────────────────────────
 
