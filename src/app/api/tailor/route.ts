@@ -250,7 +250,7 @@ identify what would make it a 9.5/10 and implement that adjustment, but never us
         { role: "system", content: systemPrompt },
         { role: "user", content: userContent },
       ],
-      max_completion_tokens: 8000,
+      max_completion_tokens: 12000,
     });
 
     let inputTokens = 0;
