@@ -69,13 +69,13 @@ function parseInline(raw: string): Span[] {
   return spans.length > 0 ? spans : [{ kind: "text", text: raw }];
 }
 
-function InlineText({ text, baseStyle }: { text: string; baseStyle: Styles[string] }) {
+function InlineText({ text, baseStyle, minPresenceAhead }: { text: string; baseStyle: Styles[string]; minPresenceAhead?: number }) {
   const spans = parseInline(text);
   if (spans.length === 1 && spans[0].kind === "text") {
-    return <Text style={baseStyle}>{text}</Text>;
+    return <Text style={baseStyle} minPresenceAhead={minPresenceAhead}>{text}</Text>;
   }
   return (
-    <Text style={baseStyle}>
+    <Text style={baseStyle} minPresenceAhead={minPresenceAhead}>
       {spans.map((span, i) => {
         if (span.kind === "bold") return <Text key={i} style={styles.bold}>{span.text}</Text>;
         if (span.kind === "italic") return <Text key={i} style={{ fontFamily: "Helvetica-Oblique" }}>{span.text}</Text>;
@@ -114,14 +114,14 @@ export function ResumePDFDocument({ markdown }: { markdown: string }) {
           if (line.type === "h1")
             return <Text key={i} style={styles.name}>{line.text}</Text>;
           if (line.type === "h2")
-            return <Text key={i} style={styles.sectionHeader}>{line.text}</Text>;
+            return <Text key={i} style={styles.sectionHeader} minPresenceAhead={18}>{line.text}</Text>;
           if (line.type === "h3")
-            return <InlineText key={i} text={line.text} baseStyle={{ ...styles.h3, ...styles.bold }} />;
+            return <InlineText key={i} text={line.text} baseStyle={{ ...styles.h3, ...styles.bold }} minPresenceAhead={18} />;
           if (line.type === "h4")
-            return <InlineText key={i} text={line.text} baseStyle={{ ...styles.paragraph, ...styles.bold }} />;
+            return <InlineText key={i} text={line.text} baseStyle={{ ...styles.paragraph, ...styles.bold }} minPresenceAhead={18} />;
           if (line.type === "bullet")
             return (
-              <View key={i} style={styles.bullet}>
+              <View key={i} style={styles.bullet} wrap={false}>
                 <Text style={styles.bulletDot}>•</Text>
                 <InlineText text={line.text} baseStyle={styles.bulletText} />
               </View>
