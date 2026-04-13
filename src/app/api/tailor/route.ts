@@ -68,6 +68,7 @@ export async function POST(req: Request) {
             bannedPhrases: true,
             verifiedMetrics: true,
             neverClaim: true,
+            styleGuide: true,
             customTailorModel: true,
             customAnalyzeModel: true,
             customExtractModel: true,
@@ -135,12 +136,20 @@ export async function POST(req: Request) {
     const contentSource = profile.curriculumVitae ?? profile.masterResume!;
     const formatTemplate = profile.masterResume;
 
+    const hasArrayRules =
+      (profile.protectedPhrases?.length ?? 0) > 0 ||
+      (profile.bannedPhrases?.length ?? 0) > 0 ||
+      (profile.verifiedMetrics?.length ?? 0) > 0 ||
+      (profile.neverClaim?.length ?? 0) > 0;
+
+    const hasWritingRules = hasArrayRules || !!profile.styleGuide;
+
     const systemPrompt = `## SYSTEM
-You are a professional resume writer with a decade of experience hiring 
-${profile.targetRoles.join(", ")} across verticals. 
+You are a professional resume writer with a decade of experience hiring
+${profile.targetRoles.join(", ")} across verticals.
 You have been given:
 1. A candidate's comprehensive CV
-2. Their preferred resume format — a structural template only; 
+2. Their preferred resume format — a structural template only;
    treat the summary and bullets in it as placeholders, not model copy
 3. A specific job description
 
@@ -149,33 +158,33 @@ Your task is to produce a focused, targeted resume for this role.
 ## PROCESS
 
 Step 1 — Understand the candidate
-Read the full CV. Identify their strongest, most verifiable proof points 
-(metrics, named technologies, real outcomes). Note what they have actually 
+Read the full CV. Identify their strongest, most verifiable proof points
+(metrics, named technologies, real outcomes). Note what they have actually
 built vs. what they have only configured or used.
 
 Step 2 — Understand the role
-Identify the top 3–5 things this employer actually needs. Distinguish 
+Identify the top 3–5 things this employer actually needs. Distinguish
 must-haves from nice-to-haves.
 
 Step 3 — Match honestly
-Select experience and skills that genuinely satisfy what the employer needs. 
-Mirror the job description's language ONLY where the description accurately 
-reflects what the candidate did. Do not relabel simpler work with 
-more impressive JD terminology to make it appear to match. A hiring manager 
-who interviews this candidate will probe every bullet — if the framing 
+Select experience and skills that genuinely satisfy what the employer needs.
+Mirror the job description's language ONLY where the description accurately
+reflects what the candidate did. Do not relabel simpler work with
+more impressive JD terminology to make it appear to match. A hiring manager
+who interviews this candidate will probe every bullet — if the framing
 doesn't survive a follow-up question, cut it.
 
 Step 4 — Write the summary
-Write a new summary for this specific role. Do not reuse the template 
-summary. It should be 2–3 sentences: what the candidate does, their 
-most relevant proof point for this role, and one honest differentiator. 
-No filler phrases ("unique blend", "expert in bridging"). Lead with 
+Write a new summary for this specific role. Do not reuse the template
+summary. It should be 2–3 sentences: what the candidate does, their
+most relevant proof point for this role, and one honest differentiator.
+No filler phrases ("unique blend", "expert in bridging"). Lead with
 the most impressive thing that is directly relevant to this job.
 Never use an "—".
 
 Step 5 — Write the bullets
 - Every bullet must be results-oriented: action → method → outcome
-- Include specific numbers wherever the CV provides them; do not omit 
+- Include specific numbers wherever the CV provides them; do not omit
   metrics in favor of vaguer language
 - Do not invent, inflate, or reframe experience the candidate does not have
 - Order bullets by relevance to this role, not chronology within a role
@@ -184,10 +193,10 @@ Step 5 — Write the bullets
 
 Step 6 — Format and output
 - Use the template's structure and layout
-- Bold sparingly: only the single most important phrase per bullet, 
-  and only where it adds scannability for a human reader. 
+- Bold sparingly: only the single most important phrase per bullet,
+  and only where it adds scannability for a human reader.
   If everything is bold, nothing is.
-- Return only the resume markdown — no commentary, no preamble, 
+- Return only the resume markdown — no commentary, no preamble,
   no explanation
 - Ensure all links are properly formatted
 - Place contact details at the very top
@@ -196,13 +205,14 @@ Step 6 — Format and output
 Step 7 — Final Review
 Think about what you have made and what could be improved. If the current version is an 8/10,
 identify what would make it a 9.5/10 and implement that adjustment, but never use an "—" em-dash.${
-  (profile.protectedPhrases?.length ?? 0) > 0 ||
-  (profile.bannedPhrases?.length ?? 0) > 0 ||
-  (profile.verifiedMetrics?.length ?? 0) > 0 ||
-  (profile.neverClaim?.length ?? 0) > 0
-    ? `\n\n## CANDIDATE'S WRITING RULES (non-negotiable)\n${
+  hasWritingRules
+    ? `\n\n## CANDIDATE'S WRITING RULES (non-negotiable)${
+        profile.styleGuide
+          ? `\n\nStyle guide — follow these voice and tone preferences throughout the resume:\n${profile.styleGuide}`
+          : ""
+      }${
         (profile.protectedPhrases?.length ?? 0) > 0
-          ? `\nProtected phrases — use verbatim, never paraphrase:\n${profile.protectedPhrases!.map((p) => `- ${p}`).join("\n")}`
+          ? `\n\nProtected phrases — use verbatim, never paraphrase:\n${profile.protectedPhrases!.map((p) => `- ${p}`).join("\n")}`
           : ""
       }${
         (profile.bannedPhrases?.length ?? 0) > 0

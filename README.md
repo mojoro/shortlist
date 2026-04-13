@@ -1,6 +1,8 @@
 # Shortlist
 
-**AI-powered job search, end to end.** Shortlist scrapes listings from Greenhouse, Lever, and Ashby every morning, scores them against your profile using Claude, lets you tailor your resume with one click, and tracks your entire pipeline — all in one place.
+[![CI](https://github.com/mojoro/shortlist/actions/workflows/ci.yml/badge.svg)](https://github.com/mojoro/shortlist/actions/workflows/ci.yml)
+
+**AI-powered job search, end to end.** Shortlist scrapes listings from six sources every morning, scores them against your profile with AI, lets you tailor your resume with one click, and tracks your entire pipeline — all in one place.
 
 > Built by [John Moorman](https://johnmoorman.com) as a portfolio project. Currently single-user; SaaS roadmap in progress.
 
@@ -14,17 +16,7 @@
 - **Pipeline tracker** — Kanban-style table: Saved → Applied → Interview → Offer. Tracks follow-up dates, notes, and the tailored resume used for each application.
 - **Import anything** — Paste a URL or raw text from any job listing. Claude extracts the structured fields. Works with any company, not just supported ATS platforms.
 - **Multi-profile** — One account, multiple independent job searches. "Frontend Berlin" and "Automation Remote" get completely separate feeds, criteria, and pipelines.
-- **Daily scraping** — Greenhouse, Lever, and Ashby jobs scraped every morning via Vercel Cron. Pool-first architecture deduplicates globally before matching per-profile.
-
----
-
-## Screenshots
-
-<!-- Add screenshots here once hosted -->
-<!-- ![Job feed](docs/screenshots/feed.png) -->
-<!-- ![Resume tailor](docs/screenshots/tailor.png) -->
-<!-- ![Pipeline tracker](docs/screenshots/pipeline.png) -->
-<!-- ![Landing page](docs/screenshots/landing.png) -->
+- **Daily scraping** — Six sources (Greenhouse, Lever, Ashby, USAJobs, Adzuna, Arbeitnow) scraped every morning via Vercel Cron. Pool-first architecture deduplicates globally before matching per-profile.
 
 ---
 
@@ -38,8 +30,11 @@
 | Database | [Neon](https://neon.tech) (PostgreSQL) |
 | ORM | Prisma |
 | Auth | [Clerk](https://clerk.com) |
-| AI | [OpenRouter](https://openrouter.ai) → `anthropic/claude-sonnet-4-6` |
-| Scraping | Greenhouse / Lever / Ashby public APIs |
+| AI | [OpenRouter](https://openrouter.ai) — multiple models (see AI pipeline below) |
+| Scraping | Greenhouse, Lever, Ashby, USAJobs, Adzuna, Arbeitnow |
+| State | Zustand (client), React 19 `useOptimistic` |
+| Testing | Playwright (E2E), Vitest + React Testing Library (unit) |
+| CI/CD | GitHub Actions (typecheck → lint → unit → Playwright) |
 | Scheduling | Vercel Cron (daily at 7am UTC) |
 | PDF | `@react-pdf/renderer` |
 | Markdown | `@uiw/react-md-editor` |
@@ -69,9 +64,12 @@ User (Clerk ID)
 
 ### AI pipeline
 
-- **Scoring** — Batches of 5 jobs, 500ms between batches, `claude-haiku-4-5`. Pre-filter rejects excluded keywords without an API call. Response: `{ score, status, summary, matchPoints[], gapPoints[] }`.
-- **Tailoring** — Streaming, `claude-sonnet-4-6`. Uses the full CV as content source and the master resume as format template. Writing rules are injected as hard constraints.
-- **Extraction** — One-shot, `claude-haiku-4-5`. Fetches a URL, strips HTML noise, converts to markdown, extracts structured fields.
+- **Scoring** — Batches of 5 jobs, 500ms between batches, `anthropic/claude-haiku-4.5`. Pre-filter rejects excluded keywords without an API call. Response: `{ score, status, summary, matchPoints[], gapPoints[] }`.
+- **Tailoring** — Streaming, `qwen/qwen3.5-397b-a17b`. Uses the full CV as content source and the master resume as format template. Writing rules are injected as hard constraints.
+- **Extraction** — One-shot, `anthropic/claude-haiku-4.5`. Fetches a URL, strips HTML noise, converts to markdown, extracts structured fields.
+- **Triage** — Batch classification of borderline candidates, `google/gemini-2.5-flash`.
+
+All models are user-overridable per profile via Advanced Settings.
 
 ---
 
@@ -117,13 +115,16 @@ curl -X POST http://localhost:3000/api/dev/seed
 | Variable | Description |
 |---|---|
 | `DATABASE_URL` | Neon pooled connection string |
-| `DIRECT_URL` | Neon direct connection string (migrations only) |
+| `DATABASE_URL_UNPOOLED` | Neon direct connection string (migrations only) |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key |
 | `CLERK_SECRET_KEY` | Clerk secret key |
-| `CLERK_WEBHOOK_SECRET` | Clerk webhook signing secret |
+| `CLERK_WEBHOOK_SECRET` | Clerk webhook signing secret (optional) |
 | `OPENROUTER_API_KEY` | OpenRouter API key |
-| `APIFY_API_TOKEN` | Apify token (reserved, not yet used) |
 | `CRON_SECRET` | Random string — protects `/api/scrape` and `/api/analyze` |
+| `USAJOBS_API_KEY` | USAJobs scraper (optional) |
+| `USAJOBS_EMAIL` | USAJobs scraper (optional) |
+| `ADZUNA_APP_ID` | Adzuna scraper (optional) |
+| `ADZUNA_APP_KEY` | Adzuna scraper (optional) |
 | `NEXT_PUBLIC_APP_URL` | Full URL of the deployment (e.g. `http://localhost:3000`) |
 | `NEXT_PUBLIC_DEFAULT_THEME` | `light` \| `dark` \| `system` |
 
@@ -143,39 +144,68 @@ Add `?skipPool=1` to skip re-scraping and re-run the matching pass against the e
 ```
 src/
   app/
-    (auth)/           # Clerk sign-in / sign-up pages
+    (auth)/               # Clerk sign-in / sign-up pages
     (dashboard)/
-      dashboard/      # Job feed
-      jobs/[id]/      # Job detail + match analysis
-      tailor/[jobId]/ # Resume tailor — JD vs resume, streaming, export
-      pipeline/       # Application tracker
+      dashboard/          # Job feed — default view
+      jobs/[id]/          # Job detail + match analysis
+      tailor/[jobId]/     # Resume tailor — JD vs resume, streaming, export
+      pipeline/           # Application tracker (table + Kanban board)
+      settings/           # Profile + Account tabs
     api/
-      scrape/         # POST — pool scrape + profile matching
-      analyze/        # POST — AI scoring for unscored jobs
-      tailor/         # POST — streams tailored resume
-      jobs/extract/   # POST — AI field extraction from URL/text
-      jobs/import/    # POST — saves a custom job listing
-    page.tsx          # Landing page
+      scrape/             # POST — pool scrape + profile matching
+      analyze/            # POST — AI scoring for unscored jobs
+      tailor/             # POST — streams tailored resume
+      tailor/save/        # POST — persists tailored resume draft
+      jobs/extract/       # POST — AI field extraction from URL/text
+      jobs/import/        # POST — saves a custom job listing
+      webhooks/clerk/     # POST — Clerk webhook (user lifecycle)
+    onboarding/           # Onboarding wizard for new users
+    page.tsx              # Landing page
   components/
-    dashboard/        # StatsRow
-    jobs/             # JobCard, JobFeed, ScoreBadge, JobDetailActions
-    tailor/           # TailorPanel, GeneratePane, ResumePDFDocument, PDFPreview
-    pipeline/         # PipelineTable, ApplicationDrawer, StatusSelect
-    layout/           # AppNav (collapsible sidebar + mobile tabs)
-    landing/          # HeroDemoPreview, FeatureRow, LandingNav
+    dashboard/            # FeedToolbar, ProfileSwitcher
+    jobs/                 # JobCard, JobFeed, ScoreBadge, ImportJobModal
+    tailor/               # TailorPanel, GeneratePane, ResumePDFDocument, PDFPreview
+    pipeline/             # PipelineTable, KanbanBoard, ApplicationDrawer, StatusSelect
+    settings/             # SettingsClient, UsageSection, FeedbackForm
+    layout/               # AppNav (collapsible sidebar + mobile tabs)
+    landing/              # HeroDemoPreview, FeatureRow, LandingNav
+    onboarding/           # OnboardingWizard
   lib/
-    prisma.ts         # Prisma client singleton
-    openrouter.ts     # OpenRouter client + model constants
-    match.ts          # jobMatchesProfile() — in-process pool filtering
-    normalize.ts      # Source raw data → JobPool schema
-    scrapers/         # greenhouse.ts, lever.ts, ashby.ts
+    prisma.ts             # Prisma client singleton
+    openrouter.ts         # OpenRouter client (server-only)
+    models.ts             # Model constants + getModels() helper (client-safe)
+    match-sql.ts          # SQL-based pool matching + rematch
+    normalize.ts          # Source raw data → JobPool schema
+    validations.ts        # Zod schemas for all API request bodies
+    store.ts              # Zustand store (dashboard state)
+    scrapers/             # greenhouse, lever, ashby, usajobs, adzuna, arbeitnow
   config/
-    app.ts            # APP_CONFIG — app name lives here only
-    companies.ts      # Company slugs for each scraper source
+    app.ts                # APP_CONFIG — app name lives here only
+    companies.ts          # Company lists + search configs for all scrapers
 prisma/
-  schema.prisma       # Source of truth for DB schema
-  seed.ts             # Realistic mock data for development
+  schema.prisma           # Source of truth for DB schema
+tests/
+  *.spec.ts               # Playwright E2E tests
+  unit/                   # Vitest unit tests
+  global-setup.ts         # Playwright global setup — seeds test data
+.github/
+  workflows/ci.yml        # CI: typecheck → lint → unit → Playwright
 ```
+
+---
+
+## CI/CD
+
+Every push to `main` and every pull request runs the full CI pipeline via GitHub Actions:
+
+| Step | What it does |
+|---|---|
+| **Type check** | `pnpm tsc --noEmit` |
+| **Lint** | ESLint |
+| **Unit tests** | Vitest + React Testing Library |
+| **E2E tests** | Playwright (runs against a Neon dev branch database) |
+
+Playwright tests run after all other checks pass. Test reports are uploaded as artifacts and retained for 14 days. Vercel auto-deploys `main` to production and PR branches to preview URLs.
 
 ---
 
@@ -188,7 +218,7 @@ If you want to contribute:
 1. **Open an issue first** for anything non-trivial. Describe what you want to change and why. This avoids wasted effort on PRs that won't be merged.
 2. **Fork, branch, and PR.** Branch names follow `type/kebab-description` (e.g. `feature/email-notifications`, `fix/feed-filter`).
 3. **One concern per PR.** Don't bundle a bug fix with a refactor.
-4. **Pass the type check.** Run `pnpm tsc --noEmit` before submitting.
+4. **Pass CI.** Run `pnpm tsc --noEmit` and `pnpm test:unit` before submitting.
 
 Areas where contributions are especially useful:
 
@@ -201,11 +231,14 @@ Areas where contributions are especially useful:
 
 ## Roadmap
 
-- [ ] Clerk webhook — creates `User` records on sign-up (required for multi-user)
-- [ ] Onboarding polish
+- [x] Clerk webhook — user lifecycle events (created, updated, deleted)
+- [x] Onboarding wizard for new users
+- [x] Multi-profile support with independent feeds and pipelines
+- [x] USAJobs, Adzuna, and Arbeitnow scrapers (6 sources total)
+- [x] Kanban board view for pipeline
+- [x] User-configurable AI model overrides
 - [ ] Email notifications for new high-score matches
-- [ ] Expanded company lists for all three scrapers
-- [ ] LinkedIn scraper via Apify
+- [ ] LinkedIn scraper
 - [ ] SaaS billing (Stripe)
 
 ---

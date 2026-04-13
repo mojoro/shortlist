@@ -185,6 +185,7 @@ export async function createProfile(data: unknown): Promise<{ profileId: string 
         bannedPhrases:    activeProfile.bannedPhrases,
         verifiedMetrics:  activeProfile.verifiedMetrics,
         neverClaim:       activeProfile.neverClaim,
+        styleGuide:       activeProfile.styleGuide,
         currency:         activeProfile.currency,
       }),
     },

@@ -589,6 +589,7 @@ function ResumeWritingRulesSection({ profile }: { profile: Profile }) {
     bannedPhrases:    toLines(profile.bannedPhrases),
     verifiedMetrics:  toLines(profile.verifiedMetrics),
     neverClaim:       toLines(profile.neverClaim),
+    styleGuide:       profile.styleGuide ?? "",
   });
   const [isPending, startTransition] = useTransition();
   const [saved,     setSaved]        = useState(false);
@@ -612,6 +613,7 @@ function ResumeWritingRulesSection({ profile }: { profile: Profile }) {
           bannedPhrases:    fromLines(fields.bannedPhrases),
           verifiedMetrics:  fromLines(fields.verifiedMetrics),
           neverClaim:       fromLines(fields.neverClaim),
+          styleGuide:       fields.styleGuide.trim() || undefined,
         });
         setSaved(true);
       } catch {
@@ -673,6 +675,17 @@ function ResumeWritingRulesSection({ profile }: { profile: Profile }) {
             placeholder={"Kubernetes production experience\nteam management"}
           />
           <Hint>Never imply or claim experience with these — even if adjacent skills exist.</Hint>
+        </div>
+        <div>
+          <Label>Style guide</Label>
+          <textarea
+            rows={3}
+            className={textareaClass}
+            value={fields.styleGuide}
+            onChange={handleChange("styleGuide")}
+            placeholder={"No em-dashes. Hyper-professional language. Avoid jargon. Write in active voice."}
+          />
+          <Hint>Describe the voice and tone the AI should use when writing your resume.</Hint>
         </div>
         {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
         <SaveButton isPending={isPending} saved={saved} />
