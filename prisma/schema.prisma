@@ -89,6 +89,7 @@ model Profile {
   bannedPhrases    String[]  // Never use these phrases
   verifiedMetrics  String[]  // Use exactly these figures/achievements
   neverClaim       String[]  // Never imply experience with these
+  styleGuide       String?   // Free-text voice/tone preferences for AI writing
 
   // AI model overrides (null = use default from openrouter.ts)
   customTailorModel    String?

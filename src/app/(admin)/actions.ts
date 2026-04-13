@@ -162,6 +162,7 @@ export async function adminCopyProfileToAdmin(
         bannedPhrases: sourceProfile.bannedPhrases,
         verifiedMetrics: sourceProfile.verifiedMetrics,
         neverClaim: sourceProfile.neverClaim,
+        styleGuide: sourceProfile.styleGuide,
         // AI model overrides
         customTailorModel: sourceProfile.customTailorModel,
         customAnalyzeModel: sourceProfile.customAnalyzeModel,

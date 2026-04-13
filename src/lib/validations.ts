@@ -79,6 +79,7 @@ export const updateResumeWritingRulesSchema = z.object({
   bannedPhrases:    z.array(z.string()),
   verifiedMetrics:  z.array(z.string()),
   neverClaim:       z.array(z.string()),
+  styleGuide:       z.string().optional(),
 });
 
 // ── Settings: profile create / switch ─────────────────────────────────────
